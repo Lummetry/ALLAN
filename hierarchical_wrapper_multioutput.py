@@ -33,10 +33,11 @@ __VER__ = "1.0.0"
 
 
 class HierarchicalNet:
-  def __init__(self, logger):
+  def __init__(self, logger, data_processer):
     self._version = __VER__
     
     self.logger = logger
+    self.data_processer = data_processer
     self.config_data = self.logger.config_data
     self.has_decoder = False
     self._parse_config_data()
@@ -295,14 +296,27 @@ class HierarchicalNet:
 
     self.enc_tf_out = tf_out
 
+    self.additional_outputs = [self.peek_tensor]
+
+    self.has_bot_intent = False
+    if 'BOT_INTENT' in configuration:
+      self.has_bot_intent = True
+      tf_bot_intent_out = self.CreateRecurrentCell(configuration['BOT_INTENT'], self.peek_tensor)
+      tf_bot_intent_out = Dense(units=self.nr_labels, activation='softmax', name='bot_intent_logits')(tf_bot_intent_out)
+
+      self.additional_outputs.append(tf_bot_intent_out)
+    #endif
+
     if self.is_timedistributed:
       self.trainable_model = Model(inputs=additional_inputs + list(crt_inputs.values()),
-                                   outputs=tf_out + [self.peek_tensor])
+                                   outputs=tf_out + self.additional_outputs)
 
       self._log("Parent/encoder model\n{}"
                 .format(self.logger.GetKerasModelSummary(self.trainable_model)))
 
       self.enc_pred_model = self.trainable_model
+      
+      self.num_transmisible_outputs = len(self.additional_outputs)
 
     return tf_out
 
@@ -327,7 +341,8 @@ class HierarchicalNet:
       decoder = Model(inputs=additional_inputs + list(crt_inputs.values()), outputs=tf_out)    
       self._log("Decoder model\n{}".format(self.logger.GetKerasModelSummary(decoder)))
 
-      self.trainable_model = Model(inputs=list(self.input_tensors.values()), outputs=[tf_out, self.peek_tensor])    
+      self.trainable_model = Model(inputs=list(self.input_tensors.values()),
+                                   outputs=[tf_out] + self.enc_pred_model.outputs[-self.num_transmisible_outputs:])    
       self._log("End-to-end model\n{}".format(self.logger.GetKerasModelSummary(self.trainable_model)))
 
     return tf_out
@@ -607,8 +622,12 @@ class HierarchicalNet:
       self.CreateParentNet(parent_config, func_child)
       self.CreateDecoder(self.decoder_architecture)
       
-      losses = [self._str_loss, "sparse_categorical_crossentropy"]
-      lossWeights = [1.0, 1.0]
+      losses = [self._str_loss]
+      lossWeights = [1.0]
+      
+      for _ in range(self.num_transmisible_outputs):
+        losses.append("sparse_categorical_crossentropy")
+        lossWeights.append(1.0)
 
       self.trainable_model.compile(optimizer=self._str_optimizer,
                                    loss=losses,
@@ -889,7 +908,7 @@ class HierarchicalNet:
 
   def CreatePredictionModels(self):
     self._log("Creating prediction models ...")
-    self.enc_pred_model = Model(self.enc_tf_inputs, self.enc_full_state + [self.peek_tensor])
+    self.enc_pred_model = Model(self.enc_tf_inputs, self.enc_full_state + self.additional_outputs)
     
     crt_tf_input = self.dec_tf_rec_input
     tf_input = self.dec_tf_rec_input
@@ -940,20 +959,33 @@ class HierarchicalNet:
     self._log("Dec pred model\n{}".format(self.logger.GetKerasModelSummary(self.dec_pred_model)))
     return
   
+  
 
-  def _step_by_step_prediction(self, data_loader, _input, method='sampling', verbose=1):
+  def _step_by_step_prediction(self, _input, method='sampling', verbose=1):
     assert method in ['sampling', 'argmax', 'beamsearch']
-    
-    str_input = _input
-    if type(str_input) is list: str_input = '\n'.join(str_input)
+    _type = type(_input)
 
-    input_tokens = data_loader.input_word_text_to_tokens(str_input, use_characters=True)
-    input_tokens = np.expand_dims(np.array(input_tokens), axis=0)
-    
+    if _type in [str, list]:
+      if type(_input) is list: _input = '\n'.join(_input)
+      input_tokens = self.data_processer.input_word_text_to_tokens(_input, use_characters=True)
+      input_tokens = np.expand_dims(np.array(input_tokens), axis=0)
+      str_input = _input
+    elif _type is np.ndarray:
+      input_tokens = _input
+      str_input = self.data_processer.translate_tokenize_input(_input)
+
     if verbose: self._log("Given '{}' the decoder predicted:".format(str_input))
     predict_results = self.enc_pred_model.predict(input_tokens)
     enc_states = predict_results[:-1]
-    label = np.argmax(predict_results[-1][:,[-1],:], axis=-1)
+
+    idx_last_intent_user = -2 if self.has_bot_intent else -1
+
+    last_intent_user = np.argmax(predict_results[idx_last_intent_user][:,[-1],:], axis=-1)
+    all_intents_user = np.argmax(predict_results[idx_last_intent_user], axis=-1)
+    
+    if self.has_bot_intent:
+      intent_bot = np.expand_dims(np.argmax(predict_results[-1], axis=-1), axis=-1)
+    
     dec_model_inputs = []
 
     for i in range(len(self.decoder_architecture['LAYERS'])):
@@ -976,12 +1008,16 @@ class HierarchicalNet:
       dec_model_inputs += [inp_h, inp_c]
     #endfor
 
-    current_gen_token = data_loader.start_char_id
+    current_gen_token = self.data_processer.start_char_id
     predicted_tokens = []
     nr_preds = 0
-    while current_gen_token != data_loader.end_char_id:
+    while current_gen_token != self.data_processer.end_char_id:
       current_gen_token = np.array(current_gen_token).reshape((1,1))
-      dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs + [current_gen_token, label])
+    
+      if not self.has_bot_intent:
+        dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs + [current_gen_token, last_intent_user])
+      else:
+        dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs + [current_gen_token, last_intent_user, intent_bot])
 
       P = dec_model_outputs[-1].squeeze()
       if method == 'sampling':
@@ -998,7 +1034,15 @@ class HierarchicalNet:
         break
     #end_while
     predicted_tokens = predicted_tokens[:-1]
-    predicted_text = data_loader.input_word_tokens_to_text([predicted_tokens])
+    predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
+    predicted_text = self.data_processer.organize_text(predicted_text)
+
     if verbose:
       self._log("  --> '{}'".format(predicted_text))
-    return predicted_text
+      
+    if self.has_bot_intent:
+      return predicted_text, last_intent_user, all_intents_user, intent_bot
+    else:
+      return predicted_text, last_intent_user, all_intents_user
+
+

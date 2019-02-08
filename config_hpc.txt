@@ -2,14 +2,6 @@
   "BASE_FOLDER" : "Dropbox",
   "APP_FOLDER"  : "_doc_ro_chatbot_data/_rochatbot_data",
 
-  "BATCHES"          : "demo_20190130/batches.pickle",
-  "WORDS_DICTIONARY" : "demo_20190130/dict_word2id.pickle",
-  "INV_WORDS_DICTIONARY" : "demo_20190130/dict_id2word.pickle",
-  "LABELS_DICTIONARY": "demo_20190130/dict_label2id.pickle",
-  "INV_LABELS_DICTIONARY": "demo_20190130/dict_id2label.pickle",
-  "CHARS_DICTIONARY" : "demo_20190130/dict_char2id.pickle",
-  "INV_CHARS_DICTIONARY" : "demo_20190130/dict_id2char.pickle",
-
   "MAX_WORDS" : 50,
   "MAX_CHARACTERS" : 200,
   "NR_LABELS" : 51,
@@ -102,7 +94,21 @@
           "SKIP_CONNECTIONS": ["INPUT"],
           "RETURN_STATE": 2
         }
-      ]
+      ],
+      
+      "BOT_INTENT" : {
+        "IDENTIFIER" : "bot_intent",
+        "LAYERS" : [
+          {
+            "NAME" : "bot_intent_rec_L1",
+            "NR_UNITS" : 128,
+            "TYPE" : "BIDIRECTIONAL",
+            "SKIP_CONNECTIONS" : [],
+            "RETURN_STATE" : 1
+          }
+        ]
+  
+      }
     }
   },
   "DECODER_ARCHITECTURE": {
