@@ -17,9 +17,25 @@ valid_lstms = ['unidirectional', 'bidirectional']
 str_optimizers = ['rmsprop', 'sgd', 'adam', 'nadam', 'adagrad']
 str_losses = ['mse', 'mae', 'sparse_categorical_crossentropy'] #TODO sparse_.... in TF
 
+__VER__ = "1.0.0"
+
+"""
+@history:
+  
+  2019-02-08: uploaded on github. Current functionalities:
+    - hierarchical encoder - decoder
+    - character embeddings
+    - intent prediction
+    - insertion of the last encoder intent as an embedding in the decoder
+    
+
+"""
+
 
 class HierarchicalNet:
   def __init__(self, logger):
+    self._version = __VER__
+    
     self.logger = logger
     self.config_data = self.logger.config_data
     self.has_decoder = False
@@ -48,7 +64,9 @@ class HierarchicalNet:
 
     self.dec_lstm_cells = []
     self.epoch_loaded_model = 0
-
+    
+    self._log("Initialized HierarchicalNet v{}".format(self._version))
+    
     return
   
   def _parse_config_data(self):
