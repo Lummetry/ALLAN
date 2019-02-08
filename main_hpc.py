@@ -5,7 +5,6 @@ import numpy as np
 #from tqdm import tqdm
 
 from Runner import ChatBot
-import platform
 
 def compare_models(model1, model2):
   nr_layers = len(model1.layers)
@@ -114,39 +113,33 @@ if __name__ == '__main__':
   TRAIN_GENERATOR_GOOD = Generator(batches_good, loop_forever=True)
 
 
-  sys = platform.system()
-  if sys == 'Linux':
-    prefix = '/home/mlteam/'
-  else:
-    prefix = 'C:/Users/LaurentiuP/'
-
   from doc_utils import DocUtils
   d = DocUtils(logger.GetDataFile('demo_20190130/index2word_final_ep60.pickle'),
                max_nr_words=CONFIG_DATA['MAX_WORDS'], max_nr_chars=CONFIG_DATA['MAX_CHARACTERS'])
-  d.CreateLabelsVocab(fn=prefix + 'Lummetry.AI Dropbox/DATA/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/Selectie_22-Jan-19/Labels.txt')
+  d.CreateLabelsVocab(fn=logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190204_Production_selection_v0_1/Labels.txt')
 
   hnet = HierarchicalNet(logger)
 
-#  hnet.DefineTrainableModel()
+  hnet.DefineTrainableModel()
 #  hnet.CreatePredictionModels()
 
-  hnet.LoadModelWeightsAndConfig('20190130_h_enc_dec_lrdec_forcetraining_epoch200_loss0.02')
+#  hnet.LoadModelWeightsAndConfig('20190130_h_enc_dec_lrdec_forcetraining_epoch200_loss0.02')
 #  hnet.Fit(generator=TRAIN_GENERATOR_GOOD, nr_epochs=200,
 #           steps_per_epoch=steps_per_epoch_good, save_period=50)
 
 
 
-  conversation = [
-      'Bine ai venit! Numele meu este Oana. Cu ce te pot ajuta?',
-      'Sarut mana doamna Oana.',
-      'Buna, <NAME>! Cum te simti astazi?',
-      'Imi este teama sa nu am o boala de piele.'
-  ]
+#  conversation = [
+#      'Bine ai venit! Numele meu este Oana. Cu ce te pot ajuta?',
+#      'Sarut mana doamna Oana.',
+#      'Buna, <NAME>! Cum te simti astazi?',
+#      'Imi este teama sa nu am o boala de piele.'
+#  ]
 
-  hnet._step_by_step_prediction(d, conversation, method='argmax')
+#  hnet._step_by_step_prediction(d, conversation, method='argmax')
 #  hnet._step_by_step_prediction(c, conversation, method='sampling')
 
 
-#  c = ChatBot(logger)
+#  c = ChatBot(logger2)
 #  c.LoadModels()
 #  c._step_by_step_prediction(d, conversation, method='argmax')

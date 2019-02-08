@@ -213,7 +213,11 @@ class HierarchicalNet:
     if 'TRAINABLE' in config_emb_words: trainable = config_emb_words['TRAINABLE']
     if 'EMB_MATRIX_PATH' in config_emb_words:
       if config_emb_words['EMB_MATRIX_PATH'] != '':
-        weights = np.load(config_emb_words['EMB_MATRIX_PATH'])
+        path = config_emb_words['EMB_MATRIX_PATH']
+        if config_emb_words['USE_DRIVE']:
+          path = self.logger.GetDataFile(path)
+      
+        weights = np.load(path)
         assert len(weights.shape) == 2
         if 'PAD' in config_emb_words:
           nr_paddings = config_emb_words['PAD']
