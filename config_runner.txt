@@ -1,0 +1,24 @@
+{
+    "BASE_FOLDER" : "Dropbox",
+    "APP_FOLDER"  : "_doc_ro_chatbot_data/_rochatbot_data",
+
+    "ENCODER_NAME" : "20190130_h_enc_dec_lrdec_forcetraining_epoch200_loss0.02_encoder.h5",
+    "DECODER_NAME" : "20190130_h_enc_dec_lrdec_forcetraining_epoch200_loss0.02_decoder.h5",
+
+    "DECODER" : {
+      "INITIAL_STATE" : ["enc_rec_L2_256", ""]
+    },
+
+    "WORDS_DICTIONARY"     : "demo_20190130/dict_word2id.pickle",
+    "INV_WORDS_DICTIONARY" : "demo_20190130/dict_id2word.pickle",
+    "LABELS_DICTIONARY"    : "demo_20190130/dict_label2id.pickle",
+    "INV_LABELS_DICTIONARY": "demo_20190130/dict_id2label.pickle",
+    "CHARS_DICTIONARY"     : "demo_20190130/dict_char2id.pickle",
+    "INV_CHARS_DICTIONARY" : "demo_20190130/dict_id2char.pickle",
+
+    "MAX_WORDS" : 50,
+    "MAX_CHARACTERS" : 200,
+    "NR_LABELS" : 51
+
+
+}
