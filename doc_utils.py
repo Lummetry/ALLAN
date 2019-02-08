@@ -4,6 +4,8 @@ import pickle
 import numpy as np
 import pandas as pd
 from nltk.tokenize import word_tokenize
+import json
+import random
 
 class DocUtils():
   def __init__(self, gensim_i2v, max_nr_words=None, max_nr_chars=None):
@@ -36,6 +38,16 @@ class DocUtils():
     
     self.max_nr_words = max_nr_words
     self.max_nr_chars = max_nr_chars
+    
+    
+    self.starts = [
+      "Hei, ma numesc Oana, te pot ajuta cu ceva?",
+      "Bine ai venit! Numele meu este Oana si m-as bucura sa te pot ajuta cu ceva.",
+      "Buna! Ma numesc Oana. Cu ce te pot ajuta?",
+      "Buna! Numele meu este Oana. In ce fel as putea sa te ajut?",
+      "Buna! Eu sunt Oana si sunt aici sa iti vin in ajutor."
+    ]
+  
     return
 
   def prepare_for_tokenization(self, string):
@@ -62,15 +74,19 @@ class DocUtils():
       full_path = os.path.join(path, file)
       with open(full_path, 'rt') as handle:
         labels = handle.read().splitlines()
-        labels = list(map(lambda x: self.dict_label2id[x], labels))
+        try:
+          labels = list(map(lambda x: self.dict_label2id[x], labels))
+        except Exception as e:
+          print(e)
+          print(full_path)
+          raise Exception
 
       
       self.all_labels[file] = labels
     return
-
+  
   def GenerateBatches(self, path, use_characters=True, use_labels=True, eps_words=10, eps_characters=30):
     conversations_w, conversations_c = self.tokenize_conversations(path=path,
-                                                                   use_characters=use_characters,
                                                                    eps_words=eps_words,
                                                                    eps_characters=eps_characters)
     
@@ -114,61 +130,158 @@ class DocUtils():
         if not use_labels:
           batches.append((new_corpus, target))
         else:
-          batches.append((new_corpus, target, current_labels[:num]))
+          batches.append((new_corpus, target, current_labels[:(num+1)])) # current_labels contain also the label for the bot
 
     return batches
+  
+  
+  def GenerateValidationBatches(self, path, use_labels=True):
+    conversations_lines, conversations_labels, conversations_possibilities = self.tokenize_validation_conversations(path)
+    
+    keys = conversations_lines.keys()
+    batches = {}
+  
+    for k1 in keys:
+      for k2 in conversations_lines[k1].keys():
+        current_lines = conversations_lines[k1][k2]
+        current_possibilities = conversations_possibilities[k1][k2]
+        
+        if use_labels:
+          current_labels = conversations_labels[k1][k2]
+        
+        assert len(current_lines) == len(current_labels)
 
+        final_key = (k2 + 1) * 2
+        if final_key not in batches: batches[final_key] = []
+        
+        if not use_labels:
+          batches[final_key].append((current_lines, current_possibilities))
+        else:
+          batches[final_key].append((current_lines, current_possibilities, current_labels))
+      #endfor
+    #endfor
 
-  def tokenize_conversations(self, path, use_characters=True, eps_words=10, eps_characters=30):
-    num_chars_distribution = []
-    num_words_distribution = []
+    return batches
+    
+        
+  def tokenize_validation_conversations(self, path):
+    conversations_lines = {}
+    conversations_possibilities = {}
+    conversations_labels = {}
+    for file in os.listdir(path):
+      if not file.endswith('.json'): continue
+      
+      conversations_lines[file] = {}
+      conversations_possibilities[file] = {}
+      conversations_labels[file] = {}
+    
+      with open(os.path.join(path, file), 'r') as f:
+        crt_json = json.load(f)
+
+      crt_conversation_lines = []
+      crt_conversation_labels = []
+      crt_conversation_possibilities = []
+      turns = crt_json['TURNS']
+      for i in range(len(turns)):
+        crt_turns = []
+        crt_labels = []
+        crt_possibilities = []
+
+        t = turns[:i+1]
+
+        crt_turns.append(random.choice(self.starts))
+        crt_labels.append(self.dict_label2id["salut"])
+        
+        for j,x in enumerate(t):
+          crt_turns.append(x['STATEMENT'])
+          crt_labels.append(self.dict_label2id[x['LABEL']])
+          
+          if j != len(t) - 1:
+            possibility = random.choice(x['POSSIBILITIES'])
+            crt_turns.append(possibility['STATEMENT'])
+            crt_labels.append(self.dict_label2id[possibility['LABEL']])
+          #endif
+        #endfor
+        
+        crt_possibilities = {
+            'STATEMENTS': [p['STATEMENT'] for p in x['POSSIBILITIES']],
+            'LABEL' :  self.dict_label2id[x['POSSIBILITIES'][0]['LABEL']] # labels are the same for a group of possibilities
+        }
+
+        crt_conversation_lines.append(crt_turns)
+        crt_conversation_labels.append(crt_labels)
+        crt_conversation_possibilities.append(crt_possibilities)
+      #endfor
+      
+      assert len(crt_conversation_lines) == len(crt_conversation_labels) == len(crt_conversation_possibilities)
+      
+      for i in range(len(crt_conversation_lines)):
+        conversations_lines[file][i] = crt_conversation_lines[i]
+        conversations_possibilities[file][i] = crt_conversation_possibilities[i]
+        conversations_labels[file][i] = crt_conversation_labels[i]
+    #endfor
+
+    return conversations_lines, conversations_labels, conversations_possibilities
+  
+  
+  def tokenize_single_conversation(self, lines, append_to_distributions=False):
+    current_conversation_w = []
+    current_conversation_c = []
+   
+    for line in lines:
+      if line == '\n': continue
+      if line[-1] == '\n': line = line[:-1]
+      characters = []
+      characters.extend(line)
+      if append_to_distributions: self.num_chars_distribution.append(len(characters))
+
+      line_mod = self.prepare_for_tokenization(line)
+      line_mod = line_mod.split()
+      if append_to_distributions: self.num_words_distribution.append(len(line_mod))
+      tokens_w = []
+      for t in line_mod:
+        try:
+          tokens_w.append(self.dict_word2id[t])
+        except:
+          tokens_w.append(self.dict_word2id['<UNK>'])
+          if t not in self.unknown_words:
+            self.unknown_words[t] = 1
+          else:
+            self.unknown_words[t] += 1
+      #endfor
+
+      tokens_c = []
+      for c in characters:
+        tokens_c.append(self.dict_char2id[c])
+      
+      current_conversation_c.append(tokens_c)
+      current_conversation_w.append(tokens_w)
+    #endfor
+    return current_conversation_w, current_conversation_c
+      
+
+  def tokenize_conversations(self, path, eps_words=10, eps_characters=30):
+    self.num_chars_distribution = []
+    self.num_words_distribution = []
     conversations_w = {}
     conversations_c = {}
     self.unknown_words = {}
 
     for file in os.listdir(path):
       full_path = os.path.join(path, file)
-      current_conversation_w = []
-      current_conversation_c = []
-      with open(full_path, "r") as f:
-        for line in f.readlines():
-          if line == '\n': continue
-          if line[-1] == '\n': line = line[:-1]
-          characters = []
-          characters.extend(line)
-          num_chars_distribution.append(len(characters))
-
-          line_mod = self.prepare_for_tokenization(line)
-          line_mod = line_mod.split()
-          num_words_distribution.append(len(line_mod))
-          tokens_w = []
-          for t in line_mod:
-            try:
-              tokens_w.append(self.dict_word2id[t])
-            except:
-              tokens_w.append(self.dict_word2id['<UNK>'])
-              if t not in self.unknown_words:
-                self.unknown_words[t] = 1
-              else:
-                self.unknown_words[t] += 1
-          #endfor
-
-          tokens_c = []
-          for c in characters:
-            tokens_c.append(self.dict_char2id[c])
-          
-          current_conversation_c.append(tokens_c)
-          current_conversation_w.append(tokens_w)
-        #endfor
-      #endwith
+      with open(full_path, 'r') as f:
+        lines = f.readlines()
+      
+      current_conversation_w, current_conversation_c = self.tokenize_single_conversation(lines, append_to_distributions=True)
+      
       conversations_c[file] = current_conversation_c
       conversations_w[file] = current_conversation_w
     #endfor
 
-    num_chars_distribution = np.array(num_chars_distribution).reshape(-1,1)
-    num_words_distribution = np.array(num_words_distribution).reshape(-1,1)
+    self.num_chars_distribution = np.array(self.num_chars_distribution).reshape(-1,1)
+    self.num_words_distribution = np.array(self.num_words_distribution).reshape(-1,1)
 
-    df_distrib = pd.DataFrame(data=np.concatenate((num_words_distribution, num_chars_distribution), axis=1),
+    df_distrib = pd.DataFrame(data=np.concatenate((self.num_words_distribution, self.num_chars_distribution), axis=1),
                               columns=['Words', 'Characters']).describe()
 
     print("Distributions descriptions:\n" + df_distrib.to_string())
@@ -179,10 +292,7 @@ class DocUtils():
     print("Setting max nr. words to {}".format(self.max_nr_words))
     print("Setting max nr. chars to {}".format(self.max_nr_chars))
     
-    if use_characters:
-      return conversations_w, conversations_c
-    else:
-      return conversations_w, None
+    return conversations_w, conversations_c
     
     
   def input_word_text_to_tokens(self, lines, use_characters=True):        
@@ -243,13 +353,24 @@ class DocUtils():
       text = text + [row_text]
     return " ".join(text)
 
-
-if __name__ == '__main__':
-  d = DocUtils('C:/Users/LaurentiuP/Lummetry.AI Dropbox/DATA/_doc_ro_chatbot_data/_rochatbot_data/_data/demo_20190130/index2word_final_ep60.pickle')
   
-  d.CreateLabelsVocab('C:/Users/LaurentiuP/Lummetry.AI Dropbox/DATA/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/Selectie_22-Jan-19/Labels.txt')
-  d.GenerateLabels('C:/Users/LaurentiuP/Lummetry.AI Dropbox/DATA/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/Selectie_22-Jan-19/labels')
+  def translate_tokenize_input(self, _input):
+    for idx, sentence in enumerate(_input):
+      new_sentence = [self.dict_id2word[word] for i,word in enumerate(sentence) if (i < self.max_nr_words) and (self.dict_id2word[word] != '<PAD>')]
+      print(str(new_sentence))
+    
+    return
   
-  a=d.GenerateBatches('C:/Users/LaurentiuP/Lummetry.AI Dropbox/DATA/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/Selectie_22-Jan-19/texts',
-                      eps_words=7, eps_characters=21)
   
+  def organize_text(self, text):
+    text = text[1:]
+    text = text.replace(' ?', '?')
+    text = text.replace(' !', '!')
+    text = text.replace(' ,', ',')
+    text = text.replace(' .', '.')
+    return text
+  
+  def SetTestingBatches(self, batches_train_to_validate, batches_validation):
+    self.batches_train_to_validate = batches_train_to_validate
+    self.batches_validation = batches_validation
+    return
