@@ -204,7 +204,7 @@ class DocUtils():
         #endfor
         
         crt_possibilities = {
-            'STATEMENTS': [p['STATEMENT'] for p in x['POSSIBILITIES']],
+            'STATEMENTS': [self.prepare_for_tokenization(p['STATEMENT']).split() for p in x['POSSIBILITIES']],
             'LABEL' :  self.dict_label2id[x['POSSIBILITIES'][0]['LABEL']] # labels are the same for a group of possibilities
         }
 
@@ -370,7 +370,7 @@ class DocUtils():
     text = text.replace(' .', '.')
     return text
   
-  def SetTestingBatches(self, batches_train_to_validate, batches_validation):
+  def SetPredictionBatches(self, batches_train_to_validate, batches_validation):
     self.batches_train_to_validate = batches_train_to_validate
     self.batches_validation = batches_validation
     return

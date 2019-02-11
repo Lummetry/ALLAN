@@ -94,21 +94,7 @@
           "SKIP_CONNECTIONS": ["INPUT"],
           "RETURN_STATE": 2
         }
-      ],
-      
-      "BOT_INTENT" : {
-        "IDENTIFIER" : "bot_intent",
-        "LAYERS" : [
-          {
-            "NAME" : "bot_intent_rec_L1",
-            "NR_UNITS" : 128,
-            "TYPE" : "BIDIRECTIONAL",
-            "SKIP_CONNECTIONS" : [],
-            "RETURN_STATE" : 1
-          }
-        ]
-  
-      }
+      ]
     }
   },
   "DECODER_ARCHITECTURE": {

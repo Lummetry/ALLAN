@@ -1,7 +1,7 @@
-from tqdm import tqdm, trange
+from tqdm import trange
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Lambda, concatenate, TimeDistributed
-from tensorflow.keras.layers import Bidirectional, Dropout, CuDNNLSTM, Dense, Embedding, Reshape
+from tensorflow.keras.layers import Bidirectional, CuDNNLSTM, Dense, Embedding, Reshape
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 import numpy as np
@@ -10,7 +10,10 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
-import keras.backend as K
+
+from metrics import compute_bleu
+from sklearn.metrics import accuracy_score
+import pandas as pd
 
 
 valid_lstms = ['unidirectional', 'bidirectional']
@@ -834,13 +837,16 @@ class HierarchicalNet:
     for key,val in logs.items():
       str_logs += "{}:{:.6f}  ".format(key,val)
     self._log(" Train/Fit: Epoch: {} Results: {}".format(epoch,str_logs))
-    
+
+    self.Predict(dataset='train')
+    self.Predict(dataset='validation')
+
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
     self._save_model(epoch, loss)
     return
-      
-    
+
+
   def _mk_plot(self, fig_path):
     sns.set()
     plt.figure(figsize=(1280/96, 720/96), dpi=96)
@@ -961,7 +967,7 @@ class HierarchicalNet:
   
   
 
-  def _step_by_step_prediction(self, _input, method='sampling', verbose=1):
+  def _step_by_step_prediction(self, _input, method='sampling', verbose=1, return_text=True):
     assert method in ['sampling', 'argmax', 'beamsearch']
     _type = type(_input)
 
@@ -983,6 +989,7 @@ class HierarchicalNet:
     last_intent_user = np.argmax(predict_results[idx_last_intent_user][:,[-1],:], axis=-1)
     all_intents_user = np.argmax(predict_results[idx_last_intent_user], axis=-1)
     
+    intent_bot = None
     if self.has_bot_intent:
       intent_bot = np.expand_dims(np.argmax(predict_results[-1], axis=-1), axis=-1)
     
@@ -1002,7 +1009,7 @@ class HierarchicalNet:
         idx = self._get_key_index_odict(self.enc_layers_full_state, enc_layer_initial_state)
         if idx is not None:
           inp_h, inp_c = enc_states[2*idx:2*(idx+1)]
-          self._log("Enc_h: {}  Dec_h: {}".format(inp_h.sum(), inp_c.sum()))
+          if verbose: self._log("Enc_h: {}  Dec_h: {}".format(inp_h.sum(), inp_c.sum()))
       #endif
 
       dec_model_inputs += [inp_h, inp_c]
@@ -1013,7 +1020,7 @@ class HierarchicalNet:
     nr_preds = 0
     while current_gen_token != self.data_processer.end_char_id:
       current_gen_token = np.array(current_gen_token).reshape((1,1))
-    
+
       if not self.has_bot_intent:
         dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs + [current_gen_token, last_intent_user])
       else:
@@ -1034,15 +1041,99 @@ class HierarchicalNet:
         break
     #end_while
     predicted_tokens = predicted_tokens[:-1]
-    predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
-    predicted_text = self.data_processer.organize_text(predicted_text)
+    
+    if return_text:
+      predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
+      predicted_text = self.data_processer.organize_text(predicted_text)
 
-    if verbose:
-      self._log("  --> '{}'".format(predicted_text))
-      
-    if self.has_bot_intent:
-      return predicted_text, last_intent_user, all_intents_user, intent_bot
+      if verbose:
+        self._log("  --> '{}'".format(predicted_text))
     else:
-      return predicted_text, last_intent_user, all_intents_user
+      predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
+
+    return predicted_text, last_intent_user, all_intents_user, intent_bot
+
+  
+  def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
+    references, candidates = bleu_params
+    bleu = compute_bleu(references, candidates)
+    
+    acc_intents_user, acc_intent_bot = None, None
+    
+    if intents_user_params is not None:
+      true_intents_user, predicted_intents_user = intents_user_params
+      acc_intents_user = accuracy_score(true_intents_user, predicted_intents_user)
+
+    if intent_bot_params is not None:
+      true_intent_bot, predicted_intent_bot = intent_bot_params
+      acc_intent_bot = accuracy_score(true_intent_bot, predicted_intent_bot)
+
+    return bleu, acc_intents_user, acc_intent_bot
+    
 
 
+  def Predict(self, dataset):
+    dataset = dataset.lower()
+    assert dataset in ['train', 'validation']
+    dict_results = {}
+    
+    if dataset == 'train':
+      ds = self.data_processer.batches_train_to_validate
+    elif dataset == 'validation':
+      ds = self.data_processer.batches_validation
+    #endif
+    
+    for nr_turns in ds.keys():
+      dict_results[nr_turns] = {}
+      dict_results[nr_turns]['BLEU_ARGMAX'] = []
+      dict_results[nr_turns]['BLEU_SAMPLING'] = []
+      dict_results[nr_turns]['ACC_INTENTS_USER'] = [] 
+      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = []
+
+    for nr_turns, all_dialogues in ds.items():
+      for current_state in all_dialogues:        
+        if dataset == 'train':
+          reference = [list(map(lambda x: self.data_processer.dict_id2word[x], current_state[1][1:-1]))]
+          true_intents_user = current_state[2][:-1]
+          true_intent_bot   = current_state[2][-1:]
+        elif dataset == 'validation':
+          reference = current_state[1]['STATEMENTS']
+          true_intents_user = current_state[2]
+          true_intent_bot   = [current_state[1]['LABEL']]
+        #endif
+
+        prediction_result = self._step_by_step_prediction(current_state[0], method='argmax', verbose=0, return_text=False)
+        candidate_argmax, _, predicted_intents_user, predicted_intent_bot = prediction_result
+        candidate_argmax = [candidate_argmax] * len(reference)
+
+        prediction_result = self._step_by_step_prediction(current_state[0], method='sampling', verbose=0, return_text=False)
+        candidate_sampling, _, _, _ = prediction_result
+        candidate_sampling = [candidate_sampling] * len(reference)
+
+        intent_bot_params = None
+        if predicted_intent_bot is not None:
+          intent_bot_params = (true_intent_bot, predicted_intent_bot)
+
+        bleu_argmax, acc_intents_user, acc_intent_bot = self.compute_metrics(
+            bleu_params=(reference, candidate_argmax),
+            intents_user_params=(true_intents_user, predicted_intents_user),
+            intent_bot_params=intent_bot_params) 
+
+        bleu_sampling, _, _ = self.compute_metrics((reference, candidate_sampling))
+
+        dict_results[nr_turns]['BLEU_ARGMAX'].append(bleu_argmax)
+        dict_results[nr_turns]['BLEU_SAMPLING'].append(bleu_sampling)
+        dict_results[nr_turns]['ACC_INTENTS_USER'].append(acc_intents_user)
+        if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'].append(acc_intent_bot)
+      #endfor
+      
+      dict_results[nr_turns]['BLEU_ARGMAX'] = np.mean(dict_results[nr_turns]['BLEU_ARGMAX'])
+      dict_results[nr_turns]['BLEU_SAMPLING'] = np.mean(dict_results[nr_turns]['BLEU_SAMPLING'])
+      dict_results[nr_turns]['ACC_INTENTS_USER'] = np.mean(dict_results[nr_turns]['ACC_INTENTS_USER'])
+      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = np.mean(dict_results[nr_turns]['ACC_INTENT_BOT'])
+    #endfor
+    
+    df_results = pd.DataFrame.from_dict(dict_results)
+    
+    self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
+    return      
