@@ -4,7 +4,7 @@
 
   "MAX_WORDS" : 50,
   "MAX_CHARACTERS" : 200,
-  "NR_LABELS" : 51,
+  "NR_LABELS" : 67,
 
   "MODEL_NAME" : "20190130_h_enc_dec_lrdec_forcetraining",
   "METRICS": [],
@@ -124,7 +124,7 @@
       },
       {
         "NAME": "emb_labels",
-        "INPUT_DIM": 51,
+        "INPUT_DIM": 67,
         "OUTPUT_DIM": 6,
         "CONNECTED_TO": "input_label",
         "RESHAPE": [],
