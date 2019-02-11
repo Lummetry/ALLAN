@@ -838,8 +838,9 @@ class HierarchicalNet:
       str_logs += "{}:{:.6f}  ".format(key,val)
     self._log(" Train/Fit: Epoch: {} Results: {}".format(epoch,str_logs))
 
-    self.Predict(dataset='train')
-    self.Predict(dataset='validation')
+    if self.validate:
+      self.Predict(dataset='train')
+      self.Predict(dataset='validation')
 
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
@@ -978,6 +979,7 @@ class HierarchicalNet:
       str_input = _input
     elif _type is np.ndarray:
       input_tokens = _input
+      input_tokens = np.expand_dims(input_tokens, axis=0)
       str_input = self.data_processer.translate_tokenize_input(_input)
 
     if verbose: self._log("Given '{}' the decoder predicted:".format(str_input))
@@ -1102,11 +1104,15 @@ class HierarchicalNet:
           true_intent_bot   = [current_state[1]['LABEL']]
         #endif
 
-        prediction_result = self._step_by_step_prediction(current_state[0], method='argmax', verbose=0, return_text=False)
+        prediction_result = self._step_by_step_prediction(current_state[0],
+                                                          method='argmax', verbose=0,
+                                                          return_text=False)
         candidate_argmax, _, predicted_intents_user, predicted_intent_bot = prediction_result
         candidate_argmax = [candidate_argmax] * len(reference)
 
-        prediction_result = self._step_by_step_prediction(current_state[0], method='sampling', verbose=0, return_text=False)
+        prediction_result = self._step_by_step_prediction(current_state[0],
+                                                          method='sampling', verbose=0,
+                                                          return_text=False)
         candidate_sampling, _, _, _ = prediction_result
         candidate_sampling = [candidate_sampling] * len(reference)
 

@@ -47,6 +47,8 @@ class DocUtils():
       "Buna! Numele meu este Oana. In ce fel as putea sa te ajut?",
       "Buna! Eu sunt Oana si sunt aici sa iti vin in ajutor."
     ]
+    
+    self.validate = False
   
     return
 
@@ -371,6 +373,7 @@ class DocUtils():
     return text
   
   def SetPredictionBatches(self, batches_train_to_validate, batches_validation):
+    self.validate = True
     self.batches_train_to_validate = batches_train_to_validate
     self.batches_validation = batches_validation
     return
