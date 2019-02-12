@@ -838,7 +838,7 @@ class HierarchicalNet:
       str_logs += "{}:{:.6f}  ".format(key,val)
     self._log(" Train/Fit: Epoch: {} Results: {}".format(epoch,str_logs))
 
-    if self.validate:
+    if self.data_processer.validate:
       self.Predict(dataset='train')
       self.Predict(dataset='validation')
 
@@ -980,7 +980,7 @@ class HierarchicalNet:
     elif _type is np.ndarray:
       input_tokens = _input
       input_tokens = np.expand_dims(input_tokens, axis=0)
-      str_input = self.data_processer.translate_tokenize_input(_input)
+      str_input = self.data_processer.translate_tokenized_input(_input)
 
     if verbose: self._log("Given '{}' the decoder predicted:".format(str_input))
     predict_results = self.enc_pred_model.predict(input_tokens)
@@ -1053,7 +1053,9 @@ class HierarchicalNet:
     else:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
-    return predicted_text, last_intent_user, all_intents_user, intent_bot
+    if self.has_bot_intent: intent_bot = intent_bot.reshape(-1)
+
+    return predicted_text, last_intent_user, all_intents_user.reshape(-1), intent_bot
 
   
   def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
