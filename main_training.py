@@ -3,6 +3,7 @@ from hierarchical_wrapper_multioutput import HierarchicalNet
 import numpy as np
 import random
 from doc_utils import DocUtils
+import argparse
 
 def compare_models(model1, model2):
   nr_layers = len(model1.layers)
@@ -63,7 +64,12 @@ def TrainGenerator(batches, loop_forever=False, use_bot_intent=False):
 
 
 if __name__ == '__main__':
-  logger = LoadLogger(lib_name='CHATTRAIN', config_file='config_hpc.txt', use_tf_keras=True)
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-c", "--config", help="Configuration file in JSON format",
+                      type=str, default='configurations/01_config_same_emb_no_bot_intent.txt')
+  args = parser.parse_args()
+
+  logger = LoadLogger(lib_name='CHATTRAIN', config_file=args.config, use_tf_keras=True)
   d = DocUtils(logger, logger.GetDataFile('demo_20190130/index2word_final_ep60.pickle'))
   
   d.CreateLabelsVocab(fn=logger.GetDropboxDrive() +\
@@ -106,5 +112,9 @@ if __name__ == '__main__':
   hnet.DefineTrainableModel()
   hnet.CreatePredictionModels()
 
-  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=200,
+  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=300,
            steps_per_epoch=steps_per_epoch, save_period=50)
+
+  
+  
+  
