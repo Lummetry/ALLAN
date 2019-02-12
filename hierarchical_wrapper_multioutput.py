@@ -1046,8 +1046,6 @@ class HierarchicalNet:
     
     if return_text:
       predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
-      predicted_text = self.data_processer.organize_text(predicted_text)
-
       if verbose:
         self._log("  --> '{}'".format(predicted_text))
     else:
@@ -1144,4 +1142,4 @@ class HierarchicalNet:
     df_results = pd.DataFrame.from_dict(dict_results)
     
     self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
-    return      
+    return

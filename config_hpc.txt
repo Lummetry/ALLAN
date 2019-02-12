@@ -6,7 +6,7 @@
   "MAX_CHARACTERS" : 200,
   "NR_LABELS" : 67,
 
-  "MODEL_NAME" : "20190130_h_enc_dec_lrdec_forcetraining",
+  "MODEL_NAME" : "20190212_h_enc_dec_lrdec_forcetraining",
   "METRICS": [],
   "USE_KERAS" : 1,
   "OPTIMIZER" : "adam",

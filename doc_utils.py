@@ -8,8 +8,9 @@ import json
 import random
 
 class DocUtils():
-  def __init__(self, gensim_i2v, max_nr_words=None, max_nr_chars=None):
-
+  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None):
+    self.logger = logger
+    
     with open(gensim_i2v, 'rb') as handle:
       id2word = pickle.load(handle)
 
@@ -51,6 +52,11 @@ class DocUtils():
     self.validate = False
   
     return
+  
+  def _log(self, str_msg, results = False, show_time = False, noprefix=False):
+    self.logger.VerboseLog(str_msg, results=results, show_time=show_time,
+                           noprefix=noprefix)
+    return
 
   def prepare_for_tokenization(self, string):
     return re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', string)
@@ -66,6 +72,8 @@ class DocUtils():
 
     self.dict_label2id = {labels[i]: i for i in range(len(labels))}
     self.dict_id2label = {v:k for k,v in self.dict_label2id.items()}
+    
+    self._log("Labels vocab created.")
     return
 
   
@@ -85,9 +93,15 @@ class DocUtils():
 
       
       self.all_labels[file] = labels
+    
+    self._log("All labels from [{}] were processed.".format(path[-50:]))
     return
   
   def GenerateBatches(self, path, use_characters=True, use_labels=True, eps_words=10, eps_characters=30):
+    str_log = "Generating TRAINING batches based on conversations extracted from [..{}] "
+    str_log += "(use_characters={}  use_labels={}  eps_words={}  eps_characters={}) ..."
+    self._log(str_log.format(path[-50:], use_characters, use_labels, eps_words, eps_characters))
+    
     conversations_w, conversations_c = self.tokenize_conversations(path=path,
                                                                    eps_words=eps_words,
                                                                    eps_characters=eps_characters)
@@ -133,11 +147,15 @@ class DocUtils():
           batches.append((new_corpus, target))
         else:
           batches.append((new_corpus, target, current_labels[:(num+1)])) # current_labels contain also the label for the bot
-
+    
     return batches
   
   
   def GenerateValidationBatches(self, path, use_labels=True):
+    str_log = "Generating VAL batches based on conversations extracted from [..{}] "
+    str_log += "(use_labels={}) ..."
+    self._log(str_log.format(path[-50:], use_labels))
+
     conversations_lines, conversations_labels, conversations_possibilities = self.tokenize_validation_conversations(path)
     
     keys = conversations_lines.keys()
@@ -286,13 +304,13 @@ class DocUtils():
     df_distrib = pd.DataFrame(data=np.concatenate((self.num_words_distribution, self.num_chars_distribution), axis=1),
                               columns=['Words', 'Characters']).describe()
 
-    print("Distributions descriptions:\n" + df_distrib.to_string())
+    self._log("Distributions descriptions:\n" + df_distrib.to_string())
 
     self.max_nr_words = int(df_distrib.loc['max']['Words']) + eps_words
     self.max_nr_chars = int(df_distrib.loc['max']['Characters']) + eps_characters
 
-    print("Setting max nr. words to {}".format(self.max_nr_words))
-    print("Setting max nr. chars to {}".format(self.max_nr_chars))
+    self._log("Setting max nr. words to {}".format(self.max_nr_words))
+    self._log("Setting max nr. chars to {}".format(self.max_nr_chars))
     
     return conversations_w, conversations_c
     
@@ -353,7 +371,9 @@ class DocUtils():
         if self.dict_id2word[list_tokens[r][c]] != '<PAD>':
           row_text = row_text + ' ' + self.dict_id2word[list_tokens[r][c]]
       text = text + [row_text]
-    return " ".join(text)
+    
+    text = text[1:]
+    return self.organize_text(" ".join(text))
 
   
   def translate_tokenized_input(self, _input):
@@ -361,12 +381,15 @@ class DocUtils():
     for idx, sentence in enumerate(_input):
       new_sentence = [self.dict_id2word[word] for i,word in enumerate(sentence) if (i < self.max_nr_words) and (self.dict_id2word[word] != '<PAD>')]
       all_sentences.append(new_sentence)
-
-    return all_sentences
+    
+    final_str = ""
+    for s in all_sentences:
+      final_str += " ".join(s)
+      final_str += "\n"
+    return self.organize_text(final_str)
   
   
   def organize_text(self, text):
-    text = text[1:]
     text = text.replace(' ?', '?')
     text = text.replace(' !', '!')
     text = text.replace(' ,', ',')
@@ -377,4 +400,29 @@ class DocUtils():
     self.validate = True
     self.batches_train_to_validate = batches_train_to_validate
     self.batches_validation = batches_validation
+    return
+  
+  
+  def translate_generator_sentences(self, batch, translate_out_batch=True):
+    in_batch  = batch[0]
+    out_batch = batch[1]
+    in_label_batch = None
+    if len(batch) == 3:
+      in_label_batch = batch[2]
+      assert self.dict_id2label is not None
+    
+    # print input
+    for idx, sentence in enumerate(in_batch):
+        new_sentence = [self.dict_id2word[word] for i,word in enumerate(sentence) if (i < self.max_nr_words) and (self.dict_id2word[word] != '<PAD>')]
+        
+        if len(batch) == 3:
+          label = self.dict_id2label[in_label_batch[idx]]
+          self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + label, noprefix=True)
+        else:
+          self._log(self.organize_text(" ".join(new_sentence)), noprefix=True)
+    
+    # print output
+    if translate_out_batch:
+      new_sentence = [self.dict_id2word[word] for word in out_batch]
+      self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_id2label[in_label_batch[-1]], noprefix=True)
     return
