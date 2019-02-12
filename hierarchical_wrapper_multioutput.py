@@ -846,7 +846,7 @@ class HierarchicalNet:
       validation_epochs = self.config_data['VALIDATION_EPOCHS']
     
     if validation_epochs is not None and self.data_processer.validate:
-      if (epoch + 1) % validation_epochs == 0:
+      if ((epoch + 1) % validation_epochs == 0) or epoch == 0:
         self._log("Validating ...")
         self.Predict(dataset='train')
         self.Predict(dataset='validation')
