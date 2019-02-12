@@ -20,7 +20,7 @@ valid_lstms = ['unidirectional', 'bidirectional']
 str_optimizers = ['rmsprop', 'sgd', 'adam', 'nadam', 'adagrad']
 str_losses = ['mse', 'mae', 'sparse_categorical_crossentropy'] #TODO sparse_.... in TF
 
-__VER__ = "1.0.0"
+__VER__ = "1.1.0"
 
 """
 @history:
@@ -31,6 +31,9 @@ __VER__ = "1.0.0"
     - intent prediction
     - insertion of the last encoder intent as an embedding in the decoder
     
+  2019-02-12:
+    - integrated bot intent prediction and peeking
+    - integrated validation methodology
 
 """
 
@@ -838,8 +841,14 @@ class HierarchicalNet:
       str_logs += "{}:{:.6f}  ".format(key,val)
     self._log(" Train/Fit: Epoch: {} Results: {}".format(epoch,str_logs))
 
-    self.Predict(dataset='train')
-    self.Predict(dataset='validation')
+    validation_epochs = None
+    if 'VALIDATION_EPOCHS' in self.config_data:
+      validation_epochs = self.config_data['VALIDATION_EPOCHS']
+    
+    if validation_epochs is not None and self.data_processer.validate:
+      if (epoch + 1) % validation_epochs == 0:  
+        self.Predict(dataset='train')
+        self.Predict(dataset='validation')
 
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
@@ -978,7 +987,8 @@ class HierarchicalNet:
       str_input = _input
     elif _type is np.ndarray:
       input_tokens = _input
-      str_input = self.data_processer.translate_tokenize_input(_input)
+      input_tokens = np.expand_dims(input_tokens, axis=0)
+      str_input = self.data_processer.translate_tokenized_input(_input)
 
     if verbose: self._log("Given '{}' the decoder predicted:".format(str_input))
     predict_results = self.enc_pred_model.predict(input_tokens)
@@ -1044,14 +1054,14 @@ class HierarchicalNet:
     
     if return_text:
       predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
-      predicted_text = self.data_processer.organize_text(predicted_text)
-
       if verbose:
         self._log("  --> '{}'".format(predicted_text))
     else:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
-    return predicted_text, last_intent_user, all_intents_user, intent_bot
+    if self.has_bot_intent: intent_bot = intent_bot.reshape(-1)
+
+    return predicted_text, last_intent_user, all_intents_user.reshape(-1), intent_bot
 
   
   def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
@@ -1102,11 +1112,15 @@ class HierarchicalNet:
           true_intent_bot   = [current_state[1]['LABEL']]
         #endif
 
-        prediction_result = self._step_by_step_prediction(current_state[0], method='argmax', verbose=0, return_text=False)
+        prediction_result = self._step_by_step_prediction(current_state[0],
+                                                          method='argmax', verbose=0,
+                                                          return_text=False)
         candidate_argmax, _, predicted_intents_user, predicted_intent_bot = prediction_result
         candidate_argmax = [candidate_argmax] * len(reference)
 
-        prediction_result = self._step_by_step_prediction(current_state[0], method='sampling', verbose=0, return_text=False)
+        prediction_result = self._step_by_step_prediction(current_state[0],
+                                                          method='sampling', verbose=0,
+                                                          return_text=False)
         candidate_sampling, _, _, _ = prediction_result
         candidate_sampling = [candidate_sampling] * len(reference)
 
@@ -1136,4 +1150,4 @@ class HierarchicalNet:
     df_results = pd.DataFrame.from_dict(dict_results)
     
     self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
-    return      
+    return
