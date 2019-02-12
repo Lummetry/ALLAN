@@ -7,7 +7,7 @@
   "NR_LABELS" : 67,
   "VALIDATION_EPOCHS" : 10,
 
-  "MODEL_NAME" : "20190212_h_enc_dec_lrdec_forcetraining",
+  "MODEL_NAME" : "03_same_emb_bot_intent",
   "METRICS": [],
   "USE_KERAS" : 1,
   "OPTIMIZER" : "adam",
@@ -17,6 +17,7 @@
   "ENCODER_ARCHITECTURE": {
     "CHILD1": {
       "IDENTIFIER": "sentence_level",
+      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
       "EMBEDDINGS": [
         {
           "NAME": "emb_words",
@@ -95,7 +96,19 @@
           "SKIP_CONNECTIONS": ["INPUT"],
           "RETURN_STATE": 2
         }
-      ]
+      ],
+      "BOT_INTENT" : {
+        "IDENTIFIER" : "bot_intent",
+        "LAYERS" : [
+          {
+            "NAME": "bot_intent_rec_L1",
+            "NR_UNITS": 128,
+            "TYPE": "BIDIRECTIONAL",
+            "SKIP_CONNECTIONS": [],
+            "RETURN_STATE": 1
+          }
+        ]
+      }
     }
   },
   "DECODER_ARCHITECTURE": {
@@ -111,7 +124,15 @@
       },
       
       {
-        "NAME": "input_label",
+        "NAME": "input_label_user",
+        "SHAPE": [
+          -2
+        ],
+        "IS_FEEDABLE": 1
+      },
+      
+      {
+        "NAME": "input_label_bot",
         "SHAPE": [
           -2
         ],
@@ -124,10 +145,19 @@
         "CONNECTED_TO": "input_words_dec"
       },
       {
-        "NAME": "emb_labels",
+        "NAME": "emb_labels_user",
         "INPUT_DIM": 67,
         "OUTPUT_DIM": 6,
-        "CONNECTED_TO": "input_label",
+        "CONNECTED_TO": "input_label_user",
+        "RESHAPE": [],
+        "USE_KERAS": 1,
+        "TRAINABLE": 1
+      },
+      {
+        "NAME": "emb_labels_bot",
+        "INPUT_DIM": 67,
+        "OUTPUT_DIM": 6,
+        "CONNECTED_TO": "input_label_bot",
         "RESHAPE": [],
         "USE_KERAS": 1,
         "TRAINABLE": 1
