@@ -356,12 +356,13 @@ class DocUtils():
     return " ".join(text)
 
   
-  def translate_tokenize_input(self, _input):
+  def translate_tokenized_input(self, _input):
+    all_sentences = []
     for idx, sentence in enumerate(_input):
       new_sentence = [self.dict_id2word[word] for i,word in enumerate(sentence) if (i < self.max_nr_words) and (self.dict_id2word[word] != '<PAD>')]
-      print(str(new_sentence))
-    
-    return
+      all_sentences.append(new_sentence)
+
+    return all_sentences
   
   
   def organize_text(self, text):
