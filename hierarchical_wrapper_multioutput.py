@@ -805,7 +805,7 @@ class HierarchicalNet:
                                   validation_steps=validation_steps,
                                   monitor=monitor,
                                   mode=mode)
-      else:  
+      else:
         self._fit_k_model(generator=generator,
                           nr_epochs=nr_epochs,
                           steps_per_epoch=steps_per_epoch,
@@ -825,7 +825,22 @@ class HierarchicalNet:
     reduce_lr_callback = ReduceLROnPlateau(monitor="loss", factor=0.5, 
                                            patience=2, min_lr=0.00001,
                                            verbose=1, mode='min')
-
+    
+    if self.data_processer.validate:
+      self.s2s_metrics = ['BLEU_ARGMAX', 'BLEU_SAMPLING', 'ACC_INTENTS_USER', 'ACC_INTENT_BOT']
+      self.dict_global_results_train = {}
+      self.dict_global_results_val   = {}
+      
+      for i,m in enumerate(self.s2s_metrics):
+        if i < len(self.s2s_metrics) - 1:
+          self.dict_global_results_train[m] = []
+          self.dict_global_results_val[m] = []
+        elif self.has_bot_intent:
+          self.dict_global_results_train[m] = []
+          self.dict_global_results_val[m] = []
+        
+        
+      
     self.trainable_model.fit_generator(generator=generator, epochs=nr_epochs,
                                        steps_per_epoch=steps_per_epoch,
                                        callbacks=[epoch_callback, reduce_lr_callback],
@@ -1096,10 +1111,9 @@ class HierarchicalNet:
     
     for nr_turns in ds.keys():
       dict_results[nr_turns] = {}
-      dict_results[nr_turns]['BLEU_ARGMAX'] = []
-      dict_results[nr_turns]['BLEU_SAMPLING'] = []
-      dict_results[nr_turns]['ACC_INTENTS_USER'] = [] 
-      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = []
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: dict_results[nr_turns][m] = []
+        elif self.has_bot_intent: dict_results[nr_turns][m] = []
 
     for nr_turns, all_dialogues in ds.items():
       for current_state in all_dialogues:        
@@ -1142,13 +1156,26 @@ class HierarchicalNet:
         if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'].append(acc_intent_bot)
       #endfor
       
-      dict_results[nr_turns]['BLEU_ARGMAX'] = np.mean(dict_results[nr_turns]['BLEU_ARGMAX'])
-      dict_results[nr_turns]['BLEU_SAMPLING'] = np.mean(dict_results[nr_turns]['BLEU_SAMPLING'])
-      dict_results[nr_turns]['ACC_INTENTS_USER'] = np.mean(dict_results[nr_turns]['ACC_INTENTS_USER'])
-      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = np.mean(dict_results[nr_turns]['ACC_INTENT_BOT'])
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
+        elif self.has_bot_intent: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
+      #endfor
     #endfor
     
     df_results = pd.DataFrame.from_dict(dict_results)
-    
+
     self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
+
+    mean_results = df_results.mean(axis=1)
+    if dataset == 'train':
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: self.dict_global_results_train[m].append(mean_results[m])
+        elif self.has_bot_intent: self.dict_global_results_train[m].append(mean_results[m])
+        self._log("\n{}\n".format(pd.DataFrame.from_dict(self.dict_global_results_train).to_string()))
+    elif dataset == 'validation':
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: self.dict_global_results_val[m].append(mean_results[m])
+        elif self.has_bot_intent: self.dict_global_results_val[m].append(mean_results[m])
+        self._log("\n{}\n".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
+    
     return
