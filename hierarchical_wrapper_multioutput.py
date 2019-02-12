@@ -20,7 +20,7 @@ valid_lstms = ['unidirectional', 'bidirectional']
 str_optimizers = ['rmsprop', 'sgd', 'adam', 'nadam', 'adagrad']
 str_losses = ['mse', 'mae', 'sparse_categorical_crossentropy'] #TODO sparse_.... in TF
 
-__VER__ = "1.0.0"
+__VER__ = "1.1.0"
 
 """
 @history:
@@ -31,6 +31,9 @@ __VER__ = "1.0.0"
     - intent prediction
     - insertion of the last encoder intent as an embedding in the decoder
     
+  2019-02-12:
+    - integrated bot intent prediction and peeking
+    - integrated validation methodology
 
 """
 
@@ -838,9 +841,14 @@ class HierarchicalNet:
       str_logs += "{}:{:.6f}  ".format(key,val)
     self._log(" Train/Fit: Epoch: {} Results: {}".format(epoch,str_logs))
 
-    if self.data_processer.validate:
-      self.Predict(dataset='train')
-      self.Predict(dataset='validation')
+    validation_epochs = None
+    if 'VALIDATION_EPOCHS' in self.config_data:
+      validation_epochs = self.config_data['VALIDATION_EPOCHS']
+    
+    if validation_epochs is not None and self.data_processer.validate:
+      if (epoch + 1) % validation_epochs == 0:  
+        self.Predict(dataset='train')
+        self.Predict(dataset='validation')
 
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
