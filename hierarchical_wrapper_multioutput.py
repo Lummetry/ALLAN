@@ -830,6 +830,8 @@ class HierarchicalNet:
       self.s2s_metrics = ['BLEU_ARGMAX', 'BLEU_SAMPLING', 'ACC_INTENTS_USER', 'ACC_INTENT_BOT']
       self.dict_global_results_train = {}
       self.dict_global_results_val   = {}
+      self.dict_global_results_train['EPOCH'] = []
+      self.dict_global_results_val['EPOCH'] = []
       
       for i,m in enumerate(self.s2s_metrics):
         if i < len(self.s2s_metrics) - 1:
@@ -862,10 +864,15 @@ class HierarchicalNet:
     
     if validation_epochs is not None and self.data_processer.validate:
       if (epoch % validation_epochs == 0) or epoch == 1:
+        self.dict_global_results_train['EPOCH'].append(epoch)
+        self.dict_global_results_val['EPOCH'].append(epoch)
+        
         self._log("Validating ...")
         self.Predict(dataset='train')
+        self._log("'train' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_train).to_string()))
         self.Predict(dataset='validation')
-
+        self._log("'validation' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
+    
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
     self._save_model(epoch, loss)
@@ -1164,18 +1171,17 @@ class HierarchicalNet:
     
     df_results = pd.DataFrame.from_dict(dict_results)
 
-    self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
+    self._log("'{}' granular explanatory results:\n{}".format(dataset, df_results.to_string()))
 
     mean_results = df_results.mean(axis=1)
     if dataset == 'train':
       for i,m in enumerate(self.s2s_metrics): 
         if i < len(self.s2s_metrics) - 1: self.dict_global_results_train[m].append(mean_results[m])
         elif self.has_bot_intent: self.dict_global_results_train[m].append(mean_results[m])
-        self._log("\n{}\n".format(pd.DataFrame.from_dict(self.dict_global_results_train).to_string()))
+      
     elif dataset == 'validation':
       for i,m in enumerate(self.s2s_metrics): 
         if i < len(self.s2s_metrics) - 1: self.dict_global_results_val[m].append(mean_results[m])
         elif self.has_bot_intent: self.dict_global_results_val[m].append(mean_results[m])
-        self._log("\n{}\n".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
-    
+
     return
