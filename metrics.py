@@ -287,8 +287,12 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
     geo_mean = math.exp(p_log_sum / max_order)
 
   if use_bp:
-    ratio = translation_length / reference_length
-    bp = math.exp(1 - 1. / ratio) if ratio < 1.0 else 1.0
+    try:
+      ratio = translation_length / reference_length
+      bp = math.exp(1 - 1. / ratio) if ratio < 1.0 else 1.0
+    except ZeroDivisionError:
+      bp = 0
+
   bleu = geo_mean * bp
   return np.float32(bleu)
 
