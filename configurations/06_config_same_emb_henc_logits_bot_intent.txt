@@ -124,7 +124,15 @@
       },
       
       {
-        "NAME": "input_label",
+        "NAME": "input_label_user",
+        "SHAPE": [
+          -2
+        ],
+        "IS_FEEDABLE": 1
+      },
+      
+      {
+        "NAME": "input_label_bot",
         "SHAPE": [
           -2
         ],
@@ -137,10 +145,19 @@
         "CONNECTED_TO": "input_words_dec"
       },
       {
-        "NAME": "emb_labels",
+        "NAME": "emb_labels_user",
         "INPUT_DIM": 67,
         "OUTPUT_DIM": 6,
-        "CONNECTED_TO": "input_label",
+        "CONNECTED_TO": "input_label_user",
+        "RESHAPE": [],
+        "USE_KERAS": 1,
+        "TRAINABLE": 1
+      },
+      {
+        "NAME": "emb_labels_bot",
+        "INPUT_DIM": 67,
+        "OUTPUT_DIM": 6,
+        "CONNECTED_TO": "input_label_bot",
         "RESHAPE": [],
         "USE_KERAS": 1,
         "TRAINABLE": 1
