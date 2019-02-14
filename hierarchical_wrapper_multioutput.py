@@ -15,6 +15,7 @@ from metrics import compute_bleu
 from sklearn.metrics import accuracy_score
 import pandas as pd
 import keras.backend as K
+import random
 
 
 valid_lstms = ['unidirectional', 'bidirectional']
@@ -118,6 +119,11 @@ class HierarchicalNet:
     for d in self.encoder_architecture['PARENT']['LAYERS']:
       names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
    
+    if 'BOT_INTENT' in self.encoder_architecture['PARENT']:
+      for d in self.encoder_architecture['PARENT']['BOT_INTENT']['LAYERS']:
+        names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
+      names.append('bot_intent_logits')
+    
     if 'EMBEDDINGS' in self.encoder_architecture['PARENT']:
       for d in self.encoder_architecture['PARENT']['EMBEDDINGS']:
         if 'TRAINABLE' in d:
@@ -1148,7 +1154,7 @@ class HierarchicalNet:
         elif self.has_bot_intent: dict_results[nr_turns][m] = []
 
     for nr_turns, all_dialogues in ds.items():
-      for current_state in all_dialogues:        
+      for current_state in all_dialogues:
         if dataset == 'train':
           reference = [list(map(lambda x: self.data_processer.dict_id2word[x], current_state[1][1:-1]))]
           true_intents_user = current_state[2][:-1]
@@ -1186,8 +1192,17 @@ class HierarchicalNet:
         dict_results[nr_turns]['BLEU_SAMPLING'].append(bleu_sampling)
         dict_results[nr_turns]['ACC_INTENTS_USER'].append(acc_intents_user)
         if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'].append(acc_intent_bot)
+        
+        rand = random.randint(0,7)
+        if dataset == 'validation' and rand == 0:
+          str_dialogue = '[' + "\n".join(current_state[0]) + ']'
+          str_candidate_argmax = '[' + " ".join(candidate_argmax[0]) + ']'
+          str_candidate_sampling = '[' + " ".join(candidate_sampling[0]) + ']'
+          self._log('Given\n{}'.format(str_dialogue))
+          self._log("the decoder predicted (argmax):\n{}".format(str_candidate_argmax))
+          self._log("the decoder predicted (sampling):\n{}".format(str_candidate_sampling))
       #endfor
-      
+
       for i,m in enumerate(self.s2s_metrics): 
         if i < len(self.s2s_metrics) - 1: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
         elif self.has_bot_intent: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
