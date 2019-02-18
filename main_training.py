@@ -51,12 +51,11 @@ def TrainGenerator(batches, loop_forever=False, use_bot_intent=False):
 
         if use_bot_intent:
           label_bot = np.array([batch[2][-1]] * X2.shape[-1])
-          label_bot = np.expand_dims(label, axis=0)
+          label_bot = np.expand_dims(label_bot, axis=0)
           y3 = np.array(batch[2][-1]).reshape(1,1)
           yield([X1, X2, label, label_bot], [y1, y2, y3])
-        #endif
-
-        yield([X1, X2, label], [y1, y2])
+        else:
+          yield([X1, X2, label], [y1, y2])
       else:
         yield([X1,X2],y1)
 
@@ -104,15 +103,16 @@ if __name__ == '__main__':
     logger.P("\n", noprefix=True)
   #######################################
   
+  has_bot_intent = 'BOT_INTENT' in logger.config_data['ENCODER_ARCHITECTURE']['PARENT']
   steps_per_epoch = len(batches_train)
-  TRAIN_GENERATOR = TrainGenerator(batches_train, loop_forever=True, use_bot_intent=False)
+  TRAIN_GENERATOR = TrainGenerator(batches_train, loop_forever=True, use_bot_intent=has_bot_intent)
 
   hnet = HierarchicalNet(logger, d)
 
   hnet.DefineTrainableModel()
   hnet.CreatePredictionModels()
 
-  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=300,
+  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=250,
            steps_per_epoch=steps_per_epoch, save_period=50)
 
   
