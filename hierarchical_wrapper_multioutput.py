@@ -14,6 +14,8 @@ import json
 from metrics import compute_bleu
 from sklearn.metrics import accuracy_score
 import pandas as pd
+import keras.backend as K
+import random
 
 
 valid_lstms = ['unidirectional', 'bidirectional']
@@ -51,14 +53,8 @@ class HierarchicalNet:
     self.tf_graph = None
     self.trainable_model = None
     
-    self.input_tensors = {}
     self.is_timedistributed = False
-
-    self.EmbLayers = {}
     
-    self.enc_layers_full_state = OrderedDict()
-    self.enc_full_state = []
-
     self.enc_pred_model = None
     self.enc_tf_inputs = None
     self.enc_tf_out = None
@@ -69,12 +65,22 @@ class HierarchicalNet:
     self.dec_tf_out = None
     self.decoder_readout = None
 
-    self.dec_lstm_cells = []
     self.epoch_loaded_model = 0
+    
+    self._initialize_datastructures()
     
     self._log("Initialized HierarchicalNet v{}".format(self._version))
     
     return
+  
+  def _initialize_datastructures(self):
+    self.input_tensors = {}
+    self.EmbLayers = {}
+    self.enc_layers_full_state = OrderedDict()
+    self.enc_full_state = []
+    self.dec_lstm_cells = []
+    return
+  
   
   def _parse_config_data(self):
     self.model_trained_layers = []
@@ -88,6 +94,7 @@ class HierarchicalNet:
     self._str_loss        = self.config_data['LOSS'].lower()
     self._model_name      = self.config_data['MODEL_NAME']
 
+    self._model_name = self.logger.file_prefix + '_' + self._model_name
     assert self._str_optimizer in str_optimizers
     assert self._str_loss in str_losses
     
@@ -112,6 +119,11 @@ class HierarchicalNet:
     for d in self.encoder_architecture['PARENT']['LAYERS']:
       names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
    
+    if 'BOT_INTENT' in self.encoder_architecture['PARENT']:
+      for d in self.encoder_architecture['PARENT']['BOT_INTENT']['LAYERS']:
+        names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
+      names.append('bot_intent_logits')
+    
     if 'EMBEDDINGS' in self.encoder_architecture['PARENT']:
       for d in self.encoder_architecture['PARENT']['EMBEDDINGS']:
         if 'TRAINABLE' in d:
@@ -203,7 +215,7 @@ class HierarchicalNet:
 
     def _slice(x, start, end):
       return x[:, start:end]
-    
+
     start, end = 0, self.max_words
     tf_input_words = Lambda(_slice, arguments={'start': start, 'end': end})(tf_input)
     start, end = self.max_words, self.max_words + self.max_characters
@@ -211,6 +223,7 @@ class HierarchicalNet:
 
     config_emb_words = configurations[0]['EMBEDDINGS'][0]
     config_emb_chars = configurations[1]['EMBEDDINGS'][0]
+    transfer_intent_logits_to_parent = bool(configurations[0]['TRANSFER_INTENT_LOGITS_TO_PARENT'])
 
     input_dim, output_dim, weights, trainable, name = None, None, None, True, None
     identifier = configurations[0]['IDENTIFIER']
@@ -264,11 +277,13 @@ class HierarchicalNet:
     tf_out2 = self.CreateRecurrentCell(configurations[1], tf_emb_chars)
 
     tf_concat = concatenate([tf_out1, tf_out2], name='word_char_level')
+    tf_out = tf_concat
     
     tf_label_hat = Dense(units=256, activation='relu')(tf_concat)
     tf_label_hat = Dense(units=self.nr_labels, activation='softmax')(tf_label_hat)
+    if transfer_intent_logits_to_parent: tf_out = concatenate([tf_out, tf_label_hat], name='word_char_logits')
 
-    self.func_child = Model(inputs=tf_input, outputs=[tf_concat, tf_label_hat])
+    self.func_child = Model(inputs=tf_input, outputs=[tf_out, tf_label_hat])
 
     self._log("Child model\n{}".format(self.logger.GetKerasModelSummary(self.func_child)))
 
@@ -427,7 +442,11 @@ class HierarchicalNet:
       if 'TRAINABLE' in emb: trainable = emb['TRAINABLE']
       if 'EMB_MATRIX_PATH' in emb:
         if emb['EMB_MATRIX_PATH'] != '':
-          weights = np.load(emb['EMB_MATRIX_PATH'])
+          path = emb['EMB_MATRIX_PATH']
+          if emb['USE_DRIVE']:
+            path = self.logger.GetDataFile(path)
+
+          weights = np.load(path)
           assert len(weights.shape) == 2
           if 'PAD' in emb:
             nr_paddings = emb['PAD']
@@ -805,7 +824,7 @@ class HierarchicalNet:
                                   validation_steps=validation_steps,
                                   monitor=monitor,
                                   mode=mode)
-      else:  
+      else:
         self._fit_k_model(generator=generator,
                           nr_epochs=nr_epochs,
                           steps_per_epoch=steps_per_epoch,
@@ -825,12 +844,41 @@ class HierarchicalNet:
     reduce_lr_callback = ReduceLROnPlateau(monitor="loss", factor=0.5, 
                                            patience=2, min_lr=0.00001,
                                            verbose=1, mode='min')
-
+    
+    if self.data_processer.validate:
+      self.s2s_metrics = ['BLEU_ARGMAX', 'BLEU_SAMPLING', 'ACC_INTENTS_USER', 'ACC_INTENT_BOT']
+      self.dict_global_results_train = {}
+      self.dict_global_results_val   = {}
+      self.dict_global_results_train['EPOCH'] = []
+      self.dict_global_results_val['EPOCH'] = []
+      
+      for i,m in enumerate(self.s2s_metrics):
+        if i < len(self.s2s_metrics) - 1:
+          self.dict_global_results_train[m] = []
+          self.dict_global_results_val[m] = []
+        elif self.has_bot_intent:
+          self.dict_global_results_train[m] = []
+          self.dict_global_results_val[m] = []
+        
+        
+      
     self.trainable_model.fit_generator(generator=generator, epochs=nr_epochs,
                                        steps_per_epoch=steps_per_epoch,
                                        callbacks=[epoch_callback, reduce_lr_callback],
                                        validation_data=validation_generator,
                                        validation_steps=validation_steps)
+    
+    if self.data_processer.validate:
+      self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_train),
+                                fn='global_train_results',
+                                show_prefix=True,
+                                to_data=False,
+                                ignore_index=True)
+      self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_val),
+                                fn='global_val_results',
+                                show_prefix=True,
+                                to_data=False,
+                                ignore_index=True)
 
     return
 
@@ -846,10 +894,16 @@ class HierarchicalNet:
       validation_epochs = self.config_data['VALIDATION_EPOCHS']
     
     if validation_epochs is not None and self.data_processer.validate:
-      if (epoch + 1) % validation_epochs == 0:  
+      if (epoch % validation_epochs == 0) or epoch == 1:
+        self.dict_global_results_train['EPOCH'].append(epoch)
+        self.dict_global_results_val['EPOCH'].append(epoch)
+        
+        self._log("Validating ...")
         self.Predict(dataset='train')
+        self._log("'train' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_train).to_string()))
         self.Predict(dataset='validation')
-
+        self._log("'validation' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
+    
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    
     self._save_model(epoch, loss)
@@ -1095,13 +1149,12 @@ class HierarchicalNet:
     
     for nr_turns in ds.keys():
       dict_results[nr_turns] = {}
-      dict_results[nr_turns]['BLEU_ARGMAX'] = []
-      dict_results[nr_turns]['BLEU_SAMPLING'] = []
-      dict_results[nr_turns]['ACC_INTENTS_USER'] = [] 
-      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = []
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: dict_results[nr_turns][m] = []
+        elif self.has_bot_intent: dict_results[nr_turns][m] = []
 
     for nr_turns, all_dialogues in ds.items():
-      for current_state in all_dialogues:        
+      for current_state in all_dialogues:
         if dataset == 'train':
           reference = [list(map(lambda x: self.data_processer.dict_id2word[x], current_state[1][1:-1]))]
           true_intents_user = current_state[2][:-1]
@@ -1139,15 +1192,41 @@ class HierarchicalNet:
         dict_results[nr_turns]['BLEU_SAMPLING'].append(bleu_sampling)
         dict_results[nr_turns]['ACC_INTENTS_USER'].append(acc_intents_user)
         if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'].append(acc_intent_bot)
+        
+        rand = random.randint(0,7)
+        if dataset == 'validation' and rand == 0:
+          str_dialogue = '[' + "\n".join(current_state[0]) + ']'
+          str_candidate_argmax = '[' + " ".join(candidate_argmax[0]) + ']'
+          str_candidate_sampling = '[' + " ".join(candidate_sampling[0]) + ']'
+          self._log('Given\n{}'.format(str_dialogue))
+          self._log("the decoder predicted (argmax):\n{}".format(str_candidate_argmax))
+          self._log("the decoder predicted (sampling):\n{}".format(str_candidate_sampling))
       #endfor
-      
-      dict_results[nr_turns]['BLEU_ARGMAX'] = np.mean(dict_results[nr_turns]['BLEU_ARGMAX'])
-      dict_results[nr_turns]['BLEU_SAMPLING'] = np.mean(dict_results[nr_turns]['BLEU_SAMPLING'])
-      dict_results[nr_turns]['ACC_INTENTS_USER'] = np.mean(dict_results[nr_turns]['ACC_INTENTS_USER'])
-      if self.has_bot_intent: dict_results[nr_turns]['ACC_INTENT_BOT'] = np.mean(dict_results[nr_turns]['ACC_INTENT_BOT'])
+
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
+        elif self.has_bot_intent: dict_results[nr_turns][m] = np.mean(dict_results[nr_turns][m])
+      #endfor
     #endfor
     
     df_results = pd.DataFrame.from_dict(dict_results)
-    
-    self._log("'{}' explanatory results:\n{}".format(dataset, df_results.to_string()))
+
+    self._log("'{}' granular explanatory results:\n{}".format(dataset, df_results.to_string()))
+
+    mean_results = df_results.mean(axis=1)
+    if dataset == 'train':
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: self.dict_global_results_train[m].append(mean_results[m])
+        elif self.has_bot_intent: self.dict_global_results_train[m].append(mean_results[m])
+      
+    elif dataset == 'validation':
+      for i,m in enumerate(self.s2s_metrics): 
+        if i < len(self.s2s_metrics) - 1: self.dict_global_results_val[m].append(mean_results[m])
+        elif self.has_bot_intent: self.dict_global_results_val[m].append(mean_results[m])
+
     return
+  
+  
+  def Reset(self):
+    K.clear_session()
+    self._initialize_datastructures()

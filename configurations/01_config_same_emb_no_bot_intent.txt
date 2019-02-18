@@ -1,0 +1,160 @@
+{
+  "BASE_FOLDER" : "Dropbox",
+  "APP_FOLDER"  : "_doc_ro_chatbot_data/_rochatbot_data",
+
+  "MAX_WORDS" : 50,
+  "MAX_CHARACTERS" : 200,
+  "NR_LABELS" : 67,
+  "VALIDATION_EPOCHS" : 10,
+
+  "MODEL_NAME" : "h_enc_dec_lrdec_forcetraining",
+  "METRICS": [],
+  "USE_KERAS" : 1,
+  "OPTIMIZER" : "adam",
+  "LEARNING_RATE" : 0.001,
+  "LOSS" : "sparse_categorical_crossentropy",
+
+  "ENCODER_ARCHITECTURE": {
+    "CHILD1": {
+      "IDENTIFIER": "sentence_level",
+      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
+      "EMBEDDINGS": [
+        {
+          "NAME": "emb_words",
+          "INPUT_DIM": 140422,
+          "OUTPUT_DIM": 128,
+          "USE_DRIVE": 1,
+          "EMB_MATRIX_PATH": "demo_20190130/model_final_ep60.model.wv.vectors.npy",
+          "CONNECTED_TO": "input_words",
+          "RESHAPE": [],
+          "USE_KERAS": 1,
+          "TRAINABLE": 1,
+          "PAD": 3
+        }
+      ],
+      "LAYERS": [
+        {
+          "NAME": "child_rec_L1",
+          "NR_UNITS": 128,
+          "TYPE": "BIDIRECTIONAL",
+          "SKIP_CONNECTIONS": [],
+          "RETURN_STATE": 1
+        }
+      ]
+    },
+    
+    "CHILD2": {
+      "IDENTIFIER": "character_level",
+      "EMBEDDINGS": [
+        {
+          "NAME": "emb_characters",
+          "INPUT_DIM": 190,
+          "OUTPUT_DIM": 8,
+          "CONNECTED_TO": "input_characters",
+          "RESHAPE": [],
+          "USE_KERAS": 1,
+          "TRAINABLE": 1
+        }
+      ],
+      "LAYERS": [
+        {
+          "NAME": "child_rec_L1_char",
+          "NR_UNITS": 128,
+          "TYPE": "BIDIRECTIONAL",
+          "SKIP_CONNECTIONS": [],
+          "RETURN_STATE": 1
+        }
+      ]
+    },
+    
+    
+    "PARENT": {
+      "IDENTIFIER": "timeseries_level",
+      "INPUTS": [
+        {
+          "NAME": "input_words_and_characters",
+          "SHAPE": [
+            -2,
+            250
+          ],
+          "IS_FEEDABLE": 1,
+          "TIMEDISTRIBUTED": 1
+        }
+      ],
+      "LAYERS": [
+        {
+          "NAME": "enc_rec_L1",
+          "NR_UNITS": 512,
+          "TYPE": "BIDIRECTIONAL",
+          "SKIP_CONNECTIONS": [],
+          "RETURN_STATE": 0
+        },
+        {
+          "NAME": "enc_rec_L2",
+          "NR_UNITS": 256,
+          "TYPE": "BIDIRECTIONAL",
+          "SKIP_CONNECTIONS": ["INPUT"],
+          "RETURN_STATE": 2
+        }
+      ]
+    }
+  },
+  "DECODER_ARCHITECTURE": {
+    "PEEK" : 1,
+    "IDENTIFIER": "decoding_level",
+    "INPUTS": [
+      {
+        "NAME": "input_words_dec",
+        "SHAPE": [
+          -2
+        ],
+        "IS_FEEDABLE": 1
+      },
+      
+      {
+        "NAME": "input_label",
+        "SHAPE": [
+          -2
+        ],
+        "IS_FEEDABLE": 1
+      }
+    ],
+    "EMBEDDINGS": [
+      {
+        "REUSE": "emb_words",
+        "CONNECTED_TO": "input_words_dec"
+      },
+      {
+        "NAME": "emb_labels",
+        "INPUT_DIM": 67,
+        "OUTPUT_DIM": 6,
+        "CONNECTED_TO": "input_label",
+        "RESHAPE": [],
+        "USE_KERAS": 1,
+        "TRAINABLE": 1
+      }
+    ],
+    "LAYERS": [
+      {
+        "NAME": "dec_rec_L1",
+        "NR_UNITS": 512,
+        "TYPE": "UNIDIRECTIONAL",
+        "SKIP_CONNECTIONS": [],
+        "INITIAL_STATE": "enc_rec_L2",
+        "RETURN_STATE" : 0
+      },
+      {
+        "NAME": "dec_rec_L2",
+        "NR_UNITS": 256,
+        "TYPE": "UNIDIRECTIONAL",
+        "SKIP_CONNECTIONS": [],
+        "INITIAL_STATE" : "",
+        "RETURN_STATE" : 0
+      }
+    ],
+    "READOUT": {
+      "UNITS": 140425,
+      "ACTIVATION": "softmax"
+    }
+  }
+}
