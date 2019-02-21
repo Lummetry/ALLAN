@@ -4,7 +4,8 @@
 
   "MAX_WORDS" : 50,
   "MAX_CHARACTERS" : 200,
-  "NR_LABELS" : 67,
+  "NR_USER_LABELS" : 30,
+  "NR_BOT_LABELS"  : 40,
   "VALIDATION_EPOCHS" : 10,
 
   "MODEL_NAME" : "h_enc_dec_lrdec_forcetraining",
@@ -17,7 +18,6 @@
   "ENCODER_ARCHITECTURE": {
     "CHILD1": {
       "IDENTIFIER": "sentence_level",
-      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
       "EMBEDDINGS": [
         {
           "NAME": "emb_words",
