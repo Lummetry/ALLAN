@@ -29,9 +29,12 @@ class DocUtils():
     self.dict_char2id = {full_voc[i]:i for i in range(len(full_voc))}
     self.dict_id2char = {v:k for k,v in self.dict_char2id.items()}
     
-    self.dict_label2id = {}
-    self.dict_id2label = {}
+    self.dict_user_label2id = {}
+    self.dict_user_id2label = {}
     
+    self.dict_bot_label2id = {}
+    self.dict_bot_id2label = {}
+
     self.all_labels = {}
     
     self.end_char_id = self.dict_word2id['<END>']
@@ -66,33 +69,43 @@ class DocUtils():
     return re.sub(r'<.*?>', '', string)
 
 
-  def CreateLabelsVocab(self, fn):
+  def _create_labels_vocab(self, fn):
     with open(fn, 'rt') as handle:
       labels = handle.read().splitlines()
 
-    self.dict_label2id = {labels[i]: i for i in range(len(labels))}
-    self.dict_id2label = {v:k for k,v in self.dict_label2id.items()}
+    dict_label2id = {labels[i]: i for i in range(len(labels))}
+    dict_id2label = {v:k for k,v in dict_label2id.items()}
     
-    self._log("Labels vocab created.")
-    return
+    return dict_label2id, dict_id2label
+
+  def CreateUserLabelsVocab(self, fn):
+    self.dict_user_label2id, self.dict_user_id2label = self._create_labels_vocab(fn)
+
+  def CreateBotLabelsVocab(self, fn):
+    self.dict_bot_label2id, self.dict_bot_id2label = self._create_labels_vocab(fn)
 
   
   def GenerateLabels(self, path):
-    assert self.dict_label2id != {}
+    assert self.dict_bot_label2id != {}
+    assert self.dict_user_label2id != {}
     self.all_labels = {}
     for file in os.listdir(path):
       full_path = os.path.join(path, file)
+      new_labels = []
       with open(full_path, 'rt') as handle:
         labels = handle.read().splitlines()
         try:
-          labels = list(map(lambda x: self.dict_label2id[x], labels))
+          for i,x in enumerate(labels):
+            if i % 2 == 0:
+              new_labels.append(self.dict_bot_label2id[x])
+            else:
+              new_labels.append(self.dict_user_label2id[x])
         except Exception as e:
           print(e)
           print(full_path)
           raise Exception
 
-      
-      self.all_labels[file] = labels
+      self.all_labels[file] = new_labels
     
     self._log("All labels from [{}] were processed.".format(path[-50:]))
     return
@@ -210,22 +223,22 @@ class DocUtils():
         t = turns[:i+1]
 
         crt_turns.append(random.choice(self.starts))
-        crt_labels.append(self.dict_label2id["salut"])
+        crt_labels.append(self.dict_bot_label2id["salut"])
         
         for j,x in enumerate(t):
           crt_turns.append(x['STATEMENT'])
-          crt_labels.append(self.dict_label2id[x['LABEL']])
+          crt_labels.append(self.dict_user_label2id[x['LABEL']])
           
           if j != len(t) - 1:
             possibility = random.choice(x['POSSIBILITIES'])
             crt_turns.append(possibility['STATEMENT'])
-            crt_labels.append(self.dict_label2id[possibility['LABEL']])
+            crt_labels.append(self.dict_bot_label2id[possibility['LABEL']])
           #endif
         #endfor
         
         crt_possibilities = {
             'STATEMENTS': [self.prepare_for_tokenization(p['STATEMENT']).split() for p in x['POSSIBILITIES']],
-            'LABEL' :  self.dict_label2id[x['POSSIBILITIES'][0]['LABEL']] # labels are the same for a group of possibilities
+            'LABEL' :  self.dict_bot_label2id[x['POSSIBILITIES'][0]['LABEL']] # labels are the same for a group of possibilities
         }
 
         crt_conversation_lines.append(crt_turns)
@@ -409,14 +422,17 @@ class DocUtils():
     in_label_batch = None
     if len(batch) == 3:
       in_label_batch = batch[2]
-      assert self.dict_id2label is not None
+      assert self.dict_bot_id2label is not None and self.dict_user_id2label is not None
     
     # print input
     for idx, sentence in enumerate(in_batch):
         new_sentence = [self.dict_id2word[word] for i,word in enumerate(sentence) if (i < self.max_nr_words) and (self.dict_id2word[word] != '<PAD>')]
         
         if len(batch) == 3:
-          label = self.dict_id2label[in_label_batch[idx]]
+          if idx % 2 == 0:
+            label = self.dict_bot_id2label[in_label_batch[idx]]
+          else:
+            label = self.dict_user_id2label[in_label_batch[idx]]
           self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + label, noprefix=True)
         else:
           self._log(self.organize_text(" ".join(new_sentence)), noprefix=True)
@@ -424,5 +440,5 @@ class DocUtils():
     # print output
     if translate_out_batch:
       new_sentence = [self.dict_id2word[word] for word in out_batch]
-      self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_id2label[in_label_batch[-1]], noprefix=True)
+      self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_bot_id2label[in_label_batch[-1]], noprefix=True)
     return

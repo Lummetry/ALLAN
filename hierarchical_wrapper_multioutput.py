@@ -105,7 +105,8 @@ class HierarchicalNet:
     
     self.max_words = self.config_data["MAX_WORDS"]
     self.max_characters = self.config_data["MAX_CHARACTERS"]
-    self.nr_labels = self.config_data["NR_LABELS"]
+    self.nr_user_labels = self.config_data["NR_USER_LABELS"]
+    self.nr_bot_labels  = self.config_data["NR_BOT_LABELS"]
 
     return
 
@@ -114,15 +115,16 @@ class HierarchicalNet:
      
     if self.encoder_architecture['CHILD1'] != {}:
       names.append('time_distributed')
-      names.append('time_distributed_1')
  
     for d in self.encoder_architecture['PARENT']['LAYERS']:
       names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
    
+    names.append('user_intent_dense1')
+    names.append('user_intent_logits')
     if 'BOT_INTENT' in self.encoder_architecture['PARENT']:
-      for d in self.encoder_architecture['PARENT']['BOT_INTENT']['LAYERS']:
-        names.append(d['NAME'] + '_' + str(d['NR_UNITS']))
-      names.append('bot_intent_logits')
+      if bool(self.encoder_architecture['PARENT']['BOT_INTENT']):
+        names.append('bot_intent_dense1')
+        names.append('bot_intent_logits')
     
     if 'EMBEDDINGS' in self.encoder_architecture['PARENT']:
       for d in self.encoder_architecture['PARENT']['EMBEDDINGS']:
@@ -144,6 +146,7 @@ class HierarchicalNet:
               names.append(d['NAME'])
       if 'READOUT' in self.decoder_architecture:
         names.append('readout_' + str(self.decoder_architecture['READOUT']['ACTIVATION']))
+          
     return names
 
 
@@ -223,7 +226,6 @@ class HierarchicalNet:
 
     config_emb_words = configurations[0]['EMBEDDINGS'][0]
     config_emb_chars = configurations[1]['EMBEDDINGS'][0]
-    transfer_intent_logits_to_parent = bool(configurations[0]['TRANSFER_INTENT_LOGITS_TO_PARENT'])
 
     input_dim, output_dim, weights, trainable, name = None, None, None, True, None
     identifier = configurations[0]['IDENTIFIER']
@@ -278,12 +280,8 @@ class HierarchicalNet:
 
     tf_concat = concatenate([tf_out1, tf_out2], name='word_char_level')
     tf_out = tf_concat
-    
-    tf_label_hat = Dense(units=256, activation='relu')(tf_concat)
-    tf_label_hat = Dense(units=self.nr_labels, activation='softmax')(tf_label_hat)
-    if transfer_intent_logits_to_parent: tf_out = concatenate([tf_out, tf_label_hat], name='word_char_logits')
 
-    self.func_child = Model(inputs=tf_input, outputs=[tf_out, tf_label_hat])
+    self.func_child = Model(inputs=tf_input, outputs=[tf_out])
 
     self._log("Child model\n{}".format(self.logger.GetKerasModelSummary(self.func_child)))
 
@@ -317,15 +315,23 @@ class HierarchicalNet:
 
     self.enc_tf_out = tf_out
 
-    self.additional_outputs = [self.peek_tensor]
+    self.additional_outputs = []
+    
+    def _slice_last_input(x): return x[:, -1, :]
+    tf_last_input = Lambda(_slice_last_input, name='last_user_input')(tf_input)
+    tf_user_intent = Dense(units=128, activation='relu', name='user_intent_dense1')(tf_last_input)
+    tf_user_intent = Dense(units=self.nr_user_labels, activation='softmax', name='user_intent_logits')(tf_user_intent)
+    self.additional_outputs.append(tf_user_intent)
 
     self.has_bot_intent = False
     if 'BOT_INTENT' in configuration:
-      self.has_bot_intent = True
-      tf_bot_intent_out = self.CreateRecurrentCell(configuration['BOT_INTENT'], self.peek_tensor)
-      tf_bot_intent_out = Dense(units=self.nr_labels, activation='softmax', name='bot_intent_logits')(tf_bot_intent_out)
-
-      self.additional_outputs.append(tf_bot_intent_out)
+      self.has_bot_intent = bool(configuration['BOT_INTENT'])
+      if self.has_bot_intent:
+        inp_feats_bot_intent_decoder = tf_out
+        if type(tf_out) == list: inp_feats_bot_intent_decoder = tf_out[0]
+        tf_bot_intent_out = Dense(units=128, activation='relu', name='bot_intent_dense1')(inp_feats_bot_intent_decoder)
+        tf_bot_intent_out = Dense(units=self.nr_bot_labels, activation='softmax', name='bot_intent_logits')(tf_bot_intent_out)
+        self.additional_outputs.append(tf_bot_intent_out)
     #endif
 
     if self.is_timedistributed:
@@ -419,12 +425,14 @@ class HierarchicalNet:
         self.input_tensors[k] = tf_X
       if is_timedistributed:
         with tf.name_scope(identifier):
-          for idx_crt, out in enumerate(func_child.output):
-            if idx_crt == 0:
-              tf_td = TimeDistributed(Model(func_child.input, out))(tf_X)
-              extra_feats.append(tf_td)
-            elif idx_crt == 1:
-              self.peek_tensor = TimeDistributed(Model(func_child.input, out))(tf_X)
+          tf_td = TimeDistributed(func_child)(tf_X)
+          extra_feats.append(tf_td)
+#          for idx_crt, out in enumerate(func_child.output):
+#            if idx_crt == 0:
+#              tf_td = TimeDistributed(Model(func_child.input, out))(tf_X)
+#              extra_feats.append(tf_td)
+#            elif idx_crt == 1:
+#              self.peek_tensor = TimeDistributed(Model(func_child.input, out))(tf_X)
       elif not is_input_for_emb:
         all_feats.append(tf_X)
     #endfor
@@ -948,6 +956,15 @@ class HierarchicalNet:
     with open(fn_config, 'w') as f:
       f.write(json.dumps(self.config_data, indent=2))
     self._log("Saved model config in '{}'.".format(fn_config))
+    
+    true_names = []
+    for lyr in self.trainable_model.layers:
+      if len(lyr.trainable_weights) > 0:
+        true_names.append(lyr.name)
+    
+    diff = list(set(true_names) - set(self.model_trained_layers))
+    if len(diff) != 0: self._log("WARNING! model_trained_layers mismatch. Check {}".format(diff))
+
     self.logger.SaveKerasModelWeights(fn_weights, self.trainable_model, self.model_trained_layers)
     self._mk_plot(fn_losshist)
     return
@@ -1050,9 +1067,7 @@ class HierarchicalNet:
 
     idx_last_intent_user = -2 if self.has_bot_intent else -1
 
-    last_intent_user = np.argmax(predict_results[idx_last_intent_user][:,[-1],:], axis=-1)
-    all_intents_user = np.argmax(predict_results[idx_last_intent_user], axis=-1)
-    
+    last_intent_user = np.expand_dims(np.argmax(predict_results[idx_last_intent_user], axis=-1), axis=-1)    
     intent_bot = None
     if self.has_bot_intent:
       intent_bot = np.expand_dims(np.argmax(predict_results[-1], axis=-1), axis=-1)
@@ -1114,8 +1129,9 @@ class HierarchicalNet:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
     if self.has_bot_intent: intent_bot = intent_bot.reshape(-1)
+    last_intent_user = last_intent_user.reshape(-1)
 
-    return predicted_text, last_intent_user, all_intents_user.reshape(-1), intent_bot
+    return predicted_text, last_intent_user, intent_bot
 
   
   def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
@@ -1157,24 +1173,24 @@ class HierarchicalNet:
       for current_state in all_dialogues:
         if dataset == 'train':
           reference = [list(map(lambda x: self.data_processer.dict_id2word[x], current_state[1][1:-1]))]
-          true_intents_user = current_state[2][:-1]
+          true_intent_user  = [current_state[2][-2]]
           true_intent_bot   = current_state[2][-1:]
         elif dataset == 'validation':
           reference = current_state[1]['STATEMENTS']
-          true_intents_user = current_state[2]
+          true_intent_user  = current_state[2][-1:]
           true_intent_bot   = [current_state[1]['LABEL']]
         #endif
 
         prediction_result = self._step_by_step_prediction(current_state[0],
                                                           method='argmax', verbose=0,
                                                           return_text=False)
-        candidate_argmax, _, predicted_intents_user, predicted_intent_bot = prediction_result
+        candidate_argmax, predicted_intent_user, predicted_intent_bot = prediction_result
         candidate_argmax = [candidate_argmax] * len(reference)
 
         prediction_result = self._step_by_step_prediction(current_state[0],
                                                           method='sampling', verbose=0,
                                                           return_text=False)
-        candidate_sampling, _, _, _ = prediction_result
+        candidate_sampling, _, _ = prediction_result
         candidate_sampling = [candidate_sampling] * len(reference)
 
         intent_bot_params = None
@@ -1183,7 +1199,7 @@ class HierarchicalNet:
 
         bleu_argmax, acc_intents_user, acc_intent_bot = self.compute_metrics(
             bleu_params=(reference, candidate_argmax),
-            intents_user_params=(true_intents_user, predicted_intents_user),
+            intents_user_params=(true_intent_user, predicted_intent_user),
             intent_bot_params=intent_bot_params) 
 
         bleu_sampling, _, _ = self.compute_metrics((reference, candidate_sampling))
