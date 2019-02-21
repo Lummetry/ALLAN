@@ -131,7 +131,8 @@
     "EMBEDDINGS": [
       {
         "REUSE": "emb_words",
-        "CONNECTED_TO": "input_words_dec"
+        "CONNECTED_TO": "input_words_dec",
+        "TRAINABLE" : 1
       },
       {
         "NAME": "emb_labels_user",

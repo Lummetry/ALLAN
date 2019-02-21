@@ -143,7 +143,8 @@ class HierarchicalNet:
         for d in self.decoder_architecture['EMBEDDINGS']:
           if 'TRAINABLE' in d:
             if bool(d['TRAINABLE']) is True:
-              names.append(d['NAME'])
+              if 'NAME' in d: names.append(d['NAME'])
+              elif 'REUSE' in d: names.append(d['REUSE'])  
       if 'READOUT' in self.decoder_architecture:
         names.append('readout_' + str(self.decoder_architecture['READOUT']['ACTIVATION']))
           
