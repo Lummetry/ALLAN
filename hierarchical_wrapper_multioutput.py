@@ -1,7 +1,13 @@
 from tqdm import trange
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Lambda, concatenate, TimeDistributed
-from tensorflow.keras.layers import Bidirectional, CuDNNLSTM, Dense, Embedding, Reshape
+from tensorflow.keras.layers import Bidirectional, Dense, Embedding, Reshape
+
+if True:
+  from tensorflow.keras.layers import CuDNNLSTM as RecUnit
+else:
+  from tensorflow.keras.layers import LSTM as RecUnit
+
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 import numpy as np
@@ -588,13 +594,13 @@ class HierarchicalNet:
 
       if lstm_type == 'bidirectional':
         # TOOD initial_state
-        LSTMCell = Bidirectional(CuDNNLSTM(units=units, return_sequences=True, return_state=True), name=name)
+        LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True, return_state=True), name=name)
         crt_tf_input, tf_state_h_fw, tf_state_c_fw, tf_state_h_bw, tf_state_c_bw = LSTMCell(crt_tf_input)
         tf_state_h = concatenate([tf_state_h_fw, tf_state_h_bw], name=identifier+'_concat_state_h_{}'.format(i))
         tf_state_c = concatenate([tf_state_c_fw, tf_state_c_bw], name=identifier+'_concat_state_c_{}'.format(i))
       
       if lstm_type == 'unidirectional':
-        LSTMCell = CuDNNLSTM(units=units, return_sequences=True, return_state=True, name=name)
+        LSTMCell = RecUnit(units=units, return_sequences=True, return_state=True, name=name)
         crt_tf_input, tf_state_h, tf_state_c = LSTMCell(crt_tf_input, initial_state=initial_state)
       
       if save_state:
@@ -910,8 +916,10 @@ class HierarchicalNet:
         self._log("Validating ...")
         self.Predict(dataset='train')
         self._log("'train' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_train).to_string()))
-        self.Predict(dataset='validation')
-        self._log("'validation' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
+        
+        if self.data_processer.batches_validation is not None:
+          self.Predict(dataset='validation')
+          self._log("'validation' global explanatory results:\n{}".format(pd.DataFrame.from_dict(self.dict_global_results_val).to_string()))
     
     loss = logs['loss']
     self.loss_hist.append((epoch, loss))    

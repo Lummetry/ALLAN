@@ -286,7 +286,6 @@ class DocUtils():
       tokens_c = []
       for c in characters:
         tokens_c.append(self.dict_char2id[c])
-      
       current_conversation_c.append(tokens_c)
       current_conversation_w.append(tokens_w)
     #endfor
