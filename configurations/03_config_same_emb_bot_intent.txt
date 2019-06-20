@@ -4,7 +4,8 @@
 
   "MAX_WORDS" : 50,
   "MAX_CHARACTERS" : 200,
-  "NR_LABELS" : 67,
+  "NR_USER_LABELS" : 30,
+  "NR_BOT_LABELS"  : 40,
   "VALIDATION_EPOCHS" : 10,
 
   "MODEL_NAME" : "03_same_emb_bot_intent",
@@ -17,7 +18,6 @@
   "ENCODER_ARCHITECTURE": {
     "CHILD1": {
       "IDENTIFIER": "sentence_level",
-      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
       "EMBEDDINGS": [
         {
           "NAME": "emb_words",
@@ -97,18 +97,7 @@
           "RETURN_STATE": 2
         }
       ],
-      "BOT_INTENT" : {
-        "IDENTIFIER" : "bot_intent",
-        "LAYERS" : [
-          {
-            "NAME": "bot_intent_rec_L1",
-            "NR_UNITS": 128,
-            "TYPE": "BIDIRECTIONAL",
-            "SKIP_CONNECTIONS": [],
-            "RETURN_STATE": 1
-          }
-        ]
-      }
+      "BOT_INTENT" : 1
     }
   },
   "DECODER_ARCHITECTURE": {
@@ -142,7 +131,8 @@
     "EMBEDDINGS": [
       {
         "REUSE": "emb_words",
-        "CONNECTED_TO": "input_words_dec"
+        "CONNECTED_TO": "input_words_dec",
+        "TRAINABLE" : 1
       },
       {
         "NAME": "emb_labels_user",
