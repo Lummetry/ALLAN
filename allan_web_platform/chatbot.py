@@ -3,7 +3,7 @@ import pickle
 import string
 import random
 
-from logger import Logger
+from libraries.logger import Logger
 from time import time, sleep
 
 from bokeh.layouts import column, layout, row, Spacer, widgetbox
