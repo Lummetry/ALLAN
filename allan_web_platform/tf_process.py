@@ -1,9 +1,9 @@
-from logger import Logger
-from Runner import ChatBot
+from libraries.logger import Logger
+from allan_web_platform.Runner import ChatBot
 from time import sleep
 import os
 import pickle
-from doc_utils import DocUtils
+from allan_web_platform.doc_utils import DocUtils
 
 def get_message(folder):
   while True:
