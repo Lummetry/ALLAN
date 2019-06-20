@@ -4,10 +4,11 @@
 
   "MAX_WORDS" : 50,
   "MAX_CHARACTERS" : 200,
-  "NR_LABELS" : 67,
+  "NR_USER_LABELS" : 30,
+  "NR_BOT_LABELS"  : 40,
   "VALIDATION_EPOCHS" : 10,
 
-  "MODEL_NAME" : "05_same_emb_henc_logits_no_bot_intent",
+  "MODEL_NAME" : "04_dif_emb_bot_intent",
   "METRICS": [],
   "USE_KERAS" : 1,
   "OPTIMIZER" : "adam",
@@ -17,10 +18,10 @@
   "ENCODER_ARCHITECTURE": {
     "CHILD1": {
       "IDENTIFIER": "sentence_level",
-      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 1,
+      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
       "EMBEDDINGS": [
         {
-          "NAME": "emb_words",
+          "NAME": "emb_words_enc",
           "INPUT_DIM": 140422,
           "OUTPUT_DIM": 128,
           "USE_DRIVE": 1,
@@ -96,7 +97,8 @@
           "SKIP_CONNECTIONS": ["INPUT"],
           "RETURN_STATE": 2
         }
-      ]
+      ],
+      "BOT_INTENT" : 1
     }
   },
   "DECODER_ARCHITECTURE": {
@@ -112,7 +114,15 @@
       },
       
       {
-        "NAME": "input_label",
+        "NAME": "input_label_user",
+        "SHAPE": [
+          -2
+        ],
+        "IS_FEEDABLE": 1
+      },
+      
+      {
+        "NAME": "input_label_bot",
         "SHAPE": [
           -2
         ],
@@ -121,14 +131,31 @@
     ],
     "EMBEDDINGS": [
       {
-        "REUSE": "emb_words",
-        "CONNECTED_TO": "input_words_dec"
+          "NAME": "emb_words_dec",
+          "INPUT_DIM": 140422,
+          "OUTPUT_DIM": 128,
+          "USE_DRIVE": 1,
+          "EMB_MATRIX_PATH": "demo_20190130/model_final_ep60.model.wv.vectors.npy",
+          "CONNECTED_TO": "input_words_dec",
+          "RESHAPE": [],
+          "USE_KERAS": 1,
+          "TRAINABLE": 1,
+          "PAD": 3
       },
       {
-        "NAME": "emb_labels",
+        "NAME": "emb_labels_user",
         "INPUT_DIM": 67,
         "OUTPUT_DIM": 6,
-        "CONNECTED_TO": "input_label",
+        "CONNECTED_TO": "input_label_user",
+        "RESHAPE": [],
+        "USE_KERAS": 1,
+        "TRAINABLE": 1
+      },
+      {
+        "NAME": "emb_labels_bot",
+        "INPUT_DIM": 67,
+        "OUTPUT_DIM": 6,
+        "CONNECTED_TO": "input_label_bot",
         "RESHAPE": [],
         "USE_KERAS": 1,
         "TRAINABLE": 1

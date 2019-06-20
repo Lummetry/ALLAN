@@ -1,30 +1,27 @@
 {
-  "BASE_FOLDER" : "Dropbox",
-  "APP_FOLDER"  : "_doc_ro_chatbot_data/_rochatbot_data",
-
-  "MAX_WORDS" : 50,
-  "MAX_CHARACTERS" : 200,
-  "NR_LABELS" : 67,
-  "VALIDATION_EPOCHS" : 10,
-
-  "MODEL_NAME" : "03_same_emb_bot_intent",
+  "BASE_FOLDER": "Dropbox",
+  "APP_FOLDER": "_doc_ro_chatbot_data/_rochatbot_data",
+  "MAX_WORDS": 36,
+  "MAX_CHARACTERS": 158,
+  "NR_USER_LABELS": 64,
+  "NR_BOT_LABELS": 29,
+  "VALIDATION_EPOCHS": 10,
+  "MODEL_NAME": "02_dif_emb_no_bot_intent",
   "METRICS": [],
-  "USE_KERAS" : 1,
-  "OPTIMIZER" : "adam",
-  "LEARNING_RATE" : 0.001,
-  "LOSS" : "sparse_categorical_crossentropy",
-
+  "USE_KERAS": 1,
+  "OPTIMIZER": "adam",
+  "LEARNING_RATE": 0.001,
+  "LOSS": "sparse_categorical_crossentropy",
   "ENCODER_ARCHITECTURE": {
     "CHILD1": {
       "IDENTIFIER": "sentence_level",
-      "TRANSFER_INTENT_LOGITS_TO_PARENT" : 0,
       "EMBEDDINGS": [
         {
-          "NAME": "emb_words",
-          "INPUT_DIM": 140422,
+          "NAME": "emb_words_enc",
+          "INPUT_DIM": 140690,
           "OUTPUT_DIM": 128,
           "USE_DRIVE": 1,
-          "EMB_MATRIX_PATH": "demo_20190130/model_final_ep60.model.wv.vectors.npy",
+          "EMB_MATRIX_PATH": "demo_20190611/20190611_ep55_vectors.npy",
           "CONNECTED_TO": "input_words",
           "RESHAPE": [],
           "USE_KERAS": 1,
@@ -42,7 +39,6 @@
         }
       ]
     },
-    
     "CHILD2": {
       "IDENTIFIER": "character_level",
       "EMBEDDINGS": [
@@ -66,8 +62,6 @@
         }
       ]
     },
-    
-    
     "PARENT": {
       "IDENTIFIER": "timeseries_level",
       "INPUTS": [
@@ -75,7 +69,7 @@
           "NAME": "input_words_and_characters",
           "SHAPE": [
             -2,
-            250
+            194
           ],
           "IS_FEEDABLE": 1,
           "TIMEDISTRIBUTED": 1
@@ -93,26 +87,16 @@
           "NAME": "enc_rec_L2",
           "NR_UNITS": 256,
           "TYPE": "BIDIRECTIONAL",
-          "SKIP_CONNECTIONS": ["INPUT"],
+          "SKIP_CONNECTIONS": [
+            "INPUT"
+          ],
           "RETURN_STATE": 2
         }
-      ],
-      "BOT_INTENT" : {
-        "IDENTIFIER" : "bot_intent",
-        "LAYERS" : [
-          {
-            "NAME": "bot_intent_rec_L1",
-            "NR_UNITS": 128,
-            "TYPE": "BIDIRECTIONAL",
-            "SKIP_CONNECTIONS": [],
-            "RETURN_STATE": 1
-          }
-        ]
-      }
+      ]
     }
   },
   "DECODER_ARCHITECTURE": {
-    "PEEK" : 1,
+    "PEEK": 1,
     "IDENTIFIER": "decoding_level",
     "INPUTS": [
       {
@@ -122,17 +106,8 @@
         ],
         "IS_FEEDABLE": 1
       },
-      
       {
-        "NAME": "input_label_user",
-        "SHAPE": [
-          -2
-        ],
-        "IS_FEEDABLE": 1
-      },
-      
-      {
-        "NAME": "input_label_bot",
+        "NAME": "input_label",
         "SHAPE": [
           -2
         ],
@@ -141,23 +116,22 @@
     ],
     "EMBEDDINGS": [
       {
-        "REUSE": "emb_words",
-        "CONNECTED_TO": "input_words_dec"
-      },
-      {
-        "NAME": "emb_labels_user",
-        "INPUT_DIM": 67,
-        "OUTPUT_DIM": 6,
-        "CONNECTED_TO": "input_label_user",
+        "NAME": "emb_words_dec",
+        "INPUT_DIM": 140690,
+        "OUTPUT_DIM": 128,
+        "USE_DRIVE": 1,
+        "EMB_MATRIX_PATH": "demo_20190611/20190611_ep55_vectors.npy",
+        "CONNECTED_TO": "input_words_dec",
         "RESHAPE": [],
         "USE_KERAS": 1,
-        "TRAINABLE": 1
+        "TRAINABLE": 1,
+        "PAD": 3
       },
       {
-        "NAME": "emb_labels_bot",
-        "INPUT_DIM": 67,
+        "NAME": "emb_labels",
+        "INPUT_DIM": 64,
         "OUTPUT_DIM": 6,
-        "CONNECTED_TO": "input_label_bot",
+        "CONNECTED_TO": "input_label",
         "RESHAPE": [],
         "USE_KERAS": 1,
         "TRAINABLE": 1
@@ -170,19 +144,19 @@
         "TYPE": "UNIDIRECTIONAL",
         "SKIP_CONNECTIONS": [],
         "INITIAL_STATE": "enc_rec_L2",
-        "RETURN_STATE" : 0
+        "RETURN_STATE": 0
       },
       {
         "NAME": "dec_rec_L2",
         "NR_UNITS": 256,
         "TYPE": "UNIDIRECTIONAL",
         "SKIP_CONNECTIONS": [],
-        "INITIAL_STATE" : "",
-        "RETURN_STATE" : 0
+        "INITIAL_STATE": "",
+        "RETURN_STATE": 0
       }
     ],
     "READOUT": {
-      "UNITS": 140425,
+      "UNITS": 140693,
       "ACTIVATION": "softmax"
     }
   }
