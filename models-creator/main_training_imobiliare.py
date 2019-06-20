@@ -47,7 +47,7 @@ def TrainGenerator(batches, loop_forever=False, use_bot_intent=False):
         # the last is the intent of the bot
         label = np.array([batch[2][-2]] * X2.shape[-1])
         label = np.expand_dims(label, axis=0)
-        y2 = np.array(batch[2][:-1]).reshape(1,-1,1)
+        y2 = np.array(batch[2][-2]).reshape(1,1)
 
         if use_bot_intent:
           label_bot = np.array([batch[2][-1]] * X2.shape[-1])
@@ -65,21 +65,22 @@ def TrainGenerator(batches, loop_forever=False, use_bot_intent=False):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("-c", "--config", help="Configuration file in JSON format",
-                      type=str, default='configurations/01_config_same_emb_no_bot_intent.txt')
+                      type=str, default='configurations/02_config_dif_emb_no_bot_intent_imobiliare.txt')
   args = parser.parse_args()
 
   logger = LoadLogger(lib_name='CHATTRAIN', config_file=args.config, use_tf_keras=True)
-  d = DocUtils(logger, logger.GetDataFile('demo_20190130/index2word_final_ep60.pickle'))
+  d = DocUtils(logger, logger.GetDataFile('demo_20190611/20190611_ep55_index2word.pickle'))
   
-  d.CreateLabelsVocab(fn=logger.GetDropboxDrive() +\
-                      '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190204_Production_selection_v0_1/Newlables.txt')
+  d.CreateUserLabelsVocab(fn=logger.GetDropboxDrive() +\
+                      '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190506_Imobiliare_v01/user_labels.txt')
+  d.CreateBotLabelsVocab(fn=logger.GetDropboxDrive() +\
+                         '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190506_Imobiliare_v01/bot_labels.txt')
   d.GenerateLabels(logger.GetDropboxDrive() +\
-                   '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190204_Production_selection_v0_1/labels')
+                   '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190506_Imobiliare_v01/labels')
 
-  batches_train = d.GenerateBatches(logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190204_Production_selection_v0_1/texts',
+  batches_train = d.GenerateBatches(logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190506_Imobiliare_v01/texts',
                                     use_characters=True, use_labels=True, eps_words=7, eps_characters=21)
-  batches_val = d.GenerateValidationBatches(logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190204_Production_selection_v0_1/validare/texte_validare',
-                                            use_labels=True)
+  batches_val = None
 
   batches_train_to_validate = {}
   for b in batches_train:
@@ -103,18 +104,19 @@ if __name__ == '__main__':
     logger.P("\n", noprefix=True)
   #######################################
   
-  has_bot_intent = 'BOT_INTENT' in logger.config_data['ENCODER_ARCHITECTURE']['PARENT']
+  has_bot_intent = False
+  if 'BOT_INTENT' in logger.config_data['ENCODER_ARCHITECTURE']['PARENT']:
+    has_bot_intent = bool(logger.config_data['ENCODER_ARCHITECTURE']['PARENT']['BOT_INTENT'])
+
   steps_per_epoch = len(batches_train)
   TRAIN_GENERATOR = TrainGenerator(batches_train, loop_forever=True, use_bot_intent=has_bot_intent)
 
-  hnet = HierarchicalNet(logger, d)
+#  hnet = HierarchicalNet(logger, d)
+#  hnet.LoadModelWeightsAndConfig('20190611_164049_02_dif_emb_no_bot_intent_epoch250_loss0.10')
+#  hnet.CreatePredictionModels()
 
-  hnet.DefineTrainableModel()
-  hnet.CreatePredictionModels()
+#  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=250,
+#           steps_per_epoch=steps_per_epoch, save_period=50)
 
-  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=250,
-           steps_per_epoch=steps_per_epoch, save_period=50)
-
-  
   
   
