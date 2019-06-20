@@ -1,0 +1,37 @@
+{% extends base %}
+
+{% block postamble %}
+  <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    {% include "css/bootstrap.min.css" %}
+    {% include "css/dashboard.css" %}
+    {% include "css/customcss.css" %}
+  </style>
+{% endblock %}
+
+ 
+{% block contents %}
+  <div class="row justify-content-center mb-2" >
+    <img class="text-center" src="allan-web-platform/static/img/ue-desktop.jpg" width="50%"/>
+  </div>
+  <main role="main" class="d-flex justify-content-center "> <!-- vertical-center mt-1" > -->
+      {% for root in doc.roots %}
+        {{ embed(root) | indent(2) }}
+      {% endfor %}
+  </main>
+  <!-- Bootstrap core JavaScript
+  ================================================== -->
+  <!-- Placed at the end of the document so the pages load faster -->
+  <script>
+    {% include "js/jquery-3.3.1.min.js" %}
+    {% include "js/popper.min.js" %}
+    {% include "js/bootstrap.min.js" %}
+  </script>
+
+{% endblock %}
+
+    
+
+
+
+
