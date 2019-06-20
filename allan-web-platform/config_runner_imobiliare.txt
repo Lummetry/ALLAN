@@ -1,0 +1,21 @@
+{
+    "BASE_FOLDER" : "Dropbox",
+    "APP_FOLDER"  : "_allan_data/_chatbot",
+
+    "ENCODER_NAME" : "20190611_164049_02_dif_emb_no_bot_intent_epoch250_loss0.10_imob_encoder.h5",
+    "DECODER_NAME" : "20190611_164049_02_dif_emb_no_bot_intent_epoch250_loss0.10_imob_decoder.h5",
+
+    "DECODER" : {
+      "INITIAL_STATE" : ["enc_rec_L2_256", ""]
+    },
+
+    "BOT_TYPE" : "imobiliare",
+    "INV_USER_LABELS_DICTIONARY" : "DATA/_imobiliare/dict_user_id2label.pickle", 
+    "HASHTAGS"             : "DATA/_imobiliare/hashtags.txt",
+    "LABELS"               : "DATA/_imobiliare/user_labels.txt",
+    "VULGARITIES"          : "DATA/vulgaritativ2.txt",
+    "INDEX2WORD"           : "DATA/20190611_ep55_index2word.pickle",
+
+    "MAX_WORDS" : 36,
+    "MAX_CHARACTERS" : 158
+}
