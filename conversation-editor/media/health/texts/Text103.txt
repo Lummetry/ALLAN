@@ -1,0 +1,18 @@
+Buna ziua! Numele meu este <NAMEBOT>! Cu ce informatii te pot ajuta?
+Ma dor dintii de nu mai pot! Unde sa ma duc?
+Ai cum sa imi oferi mai multe detalii, te rog?
+Ma dor dintii! Cred ca unul e si crapat. Ce pot sa fac?
+De cat timp ai aceste probleme?
+De cateva minute. Cazusem si m-am lovit la dinti si au crapat cred.
+Iti recomand sa consulti un dentist cat mai repede.
+Poti sa imi recomanzi un dentist bun?
+Cel mai bine ar fi sa mergi la clinicaxxxxx si sa iti faci o programare acolo.
+Cat o sa ma coste o programare la dentist?
+Recomand sa folosesti acest voucher (voucherxxxxx) pentru a beneficia de o reducere.
+Bine dar cat o sa ma coste?
+Costul consultului este stabilit in momentul programarii.
+Bun. Multumesc.
+Mai ai nevoie de altceva, <NAME>?
+Nu, sunt ok.
+In regula, va doresc multa sanatate!
+Multumesc la fel!

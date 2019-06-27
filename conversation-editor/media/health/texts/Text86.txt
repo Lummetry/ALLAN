@@ -1,0 +1,22 @@
+Hei, ma numesc <NAMEBOT>, te pot ajuta cu ceva?
+Imi bate inima repede. Ma poti ajuta?
+Cred ca te pot ajuta daca imi oferi mai mute detalii.
+Ma doare inima de ceva vreme si imi este frica. 
+Iei un tratament pentru inima?
+Am incercat cu ceaiuri, dar tot ma doare.
+De cat timp ai aceasta problema?
+De azi dimineata. Asa m-am trezit.
+Inteleg. Iti recomand o vizita la clinicaxxxxx pentru un consult specializat.
+Simt ca e urgent. Incepe sa ma doara tot mai tare.
+In cazul in care simti ca este nevoie, poti chema o ambulanta. Solicita ajutor in cazul in care este necesar, sunand la 112.
+Poti chema tu ambulanta?
+Imi pare rau, la situatii de 112 tu trebuie sa apelezi.
+E ok. Poate e doar un atac de panica. Imi poti recomanda ceva pentru atacurile de panica?
+Pot sa iti recomand articole de pe site-ul nostru: sitexxxxx
+Altceva poti recomanda? Medicamente sau ceaiuri? Produse naturiste?
+Din pacate nu pot recomanda medicamente direct. Numai un medic specializat poate sa iti ofere solutii adecvate.
+Bine mersi oricum
+Cu placere. Te mai pot ajuta cu altceva?
+Nu, e ok.
+In regula. La revedere, <NAME>!
+Pa

@@ -1,0 +1,25 @@
+Buna ziua! Ma numesc <NAMEBOT>, te pot ajuta cu ceva?
+Buna, <NAMEBOT>! As avea o intrebare legata de perioada de sarcina.
+Poti sa imi dai mai multe informatii, <NAME>?
+Ma simt foarte umflata si trista.
+De cat timp te simti asa?
+De cateva zile.
+Ai mai avut si alte simptome?
+Da, varsaturi, greata, pofte, lucrurile obisnuite sarcinii.
+Cum ai facut fata pana acum?
+Incerc sa ma gandesc la lucrurile bune, la copil si la sotul meu.
+Ai consultat un medic pana acum?
+Nu. Am inteles ca este normal sa am starile astea in timpul sarcinii dar vreau sa fac ceva in privinta asta.
+Mentii o dieta sanatoasa pe parcursul sarcinii?
+Desigur. Vreau sa am grija de bebelus.
+Dar cu hidratarea cum stai? Bei suficiente lichide?
+Da, beau din cand in cand. Cel mai mult beau suc de portocale natural.
+Ai urmarit ultimele articole de pe site-ul nostru referitoare la sarcina? 
+Nu stiam ca pot gasi asa ceva la voi pe site.
+Aici poti gasi diverse materiale care iti pot fi de ajutor: sitexxxxx
+Multumesc mult de tot!!!
+Insa tot trebuie sa discuti cu un medic pentru a te asigura ca este totul in regula. Vrei sa iti fac o recomandare?
+Desigur. Unde ma pot duce?
+Sugerez sa te programezi la un medic specializat din clinicaxxxxx.
+Asa o sa fac. Multumesc!
+Cu placere, <NAME>! O zi usoara!

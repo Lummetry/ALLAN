@@ -1,0 +1,23 @@
+Buna ziua! Ma numesc <NAMEBOT>. Care este problema dvs?
+Am o durere de cap ingrozitoare! Nu stiu ce sa fac sa imi treaca.
+Ai incercat tratamente naturiste, comprese cu apa rece sau ceaiuri?
+Nu. Nu suport ceaiurile.
+De cat timp ai aceasta durere?
+De o ora.
+Este o durere constanta sau intermitenta?
+Constanta. Si parca din ce in ce mai dureroasa. Mai intensa.
+Ai avut parte de stres in ultima vreme?
+Da, mai ales in ultima vreme.
+In acest caz iti recomand un consult la un medic generalist.
+Bine dar nu imi poti da tu un tratament?
+Te pot indruma catre o clinica adecvata.
+Bine. Unde sugerezi sa ma duc? Nu vreau sa chem salvarea.
+Recomand sa iti faci programare la clinicaxxxxx. 
+Cat o sa coste o programare?
+Vrei sa iti dau si un voucher pentru o reducere de pret?
+Sigur! Multumesc
+Cu placere! Voucher-ul pentru clinica este: voucherxxxxx
+Multumesc. Cu voucher-ul ce fac? Il printez si ma duc cu el la clinica, la consult?
+Orice detaliu se stablieste telefonic cu clinica.
+Am inteles, ok. La revedere!
+La revedere!

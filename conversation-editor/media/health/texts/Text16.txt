@@ -1,0 +1,21 @@
+Buna ziua! Ma numesc <NAMEBOT>. Cum te pot ajuta astazi?
+Buna <NAMEBOT>! Am o problema.
+Te ascult, <NAME>. Cu ce te pot ajuta?
+Unde as putea sa ma duc sa fac analize?
+Poti sa imi prezinti problema mai clar, te rog?
+Vreau sa fac analize de sange.
+Ce fel de problema medicala ai?
+Imi e rau la orice mancare. Nu pot sa mananc.
+De cat timp ai aceasta problema?
+De doua zile. Am mancat la un fast-food si de atunci mi s-a taiat pofta de orice.
+Ai fost la un consult pana acum?
+Nu inca. De aceea voiam sa stiu unde sa imi fac analizele.
+Este indicat sa consulti medicul internist pentru o evaluare adecvata.
+Bine, dar unde?
+O varianta potrivita pentru tine ar fi clinicaxxxxx.
+Cat o sa fie analizele?
+Costul analizelor se discuta telefonic pe baza discutiei cu medicul. Pot sa iti ofer un voucher pentru a beneficia de o reducere (voucherxxxxx)
+Am inteles. Multumesc!
+Pentru putin.
+La revedere
+La revedere!

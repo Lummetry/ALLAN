@@ -1,0 +1,123 @@
+{% load staticfiles %}
+<main class="main">
+    <!-- Breadcrumb-->
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+
+        <!-- Breadcrumb Menu-->
+    </ol>
+    <div class="container-fluid">
+        <div class="animated fadeIn">
+            <div class="row">
+                <div class="col-md-12">
+                    &nbsp;<div class="card">
+                    <div class="card-header" style="font-size: 1.1rem;">
+                        <i class="fa fa-align-justify"></i> {{ action_conversation }} conversation</div>
+                    <div class="card-body" style="overflow: auto;  max-height: 65vh;">
+                        <form method="post" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="id_name">Title</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                              <i class="icon-calendar"></i>
+                            </span>
+                                        </div>
+                                        <input class="form-control" type="text" placeholder="Name" id="id_name" name="name" value="{{ form.name.value  }}" >
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <table class="table table-responsive-sm table-bordered table-striped table-sm">
+                            <thead>
+                            <tr>
+                                <th>Label</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                                </div>
+                                <div class="col-md-9">
+                                    <label for="id_name">Title</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                              <i class="icon-calendar"></i>
+                            </span>
+                                        </div>
+                                        <textarea class="form-control" placeholder="Name" id="id_text" name="name" rows="10" ></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if error %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="alert alert-danger" role="alert">
+                                        {{ error }}
+                                    </div>
+                                </div></div>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <button class="btn btn-block btn-primary" type="submit">Update</button>
+                                </div></div>
+
+
+                            <script>
+                        $(function () {
+                            var oldCount = 0;
+                            function  addRow(lineNo) {
+                                var markup = "<tr><td id='line-"+lineNo+"'>nolabel</td></tr>";
+                                $("table tbody").append(markup);
+                            }
+
+                            function delRow(lineNo){
+                                $("table tbody").find('#line-'+lineNo).each(function(){
+
+                                        $(this).parents("tr").remove();
+
+                                });
+                            }
+
+                            function chkLine() {
+                                var text = $("#id_text").val();
+                                // will remove the blank lines from the text-area
+                                text = text.replace(/^\s*[\r\n]/gm, "");
+                                //It will split when new lines enter
+                                var lines = text.split(/\r|\r\n|\n/);
+                                var count = lines.length; //now you can count thses lines.
+                                console.log(oldCount);
+                                console.log(count);
+                                if (oldCount < count){
+                                    addRow(count);
+                                }
+
+                                if (oldCount > count){
+                                    delRow(oldCount);
+                                }
+                                oldCount = count;
+                            }
+                            $("#id_text").change(function() {
+                                $(this).css("background-color", "#7FFF00");
+                                chkLine();
+                            });
+                            $('#id_text').bind('keyup', function(e) {
+                                console.log(e.keyCode);
+                                //if(e.keyCode==13 || e.keyCode == 8 || e.keyCode == 46){
+                                    chkLine();
+                                //}
+                            });
+                        });
+                            </script>
+                        </form>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>

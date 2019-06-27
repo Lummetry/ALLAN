@@ -1,0 +1,13 @@
+salut
+atacdepanica
+nmi
+atacdepanica
+nmiatacdepanica
+atacdepanica
+recomurgenta
+urgenta
+neutru
+urgenta
+recomurgenta
+da
+end

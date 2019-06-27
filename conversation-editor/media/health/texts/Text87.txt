@@ -1,0 +1,21 @@
+Buna ziua! Ma numesc <NAMEBOT>. Cu ce te pot ajuta?
+Am o raceala nasoala. Care ar fi medicamentele cele mai indicat?
+Ai incercat tratamente naturiste? Ceaiuri sau comprese?
+Nu imi plac ceaiurile nici sa ma bati.
+In regula. Cel mai indicat ar fi sa consulti un medic generalist.
+Altceva imi recomanzi?
+Daca vrei, iti pot recomanda o clinica specializata.
+Nu vreau clinica. Prefer medicamente.
+Cred ca ar fi mai simplu pentru tine sa iti recomand o clinica la care as putea sa iti ofer si o reducere. Ce parere ai?
+Nu. Medicamente.
+Numai un medic te poate ajuta cu un tratament adecvat.
+Ok, bine atunci. Zi-mi ce clinica ma poate ajuta.
+Desigur. Iti recomand clinicaxxxxx unde poti primi ajutor specializat.
+Si cat o sa ma coste?
+Cu acest voucher (voucherxxxxx) poti primi reducere. Orice alte costuri si detalii se stabilesc telefonic.
+Dar cu ce doctor trebuie sa vorbesc?
+Acest lucru se stabileste telefonic.
+Si cand pot sa ma duc?
+Acest lucru se stabileste telefonic.
+Bine, mersi.
+Iti urez o zi placuta, <NAME>!

@@ -1,0 +1,29 @@
+Bine ai venit! Numele meu este <NAMEBOT>. Cu ce informatii te pot ajuta?
+Buna, bine te-am gasit!
+Cum te pot ajuta, <NAME>?
+Am o problema de sanatate si am nevoie de un sfat
+Poti sa imi dai mai multe detalii, te rog?
+Pai este vorba de o problema gastrica, ulcer sau ceva asemanator.
+Deci este o problema gastrica?
+Cred ca da
+Urmezi o dieta stricta?
+Nu. Credeam ca o sa imi treaca cu un medicament.
+De cat timp ai aceasta problema?
+De cateva zile. Am mancat ceva si de atunci am dureri si greata.
+Ai consultat un medic pana acum?
+Sincer speram sa nu trebuiasca sa merg la doctor. Imi este frica sa primesc vesti proaste.
+Disconfortul este continuu sau intermitent?
+Durerea este continua dar nu insuportabila. Imi este dificil cand mananc.
+Inteleg. Pe langa o dieta bogata in fibre si sa consumi minim 2 litri de lichide pe zi, as recomanda un consult medical
+Da, am fost dar tot am probleme.
+Ar merita o opinie de la un medic specializat. Iti recomand sa mergi la clinicaxxxxx pentru analize.
+Ok, asa o sa fac.
+Daca vrei, iti pot oferi un voucher pentru reducere la clinicaxxxxx. Te intereseaza?
+Da, multumesc!
+Acesta este voucher-ul de reducere (voucherxxxxx).
+Cand pot sa ma duc?
+Programarile se stabilesc telefonic.
+Si pana atunci nu pot sa fac nimic?
+Daca vrei, sunt numeroase articole care abordeaza aceasta tema pe site-ul nostru: sitexxxxx
+Multumesc
+Toate cele bune, <NAME>!

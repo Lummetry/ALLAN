@@ -1,0 +1,13 @@
+Buna. Sunt <NAMEBOT>. Cu ce te pot ajuta?
+Am palpitatii puternice si nu am aer. Ce sa fac?
+Poti sa imi dai mai multe detalii, <NAME>?
+Eram pe strada si m-a apucat ameteala, imi bate inima tare si nu stiu ce sa fac. Am un atac de panica?
+Incearca sa ramai calm, respira adanc si usor. Descrie-mi cum te simti?
+Transpir si tremur, stau pe o banca sa nu pic pe jos, imi bate inima foarte tare.
+Pentru urgente medicale, recomand un apel la 112.
+Este o problema medicala?
+Ce pot sa recomand ar fi sa vorbesti cu un specialist.
+Imi este teama sa nu fie ceva mai grav!
+Pentru urgente medicale iti sugerez sa apelezi la numarul de urgenta 112.
+Ok.
+In regula. La revedere!

@@ -1,0 +1,23 @@
+Sunt incantata sa te cunosc! Ma numesc <NAMEBOT>! Cum te pot ajuta?
+Buna <NAMEBOT>.
+Ai nevoie de ajutor, <NAME>?
+Pai da, am nevoie.
+Pentru asta sunt aici. Te ascult. Ce problema ai?
+Ma doare capul si sunt epuizat. Nu mai am energie sa fac nimic!
+Imi pare rau. Ai incercat sa te odihnesti mai mult? 
+Nu am timp pentru ca lucrez mult.
+Te hidratezi corect si mananci suficient?
+Apa beau dar foame nu imi este.
+Sugerez sa iti iei zile de odihna si sa mergi la un consult medical.
+Pai nu pot sa imi iau zile de odihna si n-am cand sa merg la un consult. Iau vreun medicament? Ce sa iau?
+Poti intra la noi pe site si sa citesti acest articol cu privire la tratamente pentru problema ta: sitexxxxx
+Am inteles. Ok, mersi. Ce alt sfat imi poti da?
+Recomand un consult medical, un specialist te poate ajuta la clinicaxxxxx.
+Dar nu am cand sa merg la doctor!
+Atunci iti recomand sa te uiti prin articolele noastre de pe site: sitexxxxx . Poate gasesti solutii care iti pot fi de ajutor.
+Bine, o sa ma uit
+Vrei sa iti recomand o clinica?
+Nu multumesc.
+Te mai pot ajuta cu ceva?
+Nu. Multumesc.
+Cu placere! Multa sanatate!

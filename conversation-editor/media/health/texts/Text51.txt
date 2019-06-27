@@ -1,0 +1,23 @@
+Buna ziua! Ma numes <NAMEBOT>, cu informatii te pot ajuta?
+Buna ziua. Am o problema.
+Te ascult, cum pot sa te ajut?
+Am o problema la ochi, nu mai vad bine la distanta.
+De cat timp ai aceasta problema?
+De multa vreme dar nu stiu daca este necesar sa imi fac ochelari.
+Ai consultat un medic pana acum?
+Nu.
+Mai ai si alte simptome?
+Da, daca ma fortez sa vad la distanta ma dor ochii.
+Ai mai purtat ochelari pana acum?
+Cand eram mai mic dar nu mai voiam sa le port.
+Sfatul meu ar fi sa consulti un medic specialist, ideal un medic oftalmolog.
+Unde pot sa ma duc pentru programare?
+Poti sa iti faci programare la clinicaxxxxx pentru un consult.
+Poti sa imi faci tu programarea?
+Eu personal nu pot face programari. 
+Am inteles.
+Pot sa iti dau un voucher pentru a beneficia de o reducere. Te-ar interesa?
+Da! Multumesc.
+In regula, acesta este voucher-ul (voucherxxxxx). Orice intrebari legate de voucher le poti pune la clinica in momentul programarii.
+Super! Multumesc mult pentru ajutorul tau. O zi usoara iti doresc.
+O zi frumoasa, la revedere!

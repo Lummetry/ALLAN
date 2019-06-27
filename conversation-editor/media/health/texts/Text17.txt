@@ -1,0 +1,26 @@
+Buna! Ma numesc <NAMEBOT>. Cu ce te pot ajuta?
+As avea si eu o problema si poate imi dai un sfat
+Imi poti da detalii, te rog?
+Pai da, mie mi-a crescut un <UNK> si nu stiu ce sa fac cu el
+De cat timp este aceasta problema?
+Nu sunt sigur, probabil de cateva zile dar chiar nu as putea spune sigur.
+Ai dureri sau alte simptome?
+Nu, doar ca ma cam mananca atunci cand ating <UNK>
+Ai un regim alimentar echilibrat?
+Ce legatura are asta?
+Pentru a putea da o recomandare adecvata, sunt anumite aspecte pe care trebuie sa le inteleg, cum ar fi intrebarea de mai sus.
+Bine, da, mananc echilibrat.
+Ai fost la un consult pana acum?
+Nu am avut cand sa ma duc
+Inteleg, dar cel mai bine cred ca ar fi sa iti faci un set de analize.
+Aha, multumesc pentru sfat
+As putea sa iti ofer si un voucher de reducere la clinicaxxxxx. Esti de acord?
+Da! Multumesc mult!
+Cu acest voucher poti beneficia de o reducere la clinicaxxxxx (voucherxxxxx)
+Poti sa imi mai recomanzi ceva?
+Mentine o dieta sanatoasa si bea cantitatea de apa recomandata pe zi.
+Altceva?
+Sa ai un program de odihna adecvat.
+Multumesc!
+Cu placere. La revedere, <NAME>!
+La revedere!

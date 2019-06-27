@@ -1,0 +1,27 @@
+Buna. Sunt <NAMEBOT>. Cu ce te pot ajuta?
+Buna <NAMEBOT>. Am nevoie de ajutor!
+Desigur, cu ce te pot ajuta, <NAME>?
+Nu stiu cum sa explic. Simt asa ca o gheara in piept.
+Inteleg. Iei tratament pentru asta?
+Nu. Am baut ceai cald dar atat.
+De cat timp ai aceasta problema?
+De doua ore.
+Alte simptome ai?
+Simt furnicaturi pe bratul stang.
+Poti sa imi explici care este problema mai clar, te rog?
+Nu stiu! Ma strange inima si sunt agitat.
+Ok, iti recomand o vizita medicala la clinicaxxxxx, sau solicita ambulanta la 112.
+Si ce fac cu inima pana atunci?
+Ramai calm si solicita ajutor de la un medic specializat.
+Nu-mi poti recomanda un medicament?
+Imi pare rau, pot doar sa recomand clinici medicale.
+Nu ma ajuta.
+Inteleg, dar in acest caz, numai un medic specialist te poate ajuta.
+Crezi ca e un atac de cord?
+Nu pot oferi diagnostic concret, insa recomand sa suni la 112 in cazul unei urgente medicale.
+Nu vreau sa fac asta!
+Cum doresti. Te mai pot ajuta cu ceva?
+Nu. O sa ma descurc.
+In regula. 
+La revedere <NAMEBOT>.
+Iti urez o zi usoara, <NAME>.

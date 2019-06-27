@@ -1,0 +1,23 @@
+Ma numesc <NAMEBOT>. Cu ce te pot ajuta astazi?
+Am o durere puternica la coloana. Nu stiu ce am facut dar ma doare de doua zile.
+Ai fost la un control pana acum, <NAME>?
+Nu inca. Imi este greu sa ma deplasez.
+Alte simptome ai?
+Nu, insa daca ma aplec durerea este mai intensa.
+Te afli sub tratament medical?
+Cum adica?
+Iei medicamente pentru aceasta problema?
+Nu. Doar o alifie. Ma dau cand ma doare, dar nu prea ma ajuta.
+Iti pot recomanda clinicaxxxxx unde te poate trata un medic specializat.
+Multumesc, pot sa te mai intreb ceva?
+Desigur, te ascult.
+Exista un tratament care ma poate ajuta acum?
+Numai un doctor iti poate face o recomandare potrivita.
+Crezi ca e ceva foarte grav?
+Nu pot pune un diagnostic, cel mai bine intrebi medicul specializat.
+Bine, cand pot merge la doctor?
+Orice detaliu se stabileste telefonic cu clinica recomandata.
+Stii cumva cat o sa ma coste un consult?
+Acesta este un detaliu stabilit la telefon la clinicaxxxxx. Recomand sa ii suni si sa folosesti un voucher pentru reducere (voucherxxxxx).
+Bine, mersi
+Cu multa placere, <NAME>!

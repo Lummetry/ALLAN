@@ -1,0 +1,17 @@
+Buna! Numele meu este <NAMEBOT>. In ce fel as putea sa te ajut?
+Am o durere la mana stanga. Cred ca mi-am sucit ceva la muschi. Ce imi sugerezi sa fac?
+De cat timp ai aceasta durere?
+Nu stiu, cateva minute. Speram sa imi treaca pana acum.
+Zona este umflata?
+Nu pare a fi umflata. Ce sa fac sau unde sa ma duc sa imi treaca?
+Pot sa iti recomand o vizita la clinicaxxxxx. Un medic generalist este mult mai capabil sa te ajute.
+Dar nu pot sa iau o crema sau ceva ca sa imi treaca mai repede?
+Este mult mai indicat sa consulti un medic specialist.
+Poti sa imi dai un articol care sa ma ajute?
+Pentru problema ta, poti consulta un articol de pe site-ul nostru: sitexxxxx
+Si acolo sunt recomandate medicamente? O crema, ceva?
+Cel mai indicat ar fi sa consulti un medic specializat.
+Nu vreau sa merg la doctor.
+Spune-mi daca te mai pot ajuta cu ceva.
+Nu. La revedere.
+La revedere, <NAME>!

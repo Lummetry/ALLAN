@@ -1,0 +1,23 @@
+Buna! Numele meu este <NAMEBOT>. In ce fel as putea sa te ajut?
+Buna. Am o problema la ochi. Ma ustura si imi lacrimeaza. Ce pot sa fac?
+De cat timp ai aceasta problema?
+De patru zile jumatate. Am fost la bazin si de atunci parca ceva nu e in regula.
+Imi pare rau sa aud asta. Ai urmat un tratament?
+Nu, am crezut ca trece de la sine, dar vad ca e mai rau.
+Ai alergii sau antecedente cu aceste simptome?
+Nu. Au inceput asa din senin.
+Alte simptome ai?
+Nu ma doare capul, nu am racit. Nu am alte simptome. Pare un pic rosu ochiul.
+Cel mai indicat ar fi sa mergi la un medic oftalmolog pentru control.
+Unde pot sa ma duc?
+Vrei sa iti ofer o varianta de clinica?
+Desigur ca da.
+In regula. Sugerez sa iti faci programare la clinicaxxxxx. 
+Cand pot sa ma duc?
+Orice detaliu se stabileste telefonic. Pot sa iti ofer un voucher, daca vrei?
+Voucher pentru ce?
+Voucherul este pentru reduceri.
+Ah da! Chiar te rog!
+Desigur, acesta este voucher-ul tau: voucherxxxxx
+Multumesc mult! Zi usoara!
+Multumesc, la fel! La revedere!

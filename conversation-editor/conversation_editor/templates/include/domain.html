@@ -1,0 +1,58 @@
+{% load staticfiles %}
+
+<main class="main">
+    <!-- Breadcrumb-->
+    <ol class="breadcrumb">
+
+
+        <!-- Breadcrumb Menu-->
+
+
+    </ol>
+    <div class="container-fluid">
+        <div class="animated fadeIn">
+
+            <div class="row">
+                <div class="col-md-12">
+                    &nbsp;<div class="card">
+                    <div class="card-header" style="font-size: 1.1rem;">
+                        <i class="fa fa-align-justify"></i> {{ title }}</div>
+                    <div class="card-body" style="overflow: auto;  max-height: 65vh;">
+                        <table class="table table-responsive-sm table-bordered table-striped table-sm">
+                            <thead>
+                            <tr>
+                                <th>Nr. Crt.</th>
+                                <th>Name</th>
+                                <th><a href="{% url 'conversation_editor' type='add' %}"><span class="badge badge-success">Add</span></a></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for doc in data %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ doc.name }}</td>
+                                <td><a href="{% url 'conversation_editor' type='edit' %}"><span class="badge badge-danger">Edit</span></a></td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <nav>
+                            <ul class="pagination">
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Prev</a>
+                                </li>
+                                <li class="page-item active">
+                                    <a class="page-link" href="#">1</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>

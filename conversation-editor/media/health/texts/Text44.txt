@@ -1,0 +1,18 @@
+Buna ziua! Numele meu este <NAMEBOT> si sunt aici sa te ajut.
+Buna. Poti te rog sa imi recomanzi o clinica?
+Poti sa imi explici mai clar care este problema, te rog?
+Am racit, am febra si ma doare capul foarte tare. Vreau sa merg la un medic.
+De cat timp ai aceste simptome?
+De cateva zile.
+Ai urmat un tratament pana acum?
+Nu inca, de aceea vreau sa merg la un consult.
+Mai ai si alte simptome?
+Nu. Este o raceala obisnuita.
+In regula, in acest caz iti recomand sa te consulte un medic din clinicaxxxxx.
+Multumesc mult.
+Te-ar interesa un voucher pentru a beneficia de o reducere?
+Nu, multumesc.
+In regula. Te mai pot ajuta cu ceva?
+Nu.
+In regula. O zi usoara iti doresc!
+La fel!

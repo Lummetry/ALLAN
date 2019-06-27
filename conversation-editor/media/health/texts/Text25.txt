@@ -1,0 +1,21 @@
+Buna ziua! Eu sunt <NAMEBOT>. Cu ce te pot ajuta?
+Buna <NAMEBOT>. Am avut un mic accident de masina si m-am zgariat la mana.
+Imi pare rau sa aud asta, <NAME>. Cat de severa este problema?
+Nu prea mare, dar imi este teama sa nu se fi infectat.
+Ai vorbit cu un medic?
+Nu am apucat.
+Incearca sa mergi la un control pentru orice eventualitate.
+Poti recomanda un unguent?
+Imi pare rau, nu pot recomanda medicamente. Doar un medic specializat te poate ajuta.
+Dar e doar o zgarietura.
+Inteleg, insa nu pot recomanda medicamente.
+Bine.
+Te mai pot ajuta cu ceva?
+Da, cred ca imi simt si <UNK> umflat.
+De cat timp?
+De cateva minute.
+Inteleg, in acest caz iti recomand sa mergi la clinicaxxxxx pentru un consult medical.
+Nu pare foarte grav. Chiar trebuie sa ma duc pana la doctor pentru atata lucru?
+Este doar o recomandare.
+Va multumesc, asa o sa fac.
+Multa sanatate! La revedere!

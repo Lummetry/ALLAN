@@ -1,0 +1,19 @@
+Buna ziua! Eu sunt <NAMEBOT>. Te pot ajuta cu ceva?
+Ma doare capul
+Inteleg, <NAME>. Poti sa imi dai mai multe detalii, te rog?
+A inceput de ieri si nu ma lasa durerea de cap.
+Ai luat medicamente pana acum, <NAME>?
+Nu.
+Urmezi sau ai incarcat un tratament medicamentos pana acum?
+Nu
+Menti o dieta sanatoasa?
+Da, mananc salate si mancaruri sanatoase de obicei.
+Te hidratezi suficient?
+Da, minim doi litri de apa pe zi.
+Lucrezi intr-un mediu stresant sau solicitant?
+Da dar nu pot sa spun ca de acolo mi se trage.
+Pot sa iti recomand o vizita la clinicaxxxxx unde poti primi un tratament medical adecvat.
+Si la care medic sa ma duc?
+Aceasta informatie se stabileste telefonic la clinicaxxxxx.
+Bine, pa
+La revedere! Multa sanatate!

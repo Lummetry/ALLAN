@@ -1,0 +1,24 @@
+Buna! Numele meu este <NAMEBOT>. Cu ce te pot ajuta?
+Hello hello
+Incantata sa te cunosc, <NAME>. Care este problema in care pot sa te ajut?
+Ma mananca pielea de pe palma. Cred ca sunt iritata.
+Ai alergii la ceva anume?
+Nu cred.
+De cat timp ai problema asta?
+De cateva zile.
+Alte simptome au aparut?
+Nu, nu cred ca am alte simptome.
+Atunci iti recomand sa te vada un dermatolog la clinicaxxxxx.
+Bine, ma duc acolo maine.
+Vrei si voucher?
+La ce ma ajuta voucherul?
+Voucherul iti ofera reducere.
+Nu, multumesc. De fapt, cred ca nu ma mai duc. Caut pe net o solutie.
+Sigur nu vrei sa incerci o vizita medicala?
+Da, nu vreau la doctor acum. Nu ma simt in stare.
+Ok, atunci pot sa iti recomand un articol de pe site-ul nostru, daca vrei.
+Da, te rog. Ce articol?
+Pe site-ul nostru poti gasi numeroase articole utile: sitexxxxx
+Ok mersi fain
+Cu drag. Iti urez insanatosire grabnica!
+Zi usoara!
