@@ -130,6 +130,10 @@ $('#id_label_name').autocomplete({
                 $('#id_message_id').val(msg_id);
                 if (json.human == false){
                     $('#id_label_name').prop("readonly", true);
+                    $('#id_human').val('0');
+                }else{
+
+                    $('#id_human').val('1');
                 }
                 console.log("success"); // another sanity check
             },
@@ -160,6 +164,7 @@ $('#id_label_name').autocomplete({
                     message : $('#id_message').val(),
                     domain : $('#id_domain').val(),
                     label_name : $('#id_label_name').val(),
+                    human: $('#id_human').val()
             }, // data sent with the post request
             // handle a successful response
             success : function(json) {

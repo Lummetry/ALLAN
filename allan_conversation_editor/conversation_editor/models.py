@@ -30,7 +30,7 @@ class Label(models.Model):
 class ChatLine(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     message = models.CharField(max_length=1024, blank=False, null=False)
-    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE, related_name='children')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     human = models.BooleanField(default=True, blank=False, null=False)

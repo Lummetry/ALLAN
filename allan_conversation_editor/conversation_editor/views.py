@@ -88,7 +88,8 @@ def conversation_editor(request, id):
         raise Exception("Item doesn't exists")
     try:
         chatLines = ChatLine.objects.filter(chat=chat).order_by('id')
-
+        chatLines = []
+        chatL = recursiv(chatLines, None, chat)
     except ChatLine.DoesNotExist:
         raise Exception("Item doesn't exists")
 
@@ -97,8 +98,19 @@ def conversation_editor(request, id):
                                          'chat_id': id,
                                          'domain_title': domain_title,
                                          'domain_id': domain_id,
-                                         'chatLines': chatLines,
+                                         'chatLines': chatL,
                                          'form': ChatLineForm()})
+
+def recursiv(chatLines, parent, chat):
+    if parent == None:
+        for item in ChatLine.objects.filter(parent__isnull=True, chat=chat):
+            chatLines.append(item)
+            recursiv(chatLines, item, chat)
+    else:
+        for item in ChatLine.objects.filter(parent=parent, chat=chat):
+            chatLines.append(item)
+            recursiv(chatLines, item, chat)
+    return chatLines
 
 def create_message(request):
     if request.method == 'POST':
@@ -137,9 +149,17 @@ def create_message(request):
             parent = ChatLine.objects.get(pk=parent_id)
         except ChatLine.DoesNotExist:
             parent = None
+        if parent is not None:
+            try:
+                child = ChatLine.objects.get(parent=parent)
+            except ChatLine.DoesNotExist:
+                child = None
         chatLine = ChatLine(chat=chat, created_user=request.user, parent=parent, message=message, label=label)
         chatLine.save()
-
+        if child is not None:
+            parent = chatLine
+            child.parent = parent
+            child.save()
         response_data['result'] = 'Create post successful!'
 
         return HttpResponse(
@@ -160,6 +180,7 @@ def update_message(request, id):
         message = request.POST.get('message')
         domain_id = request.POST.get('domain')
         label_name = request.POST.get('label_name')
+        human = request.POST.get('human')
         response_data = {}
 
         if int(label_id) == 0:
@@ -194,6 +215,11 @@ def update_message(request, id):
         fields['parent'] = parent
         fields['message'] = message
         fields['label'] = label
+        if human == '0':
+            is_human = False
+        else:
+            is_human = True
+        fields['human'] = is_human
         chatLine, created = ChatLine.objects.update_or_create(
                     id=id, defaults=fields
                 )
@@ -375,9 +401,15 @@ class ApiCreateMessageTypeView(APIView):
                 )
             except Label.DoesNotExist:
                 raise Exception("Label doesn't exists")
+            try:
+                ch = ChatLine.objects.filter(chat=chat).order_by('-id').first()
+
+                parent = ch
+            except ChatLine.DoesNotExist:
+                parent = None
             chatLine = ChatLine(chat=chat,
                                 created_user=fields['created_user'],
-                                parent=None,
+                                parent=parent,
                                 message=message,
                                 label=label,
                                 human=human)

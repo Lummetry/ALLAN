@@ -54,6 +54,18 @@
                                           </div>
                                           <input class="form-control" type="text" placeholder="title" id="id_label_name" name="label_name" value="" >
                                     </div>
+                                    <label for="id_label_name">Tip Persoana</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                              <i class="icon-calendar"></i>
+                                            </span>
+                                          </div>
+                                          <select class="custom-select custom-select-sm" id="id_human" name="human">
+                                              <option value="0">Bot</option>
+                                              <option value="1">Human</option>
+                                            </select>
+                                    </div>
                                     {% if form.errors %}
                                         <div class="alert alert-danger" role="alert">
                                           {{ form.errors }}
@@ -83,10 +95,10 @@
                                     <thead>
                                     <tr>
                                         <th width="5%">Nr. Linie</th>
-                                        <th width="65%">Linie Conversatie</th>
-                                        <th width="10%">Intentie Linie</th>
-                                        <th width="8%">Tip Persoana</th>
-                                        <th width="12%"><!--<a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Add</span></a>--></th>
+                                        <th width="63%">Linie Conversatie</th>
+                                        <th width="9%">Intentie Linie</th>
+                                        <th width="7%">Tip Persoana</th>
+                                        <th width="17%"><!--<a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Add</span></a>--></th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -97,7 +109,7 @@
                                             <td style="color: #00ff33; font-weight: bold;">{{ chatLine.label.name }}</td>
                                             <td style="color: #0a35ff; font-weight: bold;">{%  if chatLine.human == True %}Human{% else %}Bot{% endif %}</td>
                                             <td>
-                                                    <!--<a href=""><span class="badge badge-success btnAdd"  data-parent_id="{{ chatLine.id }}" data-message_id="0" data-chat_id="{{ chat_id }}">Add Below</span></a>-->
+                                                    <a href=""><span class="badge badge-success btnAdd"  data-parent_id="{{ chatLine.id }}" data-message_id="0" data-chat_id="{{ chat_id }}">Adauga</span></a>
                                                     &nbsp;
                                                     <a href=""><span class="badge badge-primary btnAdd"  data-parent_id="{% if chatLine.parent %}{{chatLine.parent.id}}{% else %}0{% endif %}" data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">Modifica</span></a>
                                                     &nbsp;
@@ -107,16 +119,16 @@
                                         </tr>
                                     {% endfor %}
 
-                                    <tr>
-                                            <td style="max-width: 10%;">&nbsp;</td>
-                                            <td style="font-family: Courier; font-size:  0.875rem; font-weight: bold;">&nbsp;</td>
-                                            <td style="color: #00ff33; font-weight: bold;">&nbsp;</td>
-                                            <td style="color: #0a35ff; font-weight: bold;">&nbsp;</td>
-                                            <td>
-                                                <a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Add</span></a>
-
-                                            </td>
-                                        </tr>
+{#                                    <tr>#}
+{#                                            <td style="max-width: 10%;">&nbsp;</td>#}
+{#                                            <td style="font-family: Courier; font-size:  0.875rem; font-weight: bold;">&nbsp;</td>#}
+{#                                            <td style="color: #00ff33; font-weight: bold;">&nbsp;</td>#}
+{#                                            <td style="color: #0a35ff; font-weight: bold;">&nbsp;</td>#}
+{#                                            <td>#}
+{#                                                <a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Adauga</span></a>#}
+{##}
+{#                                            </td>#}
+{#                                        </tr>#}
                                     </tbody>
                                 </table>
 
