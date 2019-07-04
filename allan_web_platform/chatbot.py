@@ -196,7 +196,7 @@ class Server:
 
         wordcloud_img_name = 'wc_{}.png'
         self.wordcloud_img_path = 'static/img/wordcloud/' + wordcloud_img_name
-        self.wordcloud_img_full_path = 'chatbot/' + self.wordcloud_img_path
+        self.wordcloud_img_full_path = 'allan_web_platform/' + self.wordcloud_img_path
 
         if not os.path.exists(os.path.dirname(self.wordcloud_img_path)):
             os.mkdir(os.path.dirname(self.wordcloud_img_path))
