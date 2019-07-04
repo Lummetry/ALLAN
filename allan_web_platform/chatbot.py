@@ -364,10 +364,11 @@ class Server:
             self.push_msgs_to_db(msgs=[(new_message, label, True), (reply, 'neutru', False)],
                                  domain_id=self.dct_domain_id[self.bot_type])
 
-            if not os.path.exists('conversations'):
-                os.mkdir('conversations')
-            with open('conversations/{}.txt'.format(self.CONV_PREFIX), 'wt') as f:
-                f.write('\n'.join(self.message_history))
+            if False:
+              if not os.path.exists('conversations'):
+                  os.mkdir('conversations')
+              with open('conversations/{}.txt'.format(self.CONV_PREFIX), 'wt') as f:
+                  f.write('\n'.join(self.message_history))
 
             padded_labels = '[{}]'.format(label.strip()).rjust(self.max_len_labels)
             label_text = self.label_text.format(padded_labels)
