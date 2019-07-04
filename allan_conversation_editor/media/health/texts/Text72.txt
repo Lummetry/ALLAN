@@ -1,0 +1,27 @@
+Buna! Numele meu este <NAMEBOT>. Te pot ajuta cu ceva?
+Buna
+Cu ce te pot ajuta, <NAME>?
+Am o problema dar nu stiu cum sa iti zic.
+Asa cum poti, incearca sa imi explici care este problema.
+Am o zona pe piele foarte iritata si nu stiu ce sa fac. Nu vreau sa se infecteze.
+Poti sa imi dai mai multe detalii, te rog?
+Ma mananca pielea, este deja cu cicatrici si am pete rosii.
+Ai facut programare la un medic pana acum?
+Nu am avut timp.
+Ai alergii sau reactii alergice la ceva anume?
+Da dar nu cred ca este alergie.
+De cat timp ai aceasta problema?
+Nu sunt sigur. A inceput sa ma manance saptamana trecuta dar nu am observat punctele rosii.
+Mai ai si alte simptome?
+Nu chiar. Sunt doar mai frustrat de mancarimi.
+Ai incercat tratamente naturiste?
+Nu.
+Tot pe acest subiect avem pe site unele articole care te-ar putea ajuta: sitexxxxx
+Multumesc, o sa ma uit dar acum ce pot sa fac sa nu ma mai manance?
+Ce iti propun este sa te programezi la un dermatolog pentru un consult.
+Unde pot sa gasesc un dermatolog?
+Ai propune sa mergi la clinicaxxxxx si sa ceri un consult. 
+Mersi mult!
+Iti trimit si un voucher de reducere pentru analize (voucherxxxxx).
+Ok, multumesc
+Cu drag! Toate cele bune!

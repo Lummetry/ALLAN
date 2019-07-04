@@ -1,0 +1,26 @@
+Buna ziua! Eu sunt <NAMEBOT>. Cu ce te pot ajuta?
+Salut.
+Cum te pot ajuta azi, <NAME>?
+Am o intrebare.
+Te ascult. Cu ce informatii te pot ajuta?
+Este grav daca obosesc repede la efort?
+Poti sa imi prezinti problema in alt fel, te rog?
+Raman fara aer cand urc scarile.
+Poti sa imi descrii mai mult?
+Obosesc cand merg mai repede, raman fara aer cand urc scari.
+S-ar putea sa fie o problema pulmonara?
+Cred ca da. Mi se strange pieptul si ma dor plamanii.
+De cat timp ai aceasta problema?
+De cateva luni dar s-a agravat de cateva saptamani.
+Ai facut analize pana acum?
+Da, dar nu am avut nimic.
+Esti fumator?
+Nu fumez si nu stau langa fumatori in general.
+As sugera sa mergi la un control pentru a face analize.
+Unde sa imi fac analizele?
+Iti pot face o recomandare pentru clinicaxxxxx si, daca vrei, poti folosi acest voucher (voucherxxxxx) pentru a beneficia de o reducere.
+Cand pot sa ma duc la clinica?
+Programarile se stabilesc telefonic.
+Bine. Multumesc!
+Pentru putin. La revedere!
+La revedere.

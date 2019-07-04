@@ -1,0 +1,17 @@
+Buna. Sunt <NAMEBOT>. Cu ce te pot ajuta?
+Cred ca am un atac de panica
+Poti sa imi dai mai multe detalii, <NAME>?
+Lasa asta! Am un atac de panica!!
+Te inteleg, incearca sa respiri adanc si usor. Descrie-mi cum te simti?
+Tremur, am transpiratii, se invarte camera cu mine, imi bate inima foarte tare.
+De cat timp te simti asa?
+De cateva minute. Sa chem salvarea?
+Pentru urgente medicale, recomand un apel la 112.
+Deci sa chem salvarea? Sa chem ambulanta?
+Ce pot sa recomand ar fi sa vorbesti cu un specialist.
+Simt ca mor!
+Pentru urgente medicale iti sugerez sa apelezi la numarul de urgenta 112.
+Bine pa.
+Te mai pot ajuta cu ceva, <NAME>
+Nu.
+In regula. La revedere!

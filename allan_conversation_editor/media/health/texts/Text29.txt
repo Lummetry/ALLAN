@@ -1,0 +1,21 @@
+Buna! Ma numesc <NAMEBOT>. Cu ce te pot ajuta?
+Ma simt rau
+Sunt aici sa te ajut, <NAME>. Poti sa imi descrii problema, te rog?
+Imi vine sa vomit, mi-e greata. Imi tremura mainile. Imi este greu sa stau.
+Este posibil sa ai nevoie de un consult urgent la un medic generalist.
+Nu cred ca sunt in stare sa merg pana la clinica.
+Daca iti este dificil sa mergi pana la o clinica, ai cum sa ceri ajutor de la cineva sau sa chemi o ambulanta?
+Da, pot sa chem pe cineva.
+Perfect. Te mai pot ajuta cu ceva in momentul acesta?
+Da, zi-mi un medicament ce pot sa iau pentru greata.
+Imi pare rau, nu pot recomanda medicamente. Poate poti incerca zeama de lamaie pentru greata.
+Am incercat dar tot revine starea de rau. Altceva?
+Pentru ceva mai specific iti recomand sa vorbesti cu un medic specializat.
+Un aliment? Mancare? Un fruct?
+Ceai de ghimbir poate ajuta, insa chiar este bine sa vorbesti cu cineva din domeniul medical inainte.
+Ok.
+Te mai pot ajuta cu ceva, <NAME>?
+Nu. M-ai ajutat mult cu asta. Multumesc.
+Cu placere! Multa sanatate iti doresc.
+O zi usoara!
+La revedere!

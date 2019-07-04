@@ -1,0 +1,54 @@
+{% load staticfiles %}
+<main class="main">
+    <!-- Breadcrumb-->
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+
+        <!-- Breadcrumb Menu-->
+    </ol>
+    <div class="container-fluid">
+        <div class="animated fadeIn">
+
+            <div class="row">
+                <div class="col-md-12">
+                    &nbsp;<div class="card">
+                    <div class="card-header" style="font-size: 1.1rem;">
+                        <i class="fa fa-align-justify"></i> {{ action_conversation }} conversation for {{ domain_name }}</div>
+                    <div class="card-body" style="overflow: auto;  max-height: 65vh;">
+
+                        <div class="row">
+                            <div class="col-md-12">
+
+                                <form method="post" enctype="multipart/form-data">
+                                    {% csrf_token %}
+
+                                    <label for="id_title">Title</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                              <i class="icon-calendar"></i>
+                                            </span>
+                                          </div>
+                                          <input class="form-control" type="text" placeholder="title" id="id_title" name="title" value="{{ form.title.value  }}" >
+                                    </div>
+                                    {% if form.errors %}
+                                        <div class="alert alert-danger" role="alert">
+                                          {{ form.errors }}
+                                        </div>
+
+                                    {% endif %}
+                                    <button class="btn btn-block btn-primary" type="submit">Update</button>
+                                </form>
+
+
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>

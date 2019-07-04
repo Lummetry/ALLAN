@@ -1,0 +1,27 @@
+Buna ziua! Ma numesc <NAMEBOT>! Te pot ajuta cu ceva?
+As vrea o recomandare pentru o problema 
+Cu ce te pot ajuta, <NAME>?
+Am probleme reumatice.
+Poti sa imi explici mai clar, te rog?
+Am probleme cu spatele. Ma doare coloana.
+De cat timp este aceasta durere?
+De cativa ani, dar acum s-a agravat.
+Incerci sa ai activitate fizica?
+Nu mai pot face multe din cauza spatelui.
+Lucrezi intr-un mediu care te solicita fizic?
+Nu, am fost secretara dar am iesit la pensie.
+Si mai exact, cu ce informatii te pot ajuta acum?
+Vreau sa stiu ce pot sa fac ca sa nu ma mai doara!
+Inteleg, daca este o problema de oase este recomandat sa consulti un reumatolog.
+Am fost la medic dar ce mi-a dat el este foarte scump si nu imi permit. Poti sa imi dai o alternativa mai ieftina?
+Desigur, as putea ajuta cu o recomandare pentru clinicaxxxxx.
+Dar nu vreau sa ma mai duc la doctor! Am dat deja destui bani.
+Pot sa iti ofer acest voucher (voucherxxxxx) pentru a putea beneficia de o reducere.
+Si acolo o sa imi dea doctorul un tratament mai ieftin?
+Astfel de detalii se discuta cu medicul in urma consultului medical.
+Am inteles. Mersi mult.
+Cu mult drag, te mai pot ajuta cu ceva?
+Nu pentru moment
+Cu bine atunci!
+La revedere
+La revedere!

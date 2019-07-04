@@ -1,0 +1,15 @@
+salut
+clinica
+nmi
+sange
+nmisange
+neutru
+recomclinica
+voucher
+recomvoucher
+dececlinica
+recomdececlinica
+neutru
+nmifin
+nu
+end

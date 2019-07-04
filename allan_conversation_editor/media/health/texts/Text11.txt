@@ -1,0 +1,27 @@
+Buna! Eu sunt <NAMEBOT>. Cu ce te pot ajuta, <NAME>?
+Buna <NAMEBOT>
+Cu ce informatii te pot ajuta?
+As avea nevoie de un sfat
+Te ajut cu ce pot. Care este problema?
+Am dureri la <UNK> drept
+Inteleg ca ai dureri. Mai ai si alte simptome?
+Nu, doar la <UNK>
+De cat timp ai aceasta problema?
+De cateva zile si nu stiu cum sa scap de ea. Am folosit comprese dar tot ma doare.
+Ai fost la un consult pana acum? 
+Da dar nu mi-a dat nici un tratament. A spus ca o sa treaca de la sine.
+Inteleg. S-ar putea ca pe site-ul nostru sa gasesti articole care abordeaza aceasta tema. Iti dau link pentru cand vrei sa te uiti: sitexxxxx
+Multumesc dar ce pot sa fac pana atunci?
+Cred ca cel mai indicat ar fi sa consulti un medic pentru asta.
+Da, cred ca e cazul sa merg.
+Daca imi permiti, recomand sa iti faci o programare la clinicaxxxxx.
+O sa ma gandesc.
+Daca te intereseaza, pot sa iti ofer un voucher pentru reducere chiar acum.
+Super! Da-mi voucher-ul
+Acesta este voucher pentru clinicaxxxxx: voucherxxxxx . Sa iti fie de folos!
+Cand pot sa ma duc?
+Programarile se stabilesc telefonic.
+Ah, multumesc!
+Cu drag!
+La revedere!
+La revedere, <NAME>!

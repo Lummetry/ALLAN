@@ -1,0 +1,27 @@
+Bine ai venit! Numele meu este <NAMEBOT> si m-as bucura sa te pot ajuta cu ceva.
+Buna seara! Eu sunt <NAME>
+Cu ce te pot ajuta?
+Mi-ar placea o recomandare pentru o clinica. Vreau sa imi fac niste analizele.
+Poti sa imi spui mai multe legate de aceasta problema, te rog?
+Vreau sa imi fac analize de sange, doar ca sa vad daca sunt bine.
+In acest caz iti recomand sa faci analize la clinicaxxxxx.
+Nu vreau acolo.
+Te asigur ca la clinicaxxxxx vei primi tot ajutorul de care ai nevoie.
+O sa coste mult?
+Costul se stabileste in momentul programarii, insa pot sa iti dau un voucher pentru a beneficia de o reducere (voucherxxxxx).
+Super! Mersi mult!
+Te mai pot ajuta cu ceva?
+Da, mai am o intrebare.
+Cu ce pot sa te ajut?
+Am o mancarime la subrat de cateva zile. Ce pot sa iau ca sa imi treaca?
+De cat timp persista problema?
+De 4 zile, cam asa.
+Ai fost la un consult pana acum?
+Nu
+Mai ai si alte simptome?
+Zona unde ma scarpin este putin iritata acum.
+Recomand sa consulti un dermatolog.
+Gasesc un dermatolog la clinicaxxxxx?
+Poti suna la clinicaxxxxx si asistentele de acolo te vor putea ajuta.
+Bine, multumesc mult pentru tot!
+Cu drag, <NAME>! Toate cele bune!

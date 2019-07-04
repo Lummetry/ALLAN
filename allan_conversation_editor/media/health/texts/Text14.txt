@@ -1,0 +1,25 @@
+Buna ziua, <NAME>! Sunt <NAMEBOT>. Cum iti pot fi de folos?
+Buna. Am o problema, ma simt obosita des si nu am pofta de mancare.
+Inteleg. Ai si alte simptome?
+Nu. Pur si simplu nu sunt in stare sa fac nimic. Sunt fara energie.
+Ai o alimentatie echilibrata?
+Incerc sa am dar nu prea am timp sa mananc in timpul zilei.
+Incerci sa mentii un program de odihna sanatos?
+Nu prea. Lucez mult si nu am ore fixe de odihna.
+Faci si sport sau activitate fizica in fiecare zi?
+Nu. Nici macar sa ma plimb. Imi displace sa merg pe afara.
+Este necesar sa ai un program sanatos de viata si sa ai o alimentatie adecvata. 
+Cum pot sa fac asta?
+Pentru un mod de viata mai sanatos, bea minim 2 litri de apa pe zi si consuma alimente care contin nutrienti si vitamine. Un regim alimentar este un pas esential.
+Bine, asa o sa fac. Poti sa imi spui cum sa imi imbunatatesc alimentatia?
+Avem numeroase articole pe site care te pot ajuta: sitexxxxx
+Multumesc mult!
+Iti recomand si un consult la un medic generalist pentru un diagnostic adecvat.
+Bine, dar unde imi sugerezi sa ma duc?
+Cel mai indicat este un consult la un medic generalist la clinicaxxxxx. 
+Au preturi mari?
+Poti merge cu acest voucher (voucherxxxxx) pentru a beneficia de o reducere.
+Am inteles. Multumesc din suflet!
+Te mai pot ajuta cu altceva?
+Nu, mersi!
+Cu multa placere!

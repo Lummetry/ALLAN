@@ -1,0 +1,20 @@
+Buna ziua! Eu sunt <NAMEBOT>. Cum pot sa te ajut azi?
+Am o problema la stomac.
+Imi poti scrie mai multe informatii, <NAME>?
+Am mancat prea mult si acum imi e rau. Ma doare stomacul de nu mai pot!
+Durerea este doar la nivelul stomacului?
+Da.
+De cat timp ai aceasta problema?
+De jumatate de ora, dupa ce am terminat de mancat.
+Ai un regim alimentar sanatos?
+In mare parte da, uneori mai mananc si prajeli.
+Bei suficiente lichide pe zi?
+Nu prea, uneori uit in timpul zilei si beau seara mai mult.
+Cel mai indicat ar fi sa mergi la un doctor generalist pentru consult. Pot sa iti fac o recomandare unde sa te duci pentru analize?
+Desigur.
+Poti sa mergi la clinicaxxxxx pentru a-ti face analizele.
+Imi este greu sa ma deplasez. Imi este tot mai rau.
+Daca este o situatie de urgenta, sugerez sa soliciti serviciul de ambulanta sunand la 112.
+Bine, asa o sa fac. Multumesc!
+Pentru putin. La revedere!
+La revedere!

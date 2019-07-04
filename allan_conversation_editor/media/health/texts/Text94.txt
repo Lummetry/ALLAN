@@ -1,0 +1,25 @@
+Buna ziua! Sunt <NAMEBOT>. Cu ce te pot ajuta astazi?
+Sarut mana!
+Buna, <NAME>. Cu ce te pot ajuta?
+Imi este greu sa zic dar am o problema la <UNK>. Nu stiu ce medicamente sa iau.
+Urmezi un tratament?
+Nu pentru ca nu stiu ce sa iau.
+De cat timp te doare?
+De doua zile. Azi ar fi a treia zi.
+Ai avea cum sa mergi la clinicaxxxxx pentru un consult?
+Nu stiu unde este clinicaxxxxx.
+In acest caz iti sugerez sa incerci la clinicaxxxxx si sa iti faci o programare la un medic specialist.
+Si crezi la clinicaxxxxx o sa stie doctorul ce sa imi dea?
+Sunt perfect convinsa ca doctorul iti va putea da un tratament adecvat.
+Pai si daca nu ma ajuta?
+Este mai intelept sa cautam opinii medicale pana cand gasim solutii adecvate. Poti consulta un medic generalist pentru problema ta.
+Iar dau bani aiurea.
+Daca vrei, iti pot oferi un voucher.
+Voucher pentru ce?
+Un voucher iti da reducere la serviciul medical primit.
+Bine, hai.
+Poti merge la clinicaxxxxx cu acest cod: voucherxxxxx
+Si cu asta ma duc la clinica?
+Orice detaliu se stabileste telefonic cu clinica.
+Super! Multu! :)
+O zi placuta!

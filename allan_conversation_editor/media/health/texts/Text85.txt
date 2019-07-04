@@ -1,0 +1,21 @@
+Buna ziua! Ma numesc <NAMEBOT>. Cum te pot ajuta?
+Buna <NAMEBOT>. De cateva zile ma doare capul foarte tare.
+Imi poti da mai multe detalii, <NAME>? 
+Pur si simplu ma doare tot capul. Nu este de la presiunea atmosferica, cred ca m-a tras curentul.
+Ai incercat sa iti pui compresa?
+Am pus comprese cu apa rece pe frunte. Am incercat sa si dorm, dar durerea persista.
+Esti sub tratament?
+Nu. Am luat un medicament dar nu ajuta. Ce altceva sa iau?
+Ce iti pot recomanda este sa vorbesti cu un medic specializat.
+Bine, ce medic imi recomanzi?
+Iti propun sa te duci la clinicaxxxxx cat mai repede, pentru un control medical.
+Pot lua medicamente pana atunci?
+Numai un medic, pe baza unor analize, iti poate face o astfel de recomandare.
+Ok, si daca durerea se inrautateste pana ajung la clinica?
+Daca situatia se inrautateste, recomand sa suni la 112 si sa chemi o ambulanta.
+O sa ma coste?
+Costurile si alte detalii se stabilesc telefonic. Poti merge cu acest voucher (voucherxxxxx) pentru a beneficia de o reducere.
+Si ce altceva pot sa fac?
+Propun sa consulti un specialist cat mai repede, ideal de la clinica adecvata.
+Bine, mersi.
+Cu placere!

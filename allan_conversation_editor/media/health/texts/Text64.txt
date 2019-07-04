@@ -1,0 +1,29 @@
+Buna, ma numesc <NAMEBOT>! Cu ce te pot ajuta?
+Ma bucur sa te cunosc, <NAMEBOT>.
+Te pot ajuta cu ceva, <NAME>?
+Vreau sa te intreb ceva.
+Te ascult.
+Am o problema la stomac daca nu imi este foame?
+Poti sa imi explici mai clar care este problema, te rog?
+Nu am pofta de mancare. Imi este greata daca incerc sa mananc ceva.
+De cat timp ai aceasta problema?
+De sambata seara.
+Mai ai si alte simptome?
+Ma doare burta dar nimic grav.
+Ai fost la un consult pana acum?
+Nu.
+Ai un regim alimentar sanatos?
+Da.
+Bei sufucuente lichide pe zi?
+Da. Ce tratament sa iau ca sa nu mai am probleme cu stomacul?
+Cel mai indicat ar fi sa vorbesti cu un medic generalist. De asemenea, mentine o dieta usoara si sanatoasa.
+Bine. Multumesc.
+Daca ai cum, iti recomand sa faci un consult la clinicaxxxxx.
+Pai si cat o sa coste o programare?
+Costul unei consultatii se stabileste direct la clinica dar, daca te-ar interesa, pot sa iti ofer un voucher de reducere.
+Da! Mersi mult!
+Acesta este voucher-ul tau: voucherxxxxx. 
+Cum procedez cu voucher-ul?
+Informatii suplimentare legate de voucher sunt discutate in momentul programarii la clinicaxxxxx.
+Multumesc
+Cu drag! Toate cele bune!

@@ -1,0 +1,17 @@
+Buna. Sunt <NAMEBOT>. Cu ce iti pot fi de folos azi?
+Am migrene infioratoare si nu mai pot suporta.
+Imi poti da mai multe informatii, te rog?
+Ma doare capul foarte tare, am o presiune puternica.
+Ai consultat un medic pana acum, <NAME>?
+Nu inca, am crezut ca o sa ma lase cu pastile.
+Ai urmat vre-un tratament pana acum?
+Da dar nu a mers. Inca ma doare foarte tare.
+De cat timp ai aceasta problema?
+De dimineata. Imi crapa capul de durere.
+Ce pot sa fac este sa iti recomand o vizita la clinicaxxxxx pentru un consult specializat.
+Doar atat?
+Daca te intereseaza, iti pot da chiar acum un voucher pentru reducere la analize.
+Mi-ar placea.
+Acesta este voucher-ul tau: voucherxxxxx
+Ok, multumesc mult. Sper sa fie ok.
+Insanatosire grabnica, <NAME>!

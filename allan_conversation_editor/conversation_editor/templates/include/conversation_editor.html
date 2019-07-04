@@ -1,0 +1,124 @@
+{% load staticfiles %}
+<main class="main">
+    <!-- Breadcrumb-->
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+
+        <!-- Breadcrumb Menu-->
+    </ol>
+    <div class="container-fluid">
+        <div class="animated fadeIn">
+
+        <div id="popupConfirmation">
+            <div class="popup-content">
+                <h1>Vrei sa stergi?</h1>
+                <button id="close" style="float: right;">Close</button>
+                <span id="txtConfirmation"></span><br><br>
+                <a href=""><span class="badge badge-success "  id="id_cancel_delete">Anuleaza</span></a>
+                                                    &nbsp;
+                <a href=""><span class="badge badge-danger "  id="id_confirmation_delete"  data-message_id="0">Sterge</span></a>
+            </div>
+        </div>
+        <div id="popup">
+            <div class="popup-content">
+                <h1 style="float: left;">Message</h1>
+                <a href="" style="float: right;"><span class="badge badge-danger " id="close" style="float: right;">Close</span></a>
+                <div style="clear: both;"></div>
+                <div class="row">
+                            <div class="col-md-12">
+                                <form  method="POST" id="post-form">
+                                    {% csrf_token %}
+                                    <input type="hidden" id="id_domain" name="id_domain" value="{{ domain_id }}">
+                                    <input type="hidden" id="id_message_id" name="id_message_id">
+
+                                          {{ form.parent }}
+
+                                          {{ form.chat }}
+
+                                          {{ form.label }}
+                                    <label for="id_message">Message</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                              <i class="icon-calendar"></i>
+                                            </span>
+                                          </div>
+                                          {{ form.message }}
+                                    </div>
+                                    <label for="id_label_name">Label</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                              <i class="icon-calendar"></i>
+                                            </span>
+                                          </div>
+                                          <input class="form-control" type="text" placeholder="title" id="id_label_name" name="label_name" value="" >
+                                    </div>
+                                    {% if form.errors %}
+                                        <div class="alert alert-danger" role="alert">
+                                          {{ form.errors }}
+                                        </div>
+
+                                    {% endif %}
+                                    <button class="btn btn-block btn-primary" type="submit">Update</button>
+                                </form>
+
+
+
+                            </div>
+                        </div>
+            </div>
+        </div>
+            <div class="row">
+                <div class="col-md-12">
+                    &nbsp;<div class="card">
+                    <div class="card-header" style="font-size: 1.1rem;">
+                        <i class="fa fa-align-justify"></i> Lista de mesaje pentru conversatia {{ chat_title }} din {{ domain_title }}</div>
+                    <div class="card-body" style="overflow: auto;  max-height: 65vh;">
+
+                        <div class="row">
+                            <div class="col-md-12">
+
+                                <table class="table table-responsive-sm table-bordered table-striped table-sm">
+                                    <thead>
+                                    <tr>
+                                        <th width="5%">Nr. Linie</th>
+                                        <th width="65%">Linie Conversatie</th>
+                                        <th width="10%">Intentie Linie</th>
+                                        <th width="8%">Tip Persoana</th>
+                                        <th width="12%"><!--<a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Add</span></a>--></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for chatLine in chatLines %}
+                                        <tr>
+                                            <td style="max-width: 10%;">{{ forloop.counter }}</td>
+                                            <td style="font-family: Courier; font-size:  0.875rem; font-weight: bold;">{{ chatLine.message }}</td>
+                                            <td style="color: #00ff33; font-weight: bold;">{{ chatLine.label.name }}</td>
+                                            <td style="color: #0a35ff; font-weight: bold;">{%  if chatLine.human == True %}Human{% else %}Bot{% endif %}</td>
+                                            <td>
+                                                    <!--<a href=""><span class="badge badge-success btnAdd"  data-parent_id="{{ chatLine.id }}" data-message_id="0" data-chat_id="{{ chat_id }}">Add Below</span></a>-->
+                                                    &nbsp;
+                                                    <a href=""><span class="badge badge-primary btnAdd"  data-parent_id="{% if chatLine.parent %}{{chatLine.parent.id}}{% else %}0{% endif %}" data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">Modifica</span></a>
+                                                    &nbsp;
+                                                    <a href=""><span class="badge badge-danger btnDel"  data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">Sterge</span></a>
+
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+
+
+                            </div></div>
+
+
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="/static/scripts/conversation_editor.js"></script>

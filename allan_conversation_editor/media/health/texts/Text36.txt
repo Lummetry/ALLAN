@@ -1,0 +1,22 @@
+Buna ziua! Ma numesc <NAMEBOT>. Cu ce informatii te pot ajuta?
+Te rog, imi poti recomanda un tratament pentru migrene? Ma doare capul.
+Ai luat medicamente pentru aceasta problema, <NAME>?
+Nu inca. Sper sa imi poti recomanda ceva.
+De cat timp ai problema aceasta?
+De azi dimineata. Ma doare si nu ma lasa indiferent ce fac.
+Durerea este constanta?
+Nu, ba apare, ba dispare, dar nu de tot.
+Mediul de lucru este stresant pentru tine?
+Da, in ultima vreme am si dormit prost din cauza stresului de la serviciu. Avem niste probleme si, ma rog, e o perioada grea.
+Inteleg. Ce te pot sfatui este sa mergi la clinicaxxxxx si sa faci o programare la un medic generalist.
+Dar tu nu poti sa imi sugerezi un tratament?
+Un specialist va fi capabil cu siguranta, in urma unui consult, sa stabileasca care este tratamentul potrivit pentru tine.
+Bine dar nu vreau sa merg la doctor acum. Chiar n-am chef de spitale si clinici.
+Am inteles. In acest caz iti pot recomanda sa citesti cateva articole utile de pe site-ul nostru: sitexxxxx
+Aveti articole despre migrene?
+Da, link-ul oferit prezinta articole legate de problema ta: sitexxxxx
+Aha ok
+Te mai pot ajuta cu ceva?
+Nu, multumesc mult.
+Cu placere! La revedere!
+La revedere.

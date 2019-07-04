@@ -1,0 +1,21 @@
+Buna ziua! Sunt <NAMEBOT>. Sunt aici sa te ajut.
+Ma poti ajuta cu o problema?
+Ce problema medicala ai, <NAME>?
+Ma cam deranjeaza o ureche.
+Poti sa imi explici mai clar, te rog?
+Este mai mereu astupata, de parca este o presiune. Auzul imi este afectat cel mai mult.
+Aceasta problema persista de multa vreme?
+Nu sunt sigur.
+Ai si alte simptome?
+Nu am nimic altceva. Nu stiu ce e cu urechea asta.
+Ai ascultat muzica la un volum ridicat sau ai stat intr-un mediu galagios?
+Ascult muzica la casti dar nu la volum maxim.
+Cel mai indicat ar fi sa mergi la clinicaxxxxx sa te vada un medic ORL-ist.
+Dar ce pot sa fac ca sa aud normal?
+Te poate ajuta medicul specialist.
+Pot lua niste picaturi de ureche? Sau sa picur un tip de ceai anti inflamator?
+Nu pot recomanda medicamente. Poti intreba un medic specialist de la clinicaxxxxx.
+Cum se numeste medicul?
+Orice detaliu se stabileste telefonic cu centrul medical.
+Mersi!
+Cu placere!

@@ -1,0 +1,21 @@
+Buna ziua! Numele meu este <NAMEBOT>. Cu ce informatii te pot ajuta astazi?
+Imi lacrimeaza ochiul stang de ceva timp si nu se mai opreste.
+Poti sa imi explici problema altfel, te rog?
+Imi lacrimeaza si ma mananca ochiul stang, este rosu si iritat.
+De cat timp ai aceasta problema?
+Cum am mai pus, de ceva timp. Doua ore cred.
+Ai fost la un consult pana acum?
+Nu, am crezut ca o sa imi treaca.
+Porti ochelari?
+Nu.
+In ce fel iti este afectata vederea?
+Nu imi este afectata. Pur si simplu zici ca sunt iritat la ochi si nu stiu de ce.
+Incearca sa nu te scarpini la ochi si mergi la un control medical.
+Bine dar unde sa ma duc?
+Sugerez sa mergi la un oftalmolog din clinicaxxxxx.
+Cat o sa coste un consult?
+Costul programarii se stabileste la clinica, insa pot sa iti dau acest voucher pentru a beneficia de o reducere (voucherxxxxx).
+Foarte tare! Multumesc mult
+Te mai pot ajuta cu ceva?
+Momentan nu, multumesc.
+In regula, la revedere!

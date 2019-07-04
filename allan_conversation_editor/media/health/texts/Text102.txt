@@ -1,0 +1,20 @@
+Buna, numele meu este <NAMEBOT>! Cu ce te pot ajuta?
+Ma doare o masea de doua zile non-stop.
+Ai cum sa imi oferi mai multe detalii, te rog?
+Am mancat inghetata zilele trecute si mi-a fulgerat un dinte. De atunci este foarte sensibil si ma doare rau.
+Ai luat ceva pentru durere, <NAME>?
+Da dar durerea revine.
+Ai fost la un consult medical?
+Nu
+Iti recomand sa ceri opinia unui dentist. 
+Unde sa ma duc?
+Poti apela la asistenta medicala la clinicaxxxxx.
+De ce?
+Avand in vedere ca problema ta persista, este indicat sa ceri o a doua opinie.
+Bine, o sa ma duc la clinica. Cat o sa ma coste?
+Recomand sa folosesti acest voucher (voucherxxxxx) pentru a beneficia de o reducere. Pretul se afla in momentul programarii.
+Multumesc frumos.
+Te mai pot ajuta cu ceva, <NAME>?
+Nu, multumesc.
+In regula, la revedere!
+La revedere!

@@ -1,0 +1,23 @@
+Buna ziua! Ma numesc <NAMEBOT>. Cu ce te pot ajuta?
+Buna <NAMEBOT>. Ma poti ajuta cu ceva?
+Desigur! Cu ce te pot ajuta, <NAME>?
+Vreau sa am mai multi muschi.
+Poti te rog sa imi dai mai multe informatii?
+Imi trebuie suplimente ca sa cresc in masa musculara.
+Imi poti da mai multe detalii te rog?
+Ce suplimente sa iau ca sa imi cresc masa musculara?
+Pentru a creste masa musculara, este indicat sa ai un echilibru in alimentatie si activitate fizica facuta dupa un program.
+Da, dar eu vreau suplimente.
+Numai un nutritionist va poate face o recomandare adecvata.
+Tu nu poti sa imi spui ce sa iau?
+Din nefericire, nu pot oferi acest gen de informatii, insa un medic specializat iti poate fi de folos.
+Si unde gasesc un medic care sa ma ajute?
+Daca vrei, iti pot recomanda clinicaxxxxx.
+Pai da dar la clinica nu e scump?
+Pe langa recomandare, iti pot oferi si un voucher cu reducere. Te intereseaza?
+Ok, da-mi te rog un voucher.
+Iti recomand sa te duci la clinicaxxxxx cu acest voucher (voucherxxxxx) pentru un consult adecvat.
+Si cat va costa atunci?
+Costurile si alte detalii se stabilesc telefonic
+In regula. Mersi!
+Cu multa placere.

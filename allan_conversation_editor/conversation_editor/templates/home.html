@@ -1,0 +1,18 @@
+<!-- templates/home.html -->
+{% extends 'base.html' %}
+
+  {% load staticfiles %}
+{% block title %}Home{% endblock %}
+{% block content %}
+
+{% include 'include/header.html' %}
+    <div class="app-body">
+      {% include 'include/sidebar.html' %}
+      {% include page %}
+      {% include 'include/aside-menu.html' %}
+    </div>
+
+{% include 'include/footer.html' %}
+
+
+{% endblock %}

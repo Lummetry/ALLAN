@@ -1,0 +1,25 @@
+Buna! Numele meu este <NAMEBOT>. In ce fel as putea sa te ajut?
+Buna
+Cu ce te pot ajuta, <NAME>?
+Nu imi e bine
+Poti sa imi oferi mai multe detalii, te rog?
+Ma simt nasol, simt ca nu mai pot.
+Imi pare rau, poti sa imi explici mai clar?
+Ma doare capul de 3 zile!
+Deci ai o durere de cap?
+Da, si asta. Imi e rau.
+Bei suficiente lichide?
+Nu prea. Imi sta in gat si nici pofta de mancare nu am.
+Este recomandat sa bei minim 2 litri de apa pe zi. Faci asta?
+Nu stiu.
+Activitate fizica faci?
+Nu. Ma doare capul prea tare!
+Mai ai si alte simptome?
+Da, ma simt slabit si fara energie. Nu stiu ce sa fac.
+Ai urmat vre-un tratament pana acum?
+Da, am luat <UNK> dar tot ma doare.
+Am inteles. Cel mai indicat este sa mergi la un consult medical. 
+Multumesc pentru sfat!
+As putea sa iti fac si o recomandare unde poti merge pentru analize: clinicaxxxxx
+Multumesc mult
+Cu mult drag, <NAME>!
