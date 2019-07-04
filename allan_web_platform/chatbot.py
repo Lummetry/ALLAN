@@ -2,6 +2,7 @@ import os
 import pickle
 import string
 import random
+import requests
 
 from libraries.logger import Logger
 from time import time, sleep
@@ -11,7 +12,7 @@ from bokeh.models import Div, Paragraph, TextInput, ColumnDataSource, Dropdown
 from bokeh.plotting import figure
 from nltk.tokenize import word_tokenize
 
-from wordcloud import WordCloud
+from wordcloud import WordCloud  
 
 
 class Server:
@@ -25,7 +26,6 @@ class Server:
         self.show_bot_messages = show_bot_messages
         self.bot_name = bot_name
         self.bot_name_placeholder = '<NAMEBOT>'
-        self.bot_type = 'imobiliar'
 
         self.tasteaza_msg = "{} tasteaza ...".format(self.bot_name)
         if not self.show_bot_messages: self.tasteaza_msg = "{} raspunde ...".format(self.bot_name)
@@ -56,8 +56,11 @@ class Server:
         with open(self.CONFIG['VULGARITIES'], 'rt', encoding='utf-8') as handle:
           self.vulgarities = handle.read().splitlines()
 
+
+        self.dct_domain_id = {'medical': 1, 'imobiliare': 2}
+        self.bot_type = self.CONFIG['BOT_TYPE']
         
-        if self.CONFIG['BOT_TYPE'] == 'imobiliare':
+        if self.bot_type == 'imobiliare':
           intro_messages = [
                'Bine ai venit! Ma numesc {} si sunt aici sa te ajut. Ce te-ar interesa?',
                'Bine ai venit! Ma numesc {}! Cu ce te pot ajuta?',
@@ -82,7 +85,7 @@ class Server:
                'Buna ziua! Sunt {}. Cu ce informatii te pot ajuta?'
           ]
         
-        elif self.CONFIG['BOT_TYPE'] == 'medical':
+        elif self.bot_type == 'medical':
           intro_messages = [
                'Bine ai venit! Ma numesc {}. Cu ce informatii te pot ajuta?',
                'Bine ai venit! Ma numesc {}. Te pot ajuta cu ceva?',
@@ -141,6 +144,8 @@ class Server:
 
         self.intro_message = random.choice(intro_messages)
         self.message_history.append(self.intro_message)
+        self.push_msgs_to_db(msgs=[(self.intro_message, 'salut', False)],
+                             domain_id=self.dct_domain_id[self.bot_type])
 
         self.reply_labels, self.max_len_labels = self.get_labels()
         self.reply_hashtags = self.get_hashtags()
@@ -238,6 +243,23 @@ class Server:
         self.CONV_STATE = 0
         return
       
+    def push_msgs_to_db(self, msgs, domain_id):
+      URL = "http://127.0.0.1:8000/api_create_conversation/"
+      r = requests.post(url=URL, data={'domain_id': domain_id})
+      chat_id = r.json()['data']['id']
+      
+      for (turn, label, is_human) in msgs:
+        api_msg = {'chat_id': chat_id,
+                   'human': is_human,
+                   'message': turn,
+                   'label': label}
+        r_msg = requests.post(url="http://127.0.0.1:8000/api_create_message/", data=api_msg)
+        
+        success = r_msg.json()['success']
+        self._log("Msg ({},{},{}) post with success flag={}".format(turn,label,is_human,success))
+        
+      return
+      
     def BanVulgarity(self, message):
         if len(set(message.lower().split()) & set(self.vulgarities)):
             self._log("Message {} banned due to vulgarity.".format(message))
@@ -332,6 +354,9 @@ class Server:
                                                             custom_delay=self.custom_delay)
             self._log('Got the reply {} | {} | {}'.format(reply, label, is_hashtag))
             self.message_history.append(reply)
+            
+            self.push_msgs_to_db(msgs=[(new_message, label, True), (reply, 'neutru', False)],
+                                 domain_id=self.dct_domain_id[self.bot_type])
 
             if not os.path.exists('conversations'):
                 os.mkdir('conversations')
