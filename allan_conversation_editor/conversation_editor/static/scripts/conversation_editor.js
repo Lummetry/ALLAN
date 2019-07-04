@@ -12,7 +12,7 @@ $('#id_label_name').autocomplete({
 						// data is an array of objects and must be transformed for autocomplete to use
 						var array = data.Response === "False" ? [] : $.map(data, function(m) {
 							return {
-								label: m.name + " (" + m.id + ")",
+								label: m.name + " ",
 								id:  m.id
 							};
 						});

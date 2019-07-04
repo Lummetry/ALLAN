@@ -87,7 +87,7 @@ def conversation_editor(request, id):
     except Chat.DoesNotExist:
         raise Exception("Item doesn't exists")
     try:
-        chatLines = ChatLine.objects.filter(chat=chat).order_by('id')
+        chatLines = ChatLine.objects.filter(parent__isnull=True, chat=chat).order_by('id')
         chatLines = []
         chatL = recursiv(chatLines, None, chat)
     except ChatLine.DoesNotExist:
@@ -149,6 +149,7 @@ def create_message(request):
             parent = ChatLine.objects.get(pk=parent_id)
         except ChatLine.DoesNotExist:
             parent = None
+        child = None
         if parent is not None:
             try:
                 child = ChatLine.objects.get(parent=parent)
@@ -309,6 +310,46 @@ def delete_message(request, id):
                 content_type="application/json"
             )
 
+
+def conversation_validation(request,id):
+    try:
+        chat = Chat.objects.get(id=id)
+    except Chat.DoesNotExist:
+        domain = 1
+    try:
+        chatLines = ChatLine.objects.filter(parent__isnull=True, chat=chat).order_by('id')
+        chatLines = []
+        chatL = recursiv(chatLines, None, chat)
+    except ChatLine.DoesNotExist:
+        raise Exception("Item doesn't exists")
+
+    domain = chat.domain.id
+    chat.status  = 1
+    chat.save()
+    return redirect('domain', pk=domain)
+
+
+def conversation_train(request,id):
+    try:
+        chat = Chat.objects.get(id=id)
+    except Chat.DoesNotExist:
+        domain = 1
+
+    domain = chat.domain.id
+    chat.status  = 2
+    chat.save()
+    return redirect('domain', pk=domain)
+
+
+def conversation_draft(request,id):
+    try:
+        chat = Chat.objects.get(id=id)
+    except Chat.DoesNotExist:
+        domain = 1
+    domain = chat.domain.id
+    chat.status  = 0
+    chat.save()
+    return redirect('domain', pk=domain)
 
 def get_autocomplete_labels(request,id):
     response_data = []

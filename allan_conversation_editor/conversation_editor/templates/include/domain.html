@@ -26,7 +26,8 @@
                                 <th>Created</th>
                                 <th>Updated</th>
                                 <th>Owner</th>
-                                <th><a href="{% url 'add_edit_conversation' id=0 domain=domain%}"><span class="badge badge-success">Add</span></a></th>
+                                <th>Status</th>
+                                <th><a href="{% url 'add_edit_conversation' id=0 domain=domain%}"><span class="badge badge-success">Adauga</span></a></th>
                             </tr>
                             </thead>
                             <tbody>
@@ -37,7 +38,18 @@
                                 <td>{{ chat.created|date:'Y-m-d H:i' }}</td>
                                 <td>{{ chat.updated|date:'Y-m-d H:i' }}</td>
                                 <td>{{ chat.created_user }}</td>
-                                <td><a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">Edit</span></a> <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">Messages</span></a></td>
+                                <td>
+                                    {%  if chat.status == 0 %}Draft{% endif %}
+                                    {%  if chat.status == 1 %}Validat{% endif %}
+                                    {%  if chat.status == 2 %}Antrenat{% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">Modifica</span></a>
+                                    <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">Messages</span></a>
+                                    {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id%}"><span class="badge badge-success">Valideaza</span></a>{% endif %}
+                                    {%  if chat.status == 1 %}<a href="{% url 'conversation_train' id=chat.id%}"><span class="badge badge-success">Antreneaza</span></a>{% endif %}
+                                    {%  if chat.status == 2 %}<a href="{% url 'conversation_draft' id=chat.id%}"><span class="badge badge-success">Draft</span></a>{% endif %}
+                                </td>
                             </tr>
                             {% endfor %}
                             </tbody>
