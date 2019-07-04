@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a898572c-42a0-4d0d-9058-132cd261c08f" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/conversation_editor.html" beforeDir="false" afterPath="$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/conversation_editor.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/allan_conversation_editor/allan/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/allan_conversation_editor/allan/settings.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -30,10 +30,12 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/allan_conversation_editor/allan/settings.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1518" />
+            <state relative-caret-position="242">
+              <caret line="80" column="22" selection-start-line="80" selection-start-column="22" selection-end-line="80" selection-end-column="22" />
+            </state>
           </provider>
         </entry>
       </file>
@@ -44,11 +46,17 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/conversation_editor.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="135">
-              <caret line="115" column="48" selection-start-line="115" selection-start-column="48" selection-end-line="115" selection-end-column="48" />
+            <state relative-caret-position="91">
+              <caret line="113" column="97" selection-start-line="113" selection-start-column="97" selection-end-line="113" selection-end-column="97" />
+              <folding>
+                <element signature="e#6639#6645#1#HTML" expanded="true" />
+                <element signature="e#6770#6776#1#HTML" expanded="true" />
+                <element signature="e#6873#6879#1#HTML" expanded="true" />
+                <element signature="e#6976#6982#1#HTML" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -89,6 +97,7 @@
         <option value="$PROJECT_DIR$/allan-conversation-editor/allan-import.py" />
         <option value="$PROJECT_DIR$/allan-conversation-editor/conversation_editor/models.py" />
         <option value="$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/conversation_editor.html" />
+        <option value="$PROJECT_DIR$/allan_conversation_editor/allan/settings.py" />
       </list>
     </option>
   </component>
@@ -216,12 +225,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1561715077393</updated>
-      <workItem from="1561715079721" duration="101984000" />
+      <workItem from="1561715079721" duration="102119000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="101984000" />
+    <option name="totallyTimeSpent" value="102119000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1456" height="886" extended-state="6" />
@@ -529,11 +538,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/allan_conversation_editor/allan/settings.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1518" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/add_edit_conversation.html">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-363" />
@@ -541,8 +545,21 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/allan_conversation_editor/conversation_editor/templates/include/conversation_editor.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="135">
-          <caret line="115" column="48" selection-start-line="115" selection-start-column="48" selection-end-line="115" selection-end-column="48" />
+        <state relative-caret-position="91">
+          <caret line="113" column="97" selection-start-line="113" selection-start-column="97" selection-end-line="113" selection-end-column="97" />
+          <folding>
+            <element signature="e#6639#6645#1#HTML" expanded="true" />
+            <element signature="e#6770#6776#1#HTML" expanded="true" />
+            <element signature="e#6873#6879#1#HTML" expanded="true" />
+            <element signature="e#6976#6982#1#HTML" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/allan_conversation_editor/allan/settings.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="80" column="22" selection-start-line="80" selection-start-column="22" selection-end-line="80" selection-end-column="22" />
         </state>
       </provider>
     </entry>

@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'allan.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'allan1',
+        'NAME': 'allan',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',
