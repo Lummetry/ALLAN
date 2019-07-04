@@ -18,6 +18,15 @@
                     <div class="card-header" style="font-size: 1.1rem;">
                         <i class="fa fa-align-justify"></i> {{ title }}</div>
                     <div class="card-body" style="overflow: auto;  max-height: 65vh;">
+                    {%  if error %}
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="alert alert-danger" role="alert">
+                                  {{ error }}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
                         <table class="table table-responsive-sm table-bordered table-striped table-sm">
                             <thead>
                             <tr>
@@ -46,7 +55,7 @@
                                 <td>
                                     <a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">Modifica</span></a>
                                     <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">Messages</span></a>
-                                    {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id%}"><span class="badge badge-success">Valideaza</span></a>{% endif %}
+                                    {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id  domain_id=domain%}"><span class="badge badge-success">Valideaza</span></a>{% endif %}
                                     {%  if chat.status == 1 %}<a href="{% url 'conversation_train' id=chat.id%}"><span class="badge badge-success">Antreneaza</span></a>{% endif %}
                                     {%  if chat.status == 2 %}<a href="{% url 'conversation_draft' id=chat.id%}"><span class="badge badge-success">Draft</span></a>{% endif %}
                                 </td>

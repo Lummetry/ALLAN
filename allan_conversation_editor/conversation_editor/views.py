@@ -29,7 +29,8 @@ def domain(request, pk):
     return render(request, 'home.html', {'page': 'include/domain.html',
                                          'title': title,
                                          'domain': pk,
-                                         'chats': chats})
+                                         'chats': chats,
+                                             'error': None})
 
 
 def add_edit_conversation(request, domain, id):
@@ -311,22 +312,48 @@ def delete_message(request, id):
             )
 
 
-def conversation_validation(request,id):
+def conversation_validation(request,id, domain_id):
     try:
-        chat = Chat.objects.get(id=id)
-    except Chat.DoesNotExist:
-        domain = 1
-    try:
-        chatLines = ChatLine.objects.filter(parent__isnull=True, chat=chat).order_by('id')
-        chatLines = []
-        chatL = recursiv(chatLines, None, chat)
-    except ChatLine.DoesNotExist:
-        raise Exception("Item doesn't exists")
+        try:
+            chat = Chat.objects.get(id=id)
+        except Chat.DoesNotExist:
+            domain_id = 1
+        try:
+            chatLines = ChatLine.objects.filter(parent__isnull=True, chat=chat).order_by('id')
+            chatLines = []
+            chatL = recursiv(chatLines, None, chat)
+            i = 0
+            old_human = True
+            for ln in chatLines:
+                if i == 0 and ln.human == True:
+                    raise Exception("O discutie trebuie sa fie initiata de Bot")
+                if old_human == ln.human:
+                    if ln.human == False:
+                        txt = "Bot"
+                    else:
+                        txt = "Om"
+                    raise Exception("Nu pot fi mai multe replici consecutive introduse de "+txt)
+                old_human = ln.human
+            if old_human == True:
+                raise Exception("O discutie nu se poate termina numai cu o iteratie a  Bot-ului")
+        except ChatLine.DoesNotExist:
+            raise Exception("Item doesn't exists")
 
-    domain = chat.domain.id
-    chat.status  = 1
-    chat.save()
-    return redirect('domain', pk=domain)
+        chat.status = 1
+        chat.save()
+        return redirect('domain', pk=domain_id)
+    except Exception as e:
+        try:
+            domain = Domain.objects.get(pk=domain_id)
+        except Domain.DoesNotExist:
+            raise Exception("Item doesn't exists")
+        title = domain.domainName
+        chats = Chat.objects.all().filter(domain=domain).order_by('-created')
+        return render(request, 'home.html', {'page': 'include/domain.html',
+                                             'title': title,
+                                             'domain': domain_id,
+                                             'chats': chats,
+                                             'error': e.args[0]})
 
 
 def conversation_train(request,id):

@@ -12,7 +12,6 @@
         <div id="popupConfirmation">
             <div class="popup-content">
                 <h1>Vrei sa stergi?</h1>
-                <button id="close" style="float: right;">Close</button>
                 <span id="txtConfirmation"></span><br><br>
                 <a href=""><span class="badge badge-success "  id="id_cancel_delete">Anuleaza</span></a>
                                                     &nbsp;
@@ -85,7 +84,10 @@
                 <div class="col-md-12">
                     &nbsp;<div class="card">
                     <div class="card-header" style="font-size: 1.1rem;">
-                        <i class="fa fa-align-justify"></i> Lista de mesaje pentru conversatia {{ chat_title }} din {{ domain_title }}</div>
+                        <i class="fa fa-align-justify"></i> Lista de mesaje pentru conversatia {{ chat_title }} din {{ domain_title }}
+                        <a href="{% url 'domain' pk=domain_id%}" style="float: right;"><span class="badge badge-success">Inapoi</span></a>
+
+                    </div>
                     <div class="card-body" style="overflow: auto;  max-height: 65vh;">
 
                         <div class="row">
