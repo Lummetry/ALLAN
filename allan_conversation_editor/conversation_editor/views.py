@@ -296,9 +296,9 @@ def delete_message(request, id):
                 child = None
             parent = chatLine.parent
 
-            ChatLine.objects.filter(id__in=(id, id2)).delete()
+            ChatLine.objects.filter(id=id).delete()
             if child is not None:
-                child.patent = parent
+                child.parent = parent
                 child.save()
             return HttpResponse(
                 json.dumps({"success": True, "confirmation": True, "deleted": True}),

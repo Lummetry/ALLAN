@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Jul 04, 2019 at 09:21 AM
+-- Generation Time: Jul 04, 2019 at 01:19 PM
 -- Server version: 5.7.23
 -- PHP Version: 7.2.10
 
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `conversation_editor_chat` (
   PRIMARY KEY (`id`),
   KEY `conversation_editor_chat_created_user_id_a4928d71` (`created_user_id`),
   KEY `conversation_editor_chat_domain_id_00b7c3e8` (`domain_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=229 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=234 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `conversation_editor_chat`
@@ -333,7 +333,7 @@ CREATE TABLE IF NOT EXISTS `conversation_editor_chatline` (
   KEY `conversation_editor_chatline_created_user_id_c36451cd` (`created_user_id`),
   KEY `conversation_editor_chatline_label_id_b70a6a94` (`label_id`),
   KEY `conversation_editor_chatline_parent_id_id_2d38cb33` (`parent_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=4827 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=4853 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `conversation_editor_chatline`
@@ -2963,7 +2963,7 @@ CREATE TABLE IF NOT EXISTS `django_migrations` (
   `name` varchar(255) NOT NULL,
   `applied` datetime(6) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=26 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=27 DEFAULT CHARSET=latin1;
 
 --
 -- Dumping data for table `django_migrations`
@@ -2994,7 +2994,8 @@ INSERT INTO `django_migrations` (`id`, `app`, `name`, `applied`) VALUES
 (22, 'conversation_editor', '0006_chatline_human', '2019-07-03 12:46:31.247302'),
 (23, 'sessions', '0001_initial', '2019-07-03 12:46:31.260966'),
 (24, 'conversation_editor', '0007_chat_status', '2019-07-04 06:55:57.133521'),
-(25, 'conversation_editor', '0008_auto_20190704_1148', '2019-07-04 08:48:31.156363');
+(25, 'conversation_editor', '0008_auto_20190704_1148', '2019-07-04 08:48:31.156363'),
+(26, 'conversation_editor', '0009_auto_20190704_1604', '2019-07-04 13:04:39.928631');
 
 -- --------------------------------------------------------
 
