@@ -25,7 +25,7 @@ def domain(request, pk):
     except Domain.DoesNotExist:
         raise Exception("Item doesn't exists")
     title = domain.domainName
-    chats = Chat.objects.all().filter(domain=domain)
+    chats = Chat.objects.all().filter(domain=domain).order_by('-created')
     return render(request, 'home.html', {'page': 'include/domain.html',
                                          'title': title,
                                          'domain': pk,
@@ -154,7 +154,13 @@ def create_message(request):
                 child = ChatLine.objects.get(parent=parent)
             except ChatLine.DoesNotExist:
                 child = None
-        chatLine = ChatLine(chat=chat, created_user=request.user, parent=parent, message=message, label=label)
+
+        human = request.POST.get('human')
+        if human == '0':
+            is_human = False
+        else:
+            is_human = True
+        chatLine = ChatLine(chat=chat, created_user=request.user, parent=parent, message=message, label=label, human=is_human)
         chatLine.save()
         if child is not None:
             parent = chatLine
@@ -266,24 +272,8 @@ def delete_message(request, id):
     id2 = None
     try:
         chatLine = ChatLine.objects.get(id=id)#.delete()
-        if chatLine.human == True:
-            txt = "<br>"+chatLine.message+"<br>"
-            try:
-                ch = ChatLine.objects.filter(id__gt=id, chat=chatLine.chat).order_by('id').first()
-                print(ch)
-                txt +=ch.message
-                id2 = ch.id
-            except ChatLine.DoesNotExist:
-                parent = None
-        else:
-            txt = "<br>"
-            try:
-                ch = ChatLine.objects.filter(id__lt=id, chat=chatLine.chat).order_by('-id').first()
-                print(ch)
-                txt +=ch.message+"<br>"+chatLine.message
-                id2 = ch.id
-            except ChatLine.DoesNotExist:
-                parent = None
+        txt = "<br>" + chatLine.message + "<br>"
+
 
         if confirm == 'false':
             return HttpResponse(
@@ -298,7 +288,16 @@ def delete_message(request, id):
         )
     if confirm == 'true':
         try:
+            try:
+                child = ChatLine.objects.get(parent=chatLine)
+            except ChatLine.DoesNotExist:
+                child = None
+            parent = chatLine.parent
+
             ChatLine.objects.filter(id__in=(id, id2)).delete()
+            if child is not None:
+                child.patent = parent
+                child.save()
             return HttpResponse(
                 json.dumps({"success": True, "confirmation": True, "deleted": True}),
                 content_type="application/json"
