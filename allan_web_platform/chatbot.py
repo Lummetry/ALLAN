@@ -26,7 +26,11 @@ class Server:
         self.show_bot_messages = show_bot_messages
         self.bot_name = bot_name
         self.bot_name_placeholder = '<NAMEBOT>'
-
+        self.URL_create_conv = "http://127.0.0.1:8000/api_create_conversation/"
+        self.URL_create_msg  = "http://127.0.0.1:8000/api_create_message/"
+        
+        self.bd_chat_id = {}
+        
         self.tasteaza_msg = "{} tasteaza ...".format(self.bot_name)
         if not self.show_bot_messages: self.tasteaza_msg = "{} raspunde ...".format(self.bot_name)
 
@@ -59,6 +63,12 @@ class Server:
 
         self.dct_domain_id = {'medical': 1, 'imobiliare': 2}
         self.bot_type = self.CONFIG['BOT_TYPE']
+        
+        for domain,domain_id in self.dct_domain_id.items():
+          r = requests.post(url=self.URL_create_conv, data={'domain_id': domain_id})
+          self.bd_chat_id[domain_id] = r.json()['data']['id']
+        #endfor
+    
         
         if self.bot_type == 'imobiliare':
           intro_messages = [
@@ -144,7 +154,7 @@ class Server:
 
         self.intro_message = random.choice(intro_messages)
         self.message_history.append(self.intro_message)
-        self.push_msgs_to_db(msgs=[(self.intro_message, 'salut', False)],
+        self.push_msgs_to_db(msgs=[(self.intro_message.replace(self.bot_name, self.bot_name_placeholder), 'salut', False)],
                              domain_id=self.dct_domain_id[self.bot_type])
 
         self.reply_labels, self.max_len_labels = self.get_labels()
@@ -244,16 +254,12 @@ class Server:
         return
       
     def push_msgs_to_db(self, msgs, domain_id):
-      URL = "http://127.0.0.1:8000/api_create_conversation/"
-      r = requests.post(url=URL, data={'domain_id': domain_id})
-      chat_id = r.json()['data']['id']
-      
       for (turn, label, is_human) in msgs:
-        api_msg = {'chat_id': chat_id,
+        api_msg = {'chat_id': self.bd_chat_id[domain_id],
                    'human': is_human,
                    'message': turn,
                    'label': label}
-        r_msg = requests.post(url="http://127.0.0.1:8000/api_create_message/", data=api_msg)
+        r_msg = requests.post(url=self.URL_create_msg, data=api_msg)
         
         success = r_msg.json()['success']
         self._log("Msg ({},{},{}) post with success flag={}".format(turn,label,is_human,success))
@@ -358,10 +364,11 @@ class Server:
             self.push_msgs_to_db(msgs=[(new_message, label, True), (reply, 'neutru', False)],
                                  domain_id=self.dct_domain_id[self.bot_type])
 
-            if not os.path.exists('conversations'):
-                os.mkdir('conversations')
-            with open('conversations/{}.txt'.format(self.CONV_PREFIX), 'wt') as f:
-                f.write('\n'.join(self.message_history))
+            if False:
+              if not os.path.exists('conversations'):
+                  os.mkdir('conversations')
+              with open('conversations/{}.txt'.format(self.CONV_PREFIX), 'wt') as f:
+                  f.write('\n'.join(self.message_history))
 
             padded_labels = '[{}]'.format(label.strip()).rjust(self.max_len_labels)
             label_text = self.label_text.format(padded_labels)
