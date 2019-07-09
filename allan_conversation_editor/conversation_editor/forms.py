@@ -2,8 +2,11 @@ from django import forms
 from conversation_editor.models import Domain, Chat, Label, ChatLine
 
 
-class ChatForm(forms.Form):
-    title = forms.CharField(label='Conversation title', max_length=100)
+class ChatForm(forms.ModelForm):
+
+    class Meta:
+        model = Chat
+        fields = ('title', 'txt_upload', 'lbl_upload', 'domain', 'created_user')
 
 
 class ChatLineForm(forms.ModelForm):

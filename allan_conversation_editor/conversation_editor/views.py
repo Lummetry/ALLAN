@@ -13,6 +13,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 import time
 
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
+
+
 def index(request):
     return render(request, 'home.html', {
         'page': 'include/main.html'
@@ -56,17 +60,13 @@ def add_edit_conversation(request, domain, id):
     if id is not None:
         action_conversation = "Edit"
     if request.method == "POST":
-        form = ChatForm(request.POST)
+        form = ChatForm(request.POST, request.FILES)
         if form.is_valid():
-            fields['title'] = request.POST['title']
-            fields['updated'] = datetime.datetime.now()
-            chat, created = Chat.objects.update_or_create(
-                id=id, defaults=fields
-            )
+            form.save()
             return redirect('domain', pk=domain)
 
     else:
-        form = ChatForm(initial={'title': chat_title})
+        form = ChatForm(initial={'title': chat_title, 'domain': domainD, 'created_user': request.user})
     return render(request, 'home.html', {'page': 'include/add_edit_conversation.html',
                                          'action_conversation': action_conversation,
                                          'domain_name': domain_name,
