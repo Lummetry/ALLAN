@@ -234,7 +234,7 @@ class Server:
         self.input_conversation = TextInput(placeholder="Tastaţi mesajul aici", width=855, css_classes=['mt-0', 'pt-0'])
         self.input_conversation.on_change('value', lambda attr, new, old: self._send_message())
 
-        dropdown_menu = [('Imobiliare', 'imobiliar'), ('Medical', 'medical')]
+        dropdown_menu = [('Imobiliare', 'imobiliare'), ('Medical', 'medical')]
         self.dd_menu_dict = dict([tuple(reversed(el)) for el in dropdown_menu])
         # Use button_type default, primary, success, warning, danger to change its color
         self.dropdown = Dropdown(label=self.dd_menu_dict[self.bot_type],

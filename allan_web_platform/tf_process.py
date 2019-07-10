@@ -14,7 +14,7 @@ def get_message(folder):
         return file
 
 if __name__ == '__main__':
-  config_file = 'allan_web_platform/config_runner.txt'
+  config_file = 'allan_web_platform/config_runner_imobiliare.txt'
   pipe_folder = 'allan_web_platform/pipe'
   LEN_PREFIX = 15
 

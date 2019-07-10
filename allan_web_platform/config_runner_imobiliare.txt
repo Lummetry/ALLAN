@@ -10,11 +10,11 @@
     },
 
     "BOT_TYPE" : "imobiliare",
-    "INV_USER_LABELS_DICTIONARY" : "DATA/_imobiliare/dict_user_id2label.pickle", 
+    "INV_USER_LABELS_DICTIONARY" : "allan_web_platform/DATA/_imobiliare/dict_user_id2label.pickle", 
     "HASHTAGS"             : "DATA/_imobiliare/hashtags.txt",
     "LABELS"               : "DATA/_imobiliare/user_labels.txt",
     "VULGARITIES"          : "DATA/vulgaritativ2.txt",
-    "INDEX2WORD"           : "DATA/20190611_ep55_index2word.pickle",
+    "INDEX2WORD"           : "allan_web_platform/DATA/20190611_ep55_index2word.pickle",
 
     "MAX_WORDS" : 36,
     "MAX_CHARACTERS" : 158
