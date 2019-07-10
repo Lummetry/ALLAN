@@ -16,9 +16,11 @@ class Chat(models.Model):
     title = models.CharField(max_length=100, blank=False, null=False)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    created_user = models.ForeignKey(User, editable=False, null=True, blank=True, on_delete=models.CASCADE)
+    created_user = models.ForeignKey(User, editable=True, null=True, blank=True, on_delete=models.CASCADE)
     domain = models.ForeignKey(Domain, on_delete=models.CASCADE)
     status = models.PositiveSmallIntegerField(default=0)
+    txt_upload = models.FileField(upload_to='texts/', null=True, blank=True)
+    lbl_upload = models.FileField(upload_to='labels/', null=True, blank=True)
 
 
 class Label(models.Model):
@@ -30,7 +32,7 @@ class Label(models.Model):
 class ChatLine(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     message = models.CharField(max_length=1024, blank=False, null=False)
-    parent = models.ForeignKey('self', null=True, on_delete=models.CASCADE, related_name='children')
+    parent = models.ForeignKey('self', null=True, on_delete=models.DO_NOTHING, related_name='children')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     human = models.BooleanField(default=True, blank=False, null=False)
