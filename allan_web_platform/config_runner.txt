@@ -10,11 +10,11 @@
     },
 
     "BOT_TYPE" : "medical",
-    "INV_USER_LABELS_DICTIONARY" : "DATA/_medical_new/dict_user_id2label.pickle", 
+    "INV_USER_LABELS_DICTIONARY" : "allan_web_platform/DATA/_medical_new/dict_user_id2label.pickle", 
     "HASHTAGS"             : "DATA/_medical_new/hashtags.txt",
     "LABELS"               : "DATA/_medical_new/user_labels.txt",
     "VULGARITIES"          : "DATA/vulgaritativ2.txt",
-    "INDEX2WORD"           : "DATA/20190611_ep55_index2word.pickle",
+    "INDEX2WORD"           : "allan_web_platform/DATA/20190611_ep55_index2word.pickle",
 
     "MAX_WORDS" : 50,
     "MAX_CHARACTERS" : 200

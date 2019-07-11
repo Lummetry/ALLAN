@@ -1,5 +1,5 @@
 from bokeh.io import curdoc
-from chatbot import Server
+from allan_web_platform.chatbot import Server
 from time import time
 
 start = time()

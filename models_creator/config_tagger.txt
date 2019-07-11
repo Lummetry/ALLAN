@@ -1,0 +1,4 @@
+{
+    "BASE_FOLDER" : "Dropbox",
+    "APP_FOLDER"  : "_doc_ro_chatbot_data/_rochatbot_data"
+}
