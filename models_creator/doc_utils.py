@@ -25,6 +25,7 @@ class DocUtils():
     self.dict_id2word[last_index + 1] = '<PAD>'
     self.dict_id2word[last_index + 2] = '<START>'
     self.dict_id2word[last_index + 3] = '<END>'
+    self.unknown_words = {}
     self.dict_word2id = {v:k for k,v in self.dict_id2word.items()}
 
     full_voc = "".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
@@ -403,7 +404,6 @@ class DocUtils():
     self.num_words_distribution = []
     conversations_w = {}
     conversations_c = {}
-    self.unknown_words = {}
 
     for file in os.listdir(path):
       full_path = os.path.join(path, file)
