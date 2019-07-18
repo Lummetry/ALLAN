@@ -75,8 +75,8 @@ if __name__ == '__main__':
   
   lyr_readout = tf.keras.layers.Dense(units=len(d.dict_master_label2id), 
                                         name='readout', 
-  
                                       activation='softmax')
+  
   tf_x = tf.keras.layers.Dropout(rate=0.5, name='dropout')(tf_x)
   tf_x = lyr_readout(tf_x)
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     
   model.fit(x=X_train, y=y_train, batch_size=4, epochs=100)
   
-  model.save('./models/allan_tagger_1st.h5')
+  logger.SaveKerasModel(model, 'allan_tagger_1st')
 
   random_train_texts = list(map(lambda x: (x,1), random.sample(ttn, 5)))
   random_dev_texts   = list(map(lambda x: (x,0), dtn[:5]))

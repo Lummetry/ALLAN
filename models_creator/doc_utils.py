@@ -367,6 +367,7 @@ class DocUtils():
   def tokenize_single_conversation(self, lines, append_to_distributions=False):
     current_conversation_w = []
     current_conversation_c = []
+    self.unknown_words_per_conv = []
    
     for line in lines:
       if line == '\n': continue
@@ -384,6 +385,7 @@ class DocUtils():
           tokens_w.append(self.dict_word2id[t])
         except:
           tokens_w.append(self.dict_word2id['<UNK>'])
+          self.unknown_words_per_conv.append(t)
           if t not in self.unknown_words:
             self.unknown_words[t] = 1
           else:
