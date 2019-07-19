@@ -35,7 +35,7 @@ class Tagger_Web(object):
     self.unknown_words_list = []
     
     load_time = time.time() - start_time
-    logger.P("Took {} seconds to load data".format(str(load_time)[:7]))
+    logger.P('Took {} seconds to load data'.format(str(load_time)[:7]))
     start_time = time.time()
     #create unique words set
     self.unique_word_ids = set()
@@ -48,7 +48,7 @@ class Tagger_Web(object):
     random.shuffle(self.unique_word_str)
     self.logger.P('In {} conversations used in training, found {} unique words...'.format(len(self.training_corpus),len(self.unique_word_str)))
     
-    logger.P("Took another {} seconds to get unique words".format(str(time.time() - start_time)[:7]))
+    logger.P('Took another {} seconds to get unique words'.format(str(time.time() - start_time)[:7]))
 
   #predict on new string function
   def predict_new_doc(self, text):
@@ -73,11 +73,11 @@ class Tagger_Web(object):
     tokenized_text = self.d.flatten2d(tokenized_text)
     self.document_list.append(tokenized_text)
     if len(tokenized_text) < self.model_input_len:
-      tokenized_text = tokenized_text + (self.model_input_len - len(tokenized_text)) * [self.d.dict_word2id["<PAD>"]]
+      tokenized_text = tokenized_text + (self.model_input_len - len(tokenized_text)) * [self.d.dict_word2id['<PAD>']]
     
     #trim when necessary
     if len(tokenized_text) > self.model_input_len:
-      error_text = "Text is too long! Will use only first 257 words for tagging..."
+      error_text = 'Text is too long! Will use only first 257 words for tagging...'
       tokenized_text = tokenized_text[:self.model_input_len]
       p_error = Paragraph(text=error_text, 
                           width=200, 
@@ -102,15 +102,16 @@ class Tagger_Web(object):
   #textinput callback: adding user input to list
   def callback_print(self, args, old, new):
     if new:
-      preds, percs, unknown_words = app.predict_new_doc(new)
+      preds, percs, unknown_words = app.predict_new_doc(new.rstrip())
       self.findings_list.append(preds)
       self.percentage_list.append(percs)
       self.unknown_words_list.append(unknown_words)
   
   #button callback: reload page elements with prediction   
   def change_click(self):
-  #display findings 
-    findings_text = "In urma procesarii documentului tau, propun urmatoarele labeluri: <br> Label 1: <b>{}</b> cu incredere de {}  <br> Label 2: <b>{}</b> cu incredere de {}  <br> Label 3: <b>{}</b> cu incredere de {}".format(self.findings_list[-1][0][0], str(self.findings_list[-1][0][1])[:5], self.findings_list[-1][1][0], str(self.findings_list[-1][1][1])[:5], self.findings_list[-1][2][0], str(self.findings_list[-1][2][1])[:5])
+  #display findings
+    crt_unknown_words = []
+    findings_text = 'In urma procesarii documentului tau, propun urmatoarele labeluri: <br> Label 1: <b>{}</b> cu incredere de {}  <br> Label 2: <b>{}</b> cu incredere de {}  <br> Label 3: <b>{}</b> cu incredere de {}'.format(self.findings_list[-1][0][0], str(self.findings_list[-1][0][1])[:5], self.findings_list[-1][1][0], str(self.findings_list[-1][1][1])[:5], self.findings_list[-1][2][0], str(self.findings_list[-1][2][1])[:5])
     self.p = Div(text = findings_text,
                  width=400, 
                  height=100)
@@ -124,13 +125,17 @@ class Tagger_Web(object):
     #highlight words not in training data
     user_input = self.document_list[-1]
     crt_unknown_words = self.unknown_words_list[-1]
-    highlight_text = '<h3>Cuvintele ingrosate nu sunt prezente in datele mele de antrenare:</h3> <br>'
+    highlight_text = 'Cuvintele ingrosate nu sunt prezente in datele mele de antrenare: <br> <br>'
     for i in user_input:
       s = self.d.dict_id2word.get(i)
+      if s == '<UNK>':
+        s = '<b>UNK</b>'
       if i in self.unique_word_ids:
-        highlight_text = highlight_text + ' ' + s
+        highlight_text = highlight_text + ' ' + s 
       else:
-        highlight_text = highlight_text + ' <b>' + str(s) + '</b>'
+        highlight_text = highlight_text + ' <b>' + s + '</b>'
+      
+      highlight_text = highlight_text
       
         
 #    highlight_text = self.d.organize_text(highlight_text)
@@ -141,9 +146,9 @@ class Tagger_Web(object):
     
     # TODO afisare pe ecran un text de genul: Cuvinte folosite in document pe care nu le am in vocabularul meu: {}.format(crt_unknown_words)
     if len(crt_unknown_words) == 0:
-      unk_text = ''
+      unk_text = 'Chiar daca unele cuvinte nu sunt in datele de antrenare, toate cuvintele sunt prezente in <i>vocabularul</i> meu.'
     else: 
-      unk_text = 'Cuvintele folosite in documentul tau pe care nu le am in vocabularul meu sunt urmatoarele: <br>'
+      unk_text = 'Cuvintele din in documentul tau care nu se regasesc in <i>vocabularul</i> meu sunt urmatoarele: <br>'
       for i in crt_unknown_words:
         unk_text = unk_text + str(i) + '<br>'
     
@@ -170,7 +175,7 @@ class Tagger_Web(object):
     curdoc()
   
   def init_web_app(self):
-    self.multi_select = MultiSelect(title="Unique words in training:", value=["foo"], 
+    self.multi_select = MultiSelect(title="Unique tokens in training data:", value=['uni'], 
                                options=app.unique_word_str, 
                                width=350, 
                                height=500)
@@ -181,12 +186,12 @@ class Tagger_Web(object):
                                height=200)
     
     # user interaction elements
-    self.text_input = TextAreaInput(value="", 
-                                    title="Introdu documentul pe care doresti sa il etichietezi...", 
+    self.text_input = TextAreaInput(value='', 
+                                    title='Introdu documentul pe care doresti sa il etichietezi...', 
                                     width = 400, 
                                     height = 300)
     
-    self.text_input.on_change("value", self.callback_print)
+    self.text_input.on_change('value', self.callback_print)
     
     self.bt = Button(label='Tag!')
     
@@ -212,10 +217,9 @@ session = tf.Session(config=config)
 #end fix
  
 #Load Logger
-logger = Logger(lib_name='DOCSUMM-WEB-APP', config_file='./config_tagger.txt',
+logger = Logger(lib_name='DOCSUMM-WEB-APP', 
+                config_file='.\config_tagger.txt',
                 TF_KERAS=True)
-
-
 
 app = Tagger_Web(logger,
                  model_name = 'allan_tagger_pretrained_model',
