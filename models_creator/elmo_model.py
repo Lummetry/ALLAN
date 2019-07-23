@@ -1,30 +1,56 @@
+import re
+import random
+import numpy as np
+import pickle as pkl
+import pandas as pd
+
 import tensorflow as tf
 import tensorflow.keras.backend as K
-import numpy as np
 
+
+from tqdm import tqdm
 from collections import Counter
 from nltk.tokenize import word_tokenize
 
+from models_creator.doc_utils import DocUtils
+
+
+def strip_html_tags(string):
+  return re.sub(r'<.*?>', '', string)
+  
+def string_cleanup(string):
+  return re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', string)
 
 class ELMo(object):
-    def __init__(self, logger, data_file_name, max_word_length):
+    def __init__(self, logger, data_file_name, word2idx_file, max_word_length):
         
         self.logger = logger
+        self.word2idx_file = word2idx_file
         self.max_word_length = int(max_word_length)
-        self.vocab = Counter()        
+        self.vocab = Counter()
+        
         #load training data
         logger.P("Loading text from [{}] ...".format(data_file_name))
-
         self.raw_text = []
-        #load training data
-        with open(logger.GetDataFile(data_file_name), encoding="latin-1") as f:
-          for line in f:
-            self.raw_text.append(line)
-        
-        del self.raw_text[500:]
-        
-        logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
 
+        with open(logger.GetDataFile(data_file_name), encoding="utf-8") as f:
+          for line in f:
+            line = line.rstrip()
+            self.raw_text.append(strip_html_tags(line))
+            
+        logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
+        
+        #MAKE DATA OF REASONABLE SIZE SO WE CAN ACTUALLY RUN STUFF
+#        del self.raw_text[500:]
+        
+        
+        #load word2idx mapping
+#        logger.P("Loading text from [{}] ...".format(word2idx_file))
+#
+#        with open(logger.GetDataFile(word2idx_file), 'rb') as handle:
+#          self.word2idx = pkl.load(handle)
+#        
+#        self.idx2word = dict((v,k) for k,v in self.word2idx.items())
 
         #create char2idx and idx2char dictionaries
         CHAR_DICT = 'aăâbcdefghiîjklmnopqrșsțtuvwxyzAĂÂBCDEFGHÎIJKLMNOPQRSȘTȚUVWXYZ0123456789 .!?:,\'%-\(\)/$|&;[]"'
@@ -47,49 +73,91 @@ class ELMo(object):
         self.idx2char = dict((i, c) for i, c in enumerate(chars))
         
         self.alphabet_size = len(chars)
-        
- 
+    
     def corpus_tokenization(self):
       #tokenize input into characters
-      self.training_corpus_w = []
+      self.training_corpus_w_str = []
       self.training_corpus_c = []
       self.logger.P("Tokenization underway...")
-      for sentence in self.raw_text:
+      self.logger.P("Processing {} sentences".format(len(self.raw_text)))
+      
+      for sentence in tqdm(self.raw_text):
         
         char_tokenized_sentence = []
+#        word_tokenized_sentence = []
         split_sentence = word_tokenize(sentence)
         
         #update vocabulary
         self.vocab.update(split_sentence)
-
+        
         for word in split_sentence:
-          tokenized_word = [self.char2idx.get('<S>')]
+#          word_tokenized_sentence.append(self.word2idx.get(word))
+          
+          #START TOKEN for each word in character-wise tokenization
+          char_tokenized_word = [self.char2idx.get('<S>')]
+          
           for char_index in range(self.max_word_length):
-            
             if char_index < len(word):
               if word[char_index] not in self.char2idx:
-                tokenized_word.append(self.char2idx.get('<UNK>'))
+                char_tokenized_word.append(self.char2idx.get('<UNK>'))
               else:
-                tokenized_word.append(self.char2idx.get(word[char_index]))
+                char_tokenized_word.append(self.char2idx.get(word[char_index]))
             else:
-              tokenized_word.append(self.char2idx.get('<PAD>'))
+              char_tokenized_word.append(self.char2idx.get('<PAD>'))
             
-          char_tokenized_sentence.append(np.array(tokenized_word))
+          char_tokenized_sentence.append(np.array(char_tokenized_word))
         
         split_sentence.append('<\S>')
-        self.training_corpus_w.append(np.array(split_sentence))
+        
+        self.training_corpus_w_str.append(np.array(split_sentence))
+#        self.training_corpus_w_idx.append(np.array(word_tokenized_sentence))
         self.training_corpus_c.append(np.array(char_tokenized_sentence))
         
-      self.training_corpus_c = np.array(self.training_corpus_c)  
-      self.training_corpus_w = np.array(self.training_corpus_w)  
+      self.training_corpus_w_str = np.array(self.training_corpus_w_str)
+#      self.training_corpus_w_idx = np.array(self.training_corpus_w_idx)
+      self.training_corpus_c = np.array(self.training_corpus_c) 
       
-      self.logger.P("Tokenized {} sentences, at word and character level(with a max word length of {}) ...".format(len(self.training_corpus_w), self.max_word_length))
+      self.logger.P("Tokenized {} sentences, at word and character level(with a max word length of {}) ...".format(len(self.training_corpus_w_str), self.max_word_length))
       self.logger.P("...Generating a vocabulary size of {}".format(len(self.vocab)))
       
       
-      return self.training_corpus_w, self.training_corpus_c
-       
-    def get_conv_column(self, kernel_size, f_s = 128):
+      return self.training_corpus_w_str, self.training_corpus_c
+    
+    def create_word2idx_map(self):
+      
+      self.word2idx = {'<\S>': 0}
+      count = 1
+      
+      for line in tqdm(self.training_corpus_w_str):
+        for word in line:
+          if word not in self.word2idx.keys():
+            self.word2idx[word] = count
+            count += 1
+
+      df = pd.DataFrame(self.word2idx.items(), columns=['Word', 'Indexs'])
+      print(df)
+      df.to_csv('./rowiki_dialogues_merged_v2_wordindex_df', index=False)
+
+
+    def token_sanity_check(self):
+      random_item = random.randint(0, len(self.raw_text))
+      
+      self.logger.P("Sanity check on random sentence {}".format(self.raw_text[random_item]))
+      tokenized_w = self.training_corpus_w_str[random_item]
+      tokenized_c = self.training_corpus_c[random_item]
+      
+      self.logger.P("Word tokenization: {}".format(tokenized_w))
+      self.logger.P("Char2Id tokenization: {}".format(tokenized_c))
+      
+      back_to_text = ''
+      for word in tokenized_c:
+        for char in word:
+          back_to_text = back_to_text + self.idx2char.get(char)
+
+        back_to_text = back_to_text + '\n'         
+      self.logger.P('ID2CHAR: {}'.format(back_to_text))
+      
+    def get_conv_column(self, kernel_size, f_s=128):
         #generate convolution column
         nr_collapsed = 1
         nr_convolutions = 0
@@ -147,22 +215,21 @@ class ELMo(object):
         
         #bilstm layer 1
         lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences= True), name='bidi_lyr_1')
-        tf_elmo_bidi1 = lyr_bidi1(tf_elmo_input)
+        tf_elmo_bidi1 = lyr_bidi1(tf_elmo_input) #(batch_size, seq_len, 512* 2)
         
         #bilstm layer 2
         lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences= True), name='bidi_lyr_2')
-        tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1)
-
+        tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
+        
         #dense layer - size of vocabulary
-        lyr_vocab = tf.keras.layers.Dense(units = len(self.vocab), activation = "softmax", name="dense_to_vocab")
+        lyr_vocab = tf.keras.layers.Dense(units = len(self.vocab), activation = "softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
         
-        tf_embeddings = lyr_vocab(tf_elmo_bidi2)
+        tf_readout = lyr_vocab(tf_elmo_bidi2)
         model = tf.keras.Model(inputs=tf_input,
-                               outputs= tf_embeddings)
+                               outputs= tf_readout)
         
-        model.summary()
-        model = model.compile(optimizer = "adam", loss='categorical_crossentropy')
-        model = model.fit(x=self.training_corpus_c, y=self.training_corpus_w, batch_size=32, epochs=10, verbose=1)
+        self.logger.LogKerasModel(model)
+        model = model.compile(optimizer = "adam", loss='sparse_categorical_crossentropy')
 
         return model
 

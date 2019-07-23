@@ -19,10 +19,17 @@ if __name__ == '__main__':
 
   elmo = ELMo(logger,
               data_file_name='rowiki_dialogues_merged_v2',
+              word2idx_file='rowiki_dialogues_merged_v2_word2idx.pickle',
               max_word_length=26)
   
-  
+
   elmo.corpus_tokenization()
-  elmo.build_model()
+#  for i in elmo.word2idx.keys():
+#    print(i.decode("iso8859_2").encode('latin-1'))
+  elmo.create_word2idx_map()
+
+#  elmo.token_sanity_check()
   
+#  elmo_model = elmo.build_model()
+#          model = model.fit(x=self.training_corpus_c, y=self.training_corpus_w, batch_size=32, epochs=10, verbose=1)
   a = 0
