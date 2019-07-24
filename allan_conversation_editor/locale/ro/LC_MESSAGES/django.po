@@ -29,4 +29,4 @@ msgstr ""
 
 #: conversation_editor/templates/include/add_edit_conversation.html:30
 msgid "Title"
-msgstr ""
+msgstr "Titlu"

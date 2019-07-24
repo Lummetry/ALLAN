@@ -313,6 +313,7 @@ def delete_message(request, id):
 
 
 def conversation_validation(request,id, domain_id):
+    start = time.time()
     try:
         try:
             chat = Chat.objects.get(id=id)
@@ -342,6 +343,9 @@ def conversation_validation(request,id, domain_id):
 
         chat.status = 1
         chat.save()
+        end = time.time()
+        print("This is the execution time")
+        print(end - start)
         return redirect('domain', pk=domain_id)
     except Exception as e:
         try:
