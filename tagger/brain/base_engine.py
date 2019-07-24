@@ -503,8 +503,9 @@ class ALLANEngine:
       s_name += '_' + name
       
     debug = not delete_prev_named
-          
-    self.P("Saving tagger model '{}'".format(s_name))
+    
+    if debug:      
+      self.P("Saving tagger model '{}'".format(s_name))
     fn = self.log.SaveKerasModel(self.model, 
                                  s_name, 
                                  use_prefix=True,
@@ -523,7 +524,19 @@ class ALLANEngine:
       self.prev_saved_model.append(fn)
     return
   
+  
+  def _check_model_inputs(self):
+    if len(self.model.inputs[0].shape) == 3:
+      self.generate_embeddings = True
+      self.P("Model inputs {} identified to directly receive embeddings".format(
+          self.model.inputs[0].shape))
+    else:
+      self.generate_embeddings = False
+      self.P("Model inputs {} identified to receive tokens".format(
+          self.model.inputs[0].shape))
+    return
       
+  
   def train_on_texts(self, 
             X_texts, 
             y_labels, 
@@ -554,15 +567,8 @@ class ALLANEngine:
     n_obs = len(X_texts)
     if n_obs != len(y_labels):
       raise ValueError("X and y contain different number of observations")
-      
-    if len(self.model.inputs[0].shape) == 3:
-      generate_embeddings = True
-      self.P("Model inputs {} identified to directly receive embeddings".format(
-          self.model.inputs[0].shape))
-    else:
-      generate_embeddings = False
-      self.P("Model inputs {} identified to receive tokens".format(
-          self.model.inputs[0].shape))
+
+    self._check_model_inputs()
 
     rank_labels = 'multi' in self.model_output
     
@@ -571,7 +577,7 @@ class ALLANEngine:
                                    to_onehot=True,
                                    rank_labels=rank_labels,
                                    convert_unknown_words=convert_unknown_words,
-                                   generate_embeddings=generate_embeddings)
+                                   generate_embeddings=self.generate_embeddings)
     if self.doc_max_words.lower() == 'auto':
       self.max_doc_size = self.last_max_size + 1
     else:
@@ -631,6 +637,10 @@ class ALLANEngine:
     
     self.P("Training on sequences of max {} words".format(self.max_doc_size))
 
+    # TODO: must implement embedding generation for proposed tokenized  data
+    self._check_model_inputs()
+    ###
+    
     if force_batch:
       X_data = self.pad_data(X_tokens=X_tokens)
     else:
@@ -645,6 +655,10 @@ class ALLANEngine:
   
   def _reload_embeds_from_model(self,):
     self.P("Reloading embeddings from model")
+    if self.generate_embeddings:
+      self.P("Cannot reload embeddings: input size {}. second layer: {}".format(
+          self.model.inputs[0].shape, self.model.layers[1].__class__.__name__))
+      return
     lyr_emb = None
     for lyr in self.model.layers:
       if lyr.name == self.emb_layer_name:
