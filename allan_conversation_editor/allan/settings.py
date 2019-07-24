@@ -25,7 +25,7 @@ SECRET_KEY = '#l)7)-%wj-obv+*d$6u)2u+7so(&cn8ldccobh^n^^q73ca!5)'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['40.118.28.94']
 
 
 # Application definition
@@ -93,7 +93,7 @@ DATABASES = {
         'PASSWORD': 'MLteam2019!',
         'HOST': 'lummetry-allan.database.windows.net',
         'OPTIONS': {
-            'driver': 'ODBC Driver 13 for SQL Server',
+            'driver': 'ODBC Driver 17 for SQL Server',
         }
     }
 }
