@@ -12,6 +12,8 @@ import tensorflow as tf
 
 from libraries.lummetry_layers_gated import GatedDense
 
+_VER_ = '0.8.1'
+
 class ALLANTagger(ALLANEngine):
   """
   
@@ -32,6 +34,7 @@ class ALLANTagger(ALLANEngine):
     """
     super().__init__(log=log, DEBUG=DEBUG)
     self.trained = False
+    self.__version__ = _VER_
     self.__name__ = 'ALLAN_TAG'
     self.output_size = len(dict_label2index) if dict_label2index is not None else output_size
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
@@ -342,6 +345,11 @@ class ALLANTagger(ALLANEngine):
     if len(self.unk_words_model_config['LAYERS']) == 0 :
       raise ValueError("UNK_WORDS_MODEL layers not configured - please define list of layers")
     layers_cfg = self.unk_words_model_config['LAYERS']
+    if 'FINAL_DROP' in self.unk_words_model_config.keys():
+      drp = self.unk_words_model_config['FINAL_DROP']
+    else:
+      drp = 0
+
     tf_input = tf.keras.layers.Input((None,), name='word_input')
     tf_x = tf_input
     n_layers = len(layers_cfg)
@@ -377,10 +385,12 @@ class ALLANTagger(ALLANEngine):
                             prev_features=prev_features,
                             use_cuda=self.use_cuda
                           )
-    if 'FINAL_DROP' in self.unk_words_model_config.keys():
-      drp = self.unk_words_model_config['FINAL_DROP']
-      if drp > 0:
-        tf_x = tf.keras.layers.Dropout(drp, name='pre_read_drop{:.1f}'.format(drp))(tf_x)
+    
+    if drp > 0:
+      tf_x = tf.keras.layers.Dropout(drp, name='drop1_{:.1f}'.format(drp))(tf_x)
+    tf_x = GatedDense(units=self.emb_size*2, name='gated1')(tf_x)
+    if drp > 0:
+      tf_x = tf.keras.layers.Dropout(drp, name='drop2_{:.1f}'.format(drp))(tf_x)
     tf_readout = tf.keras.layers.Dense(self.emb_size, name='embed_readout')(tf_x)
     model = tf.keras.models.Model(inputs=tf_input, outputs=tf_readout)
     model.compile(optimizer='adam', loss='logcosh')
@@ -426,9 +436,27 @@ class ALLANTagger(ALLANEngine):
           np_y_batch = np_y_subset[b_start:b_end]
           yield np_x_batch, np_y_batch        
     
-    
   
-  def train_unk_words_model(self,epochs=20):
+  def __debug_unk_words_model(self, unk_words):
+    self.P("Testing for {}".format(unk_words))
+    for uword in unk_words:
+      if uword in self.dic_word2index.keys():
+        self.P(" 'Unk' word {} found in dict at pos {}".format(uword, self.dic_word2index[uword]))
+        continue
+      top = self.get_unk_word_similar_word(uword, top=5)
+      self.P(" unk: '{}' results in: {}".format(uword, top))
+    return
+      
+      
+  def debug_known_words(self, good_words=['ochi', 'gura','gat','picior']):
+    self.P("Testing known words {}".format(good_words))
+    for word in good_words:
+      top = self.get_similar_words(word, top=5)
+      self.P(" wrd: '{}' results in: {}".format(word, top))
+    return
+      
+      
+  def train_unk_words_model(self,epochs=5):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
@@ -440,22 +468,29 @@ class ALLANTagger(ALLANEngine):
                               min_word_size=min_size)
     gen = self._get_unk_model_generator(x_data)
     # fit model
-    steps = self.embeddings.shape[0] // self.unk_words_model_batch_size
-    self.unk_words_model.fit_generator(generator=gen, steps_per_epoch=steps, epochs=epochs)
-                                       
-    # test model on a few unk words
-    good_words = ['ochi', 'gura','gat','picior']
-    self.P("Testing for {}".format(good_words))
-    for word in good_words:
-      top = self.get_similar_words(word, top=5)
-      self.P(" wrd: '{}' results in: {}".format(word, top))
-      
-    unk_words = ['capui', 'revedre','spaticul',]
-    self.P("Testing for {}".format(unk_words))
-    for uword in unk_words:
-      top = self.get_unk_word_similar_word(uword, top=5)
-      self.P(" unk: '{}' results in: {}".format(uword, top))
+    n_batches = self.embeddings.shape[0] // self.unk_words_model_batch_size
+
+    losses = []
+    avg_losses = []
+    for epoch in range(epochs):
+      epoch_losses = []
+      for i_batch in range(n_batches):
+        x_batch, y_batch = next(gen)
+        loss = self.unk_words_model.train_on_batch(x_batch, y_batch)
+        print("\r Epoch {}: {:>5.1f}% completed [loss: {:.4f}]".format(
+            epoch+1, i_batch / n_batches * 100, loss), end='', flush=True)
+        losses.append(loss)
+        epoch_losses.append(loss)
+      print("\r",end="")
+      epoch_loss = np.mean(epoch_losses)
+      avg_losses.append(epoch_loss)
+      self.P("Epoch {} done. loss:{:>7.4f}, avg loss :{:>7.4f}".format(
+          epoch+1, epoch_loss,np.mean(avg_losses)))
+      self.__debug_unk_words_model(['creerii', 'pumul','capu','galcile'])      
+            
     return
+  
+  
 
 
         
@@ -501,15 +536,18 @@ if __name__ == '__main__':
                         save=save_model,
                         skip_if_pretrained=use_loaded)
     
+  l.P("")
   tags = eng.predict_text("ma doare stomacul")
   l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
-  tags = eng.predict_text("ma doare capul")
+  l.P("")
+  tags = eng.predict_text("ma doare capul, in gât si nările")
   l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
-  tags = eng.predict_text("vreau sa slabesc")
+  l.P("")
+  tags = eng.predict_text("vreau sa slabesc si fac sport si ma doare la umăr")
   l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
