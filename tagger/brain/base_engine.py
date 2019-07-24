@@ -28,7 +28,7 @@ class ALLANEngine:
     self.sess = None
     self.session = None
     self.trained = False
-    self.prev_saved_model = None
+    self.prev_saved_model = []
     self.__name__ = 'ALLAN_BASE'
     self.first_run = {}
     self.frames_data = None
@@ -502,19 +502,25 @@ class ALLANEngine:
     if name is not None:
       s_name += '_' + name
       
-    debug = delete_prev_named
-    
-    if delete_prev_named and (self.prev_saved_model is not None):
-      if os.path.isfile(self.prev_saved_model):
-        os.remove(self.prev_saved_model)
-      
+    debug = not delete_prev_named
+          
     self.P("Saving tagger model '{}'".format(s_name))
     fn = self.log.SaveKerasModel(self.model, 
                                  s_name, 
                                  use_prefix=True,
                                  DEBUG=debug)
-    if name is not None:
-      self.prev_saved_model = fn
+
+    if delete_prev_named:
+      if self.prev_saved_model != []:
+        new_list = []
+        for _f in self.prev_saved_model:
+          if os.path.isfile(_f):
+            try:
+              os.remove(_f)              
+            except:
+              new_list.append(_f)
+        self.prev_saved_model = new_list
+      self.prev_saved_model.append(fn)
     return
   
       

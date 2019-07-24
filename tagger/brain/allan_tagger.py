@@ -12,6 +12,8 @@ import tensorflow as tf
 
 from libraries.lummetry_layers_gated import GatedDense
 
+_VER_ = '0.8.1'
+
 class ALLANTagger(ALLANEngine):
   """
   
@@ -32,6 +34,7 @@ class ALLANTagger(ALLANEngine):
     """
     super().__init__(log=log, DEBUG=DEBUG)
     self.trained = False
+    self.__version__ = _VER_
     self.__name__ = 'ALLAN_TAG'
     self.output_size = len(dict_label2index) if dict_label2index is not None else output_size
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
@@ -426,7 +429,15 @@ class ALLANTagger(ALLANEngine):
           np_y_batch = np_y_subset[b_start:b_end]
           yield np_x_batch, np_y_batch        
     
-    
+  
+  def __debug_unk_words_model(self, unk_words):
+    self.P("Testing for {}".format(unk_words))
+    for uword in unk_words:
+      if uword in self.dic_word2index.keys():
+        self.P(" 'Unk' word {} found in dict at pos {}".format(uword, self.dic_word2index[uword]))
+        continue
+      top = self.get_unk_word_similar_word(uword, top=5)
+      self.P(" unk: '{}' results in: {}".format(uword, top))
   
   def train_unk_words_model(self,epochs=20):
     """
@@ -441,6 +452,8 @@ class ALLANTagger(ALLANEngine):
     gen = self._get_unk_model_generator(x_data)
     # fit model
     steps = self.embeddings.shape[0] // self.unk_words_model_batch_size
+    
+    for epoch in range(epochs):
     self.unk_words_model.fit_generator(generator=gen, steps_per_epoch=steps, epochs=epochs)
                                        
     # test model on a few unk words
@@ -450,11 +463,8 @@ class ALLANTagger(ALLANEngine):
       top = self.get_similar_words(word, top=5)
       self.P(" wrd: '{}' results in: {}".format(word, top))
       
-    unk_words = ['capui', 'revedre','spaticul',]
-    self.P("Testing for {}".format(unk_words))
-    for uword in unk_words:
-      top = self.get_unk_word_similar_word(uword, top=5)
-      self.P(" unk: '{}' results in: {}".format(uword, top))
+    self.__debug_unk_words_model(['creerii', 'pumul','capu','galcile'])
+      
     return
 
 
