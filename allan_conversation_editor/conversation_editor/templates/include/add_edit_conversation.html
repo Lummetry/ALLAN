@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load i18n %}
 <main class="main">
     <!-- Breadcrumb-->
     <ol class="breadcrumb">
@@ -24,9 +25,34 @@
                                     {% csrf_token %}
                                     {{ form.domain }}
                                     {{ form.created_user }}
+                                <div class="row">
+                                    <div class="col-md-12">
+                                    <label for="id_title">{% trans 'Title' %}</label>
                                     {{ form.title }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                    &nbsp;
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                    <label for="id_txt_upload">Text</label>
                                     {{ form.txt_upload }}
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                    &nbsp;
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                    <label for="id_lbl_upload">Label</label>
                                     {{ form.lbl_upload }}
+                                    </div>
+                                </div>
 
 
                                     {% if form.errors %}

@@ -4,7 +4,7 @@ from time import time
 
 start = time()
 server = Server(bot_name="ALLAN", show_bot_messages=True,
-                config_file='config_runner.txt')
+                config_file='config_runner_imobiliare.txt')
 
 layouts = server.CreateLayout()
 

@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 """
 
 import os
-
+from django.utils.translation import ugettext_lazy as _
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -60,6 +61,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.i18n',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -75,28 +77,29 @@ WSGI_APPLICATION = 'allan.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.mysql',
-#        'NAME': 'allan',
-#        'USER': 'root',
-#        'PASSWORD': '',
-#        'HOST': 'localhost',
-#        'PORT': '3306'
-#    }
-#}
 DATABASES = {
     'default': {
-        'ENGINE': 'sql_server.pyodbc',
-        'NAME': 'allan-conversations',
-        'USER': 'lummetry',
-        'PASSWORD': 'MLteam2019!',
-        'HOST': 'lummetry-allan.database.windows.net',
-        'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-        }
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'allan',
+        'USER': 'root',
+        'PASSWORD': '',
+        'HOST': 'localhost',
+        'PORT': '3306'
+
     }
 }
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'sql_server.pyodbc',
+#        'NAME': 'allan-conversations',
+#        'USER': 'lummetry',
+#        'PASSWORD': 'MLteam2019!',
+#        'HOST': 'lummetry-allan.database.windows.net',
+#        'OPTIONS': {
+#            'driver': 'ODBC Driver 13 for SQL Server',
+#        }
+#    }
+#}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -120,7 +123,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGES = (
+        ('en', _('English')),
+        ('ro', _('Romana'))
+)
+LANGUAGE_CODE = 'en'
 
 TIME_ZONE = 'UTC'
 
@@ -130,7 +137,9 @@ USE_L10N = True
 
 USE_TZ = True
 
-
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale')
+]
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 

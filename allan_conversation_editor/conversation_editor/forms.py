@@ -7,7 +7,43 @@ class ChatForm(forms.ModelForm):
     class Meta:
         model = Chat
         fields = ('title', 'txt_upload', 'lbl_upload', 'domain', 'created_user')
-
+        widgets = {
+            'title': forms.TextInput(
+                attrs={'class': 'form-control',
+                       'id': 'id_title',
+                       'title': 'title',
+                       'required': True,
+                       'placeholder': 'Say something...'}
+            ),
+            'txt_upload': forms.FileInput(
+                attrs={'class': 'form-control',
+                       'id': 'id_txt_upload',
+                       'title': 'txt_upload',
+                       'required': True,
+                       'placeholder': 'Say something...'}
+            ),
+            'lbl_upload': forms.FileInput(
+                attrs={'class': 'form-control',
+                       'id': 'id_lbl_upload',
+                       'title': 'lbl_upload',
+                       'required': False,
+                       'placeholder': 'Say something...'}
+            ),
+            'domain': forms.TextInput(
+                attrs={'class': 'input-hidden',
+                       'id': 'id_domain',
+                       'title': 'domain',
+                       'required': False,
+                       'placeholder': 'Say something...'}
+            ),
+            'created_user': forms.TextInput(
+                attrs={'class': 'input-hidden',
+                       'id': 'id_created_user',
+                       'title': 'created_user',
+                       'required': True,
+                       'placeholder': 'Say something...'}
+            )
+        }
 
 class ChatLineForm(forms.ModelForm):
     class Meta:

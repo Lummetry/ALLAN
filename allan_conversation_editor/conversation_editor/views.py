@@ -334,6 +334,7 @@ def conversation_validation(request,id, domain_id):
                         txt = "Om"
                     raise Exception("Nu pot fi mai multe replici consecutive introduse de "+txt)
                 old_human = ln.human
+                i += 1
             if old_human == True:
                 raise Exception("O discutie nu se poate termina numai cu o iteratie a  Bot-ului")
         except ChatLine.DoesNotExist:
