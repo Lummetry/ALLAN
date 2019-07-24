@@ -5,12 +5,12 @@ Created on Thu Jul 11 14:20:23 2019
 @author: damia
 """
 
-from base_engine import ALLANEngine 
+from tagger.brain.base_engine import ALLANEngine 
 import os
 import numpy as np
 import tensorflow as tf
 
-from lummetry_layers_gated_dense import GatedDense
+from libraries.lummetry_layers_gated import GatedDense
 
 class ALLANTagger(ALLANEngine):
   """
@@ -461,10 +461,10 @@ class ALLANTagger(ALLANEngine):
         
 
 if __name__ == '__main__':
-  from logger_helper import LoadLogger
-  from data_loader import ALLANDataLoader
+  from libraries.logger import Logger
+  from tagger.brain.data_loader import ALLANDataLoader
   
-  cfg1 = "config_sngl_folder.txt"
+  cfg1 = "tagger/brain/config_sngl_folder.txt"
   
   use_raw_text = True
   save_model = True
@@ -473,7 +473,7 @@ if __name__ == '__main__':
   epochs = 30
   use_loaded = True
   
-  l = LoadLogger("ALNT",cfg1)
+  l = Logger(lib_name="ALNT",config_file=cfg1)
   l.SupressTFWarn()
   
   loader = ALLANDataLoader(log=l, multi_label=True, 

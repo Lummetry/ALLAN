@@ -6,7 +6,7 @@ Created on Fri Jul 12 08:13:19 2019
 """
 import tensorflow as tf
 import numpy as np
-from base_engine import ALLANEngine
+from tagger.brain.base_engine import ALLANEngine
 import os
 
 class ALLANDataLoader(ALLANEngine):
@@ -184,7 +184,8 @@ class ALLANDataLoader(ALLANEngine):
 if __name__ == '__main__':
   cfg1 = "config_sngl_folder.txt"
   cfg2 = "config_dbl_folders.txt"
-  from logger_helper import LoadLogger
+
+
   l = LoadLogger("ALNT",cfg2)
   eng = ALLANDataLoader(log=l, multi_label=True, normalize_labels=True)
   eng.LoadData()
