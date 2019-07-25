@@ -95,8 +95,9 @@
   },
   
   "EMB_GEN_MODEL" : {
-    "BATCH_SIZE" : 512,
-    "FINAL_DROP" : 0.5,
+    "BATCH_SIZE"  : 512,
+    "FINAL_DROP"  : 0.5,
+    "USE_CUDA"    : 1, 
     "COLUMNS" : {      
         "COLUMN_1" : {
             "LAYERS" : [

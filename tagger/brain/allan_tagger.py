@@ -6,7 +6,6 @@ Created on Thu Jul 11 14:20:23 2019
 """
 
 from tagger.brain.base_engine import ALLANEngine 
-import os
 import numpy as np
 import tensorflow as tf
 
@@ -19,7 +18,7 @@ class ALLANTagger(ALLANEngine):
   """
   
   """
-  def __init__(self, log,    
+  def __init__(self,    
                dict_word2index=None,
                dict_label2index=None,
                output_size=None,
@@ -28,12 +27,12 @@ class ALLANTagger(ALLANEngine):
                inputs=None,
                outputs=None,
                columns_end=None,
-               DEBUG=False):
+               **kwargs):
     """
     pass either dicts or output_size/vocab_size
     embed_size also optional - will be loaded based on saved embeds
     """
-    super().__init__(log=log, DEBUG=DEBUG)
+    super().__init__(**kwargs)
     self.trained = False
     self.__version__ = _VER_
     self.__name__ = 'ALLAN_TAG'

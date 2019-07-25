@@ -19,7 +19,8 @@ class ALLANEngine(LummetryObject):
   """
   def __init__(self, log, DEBUG=False, MAX_CHR=100000):
     super().__init__(log=log, DEBUG=DEBUG)
-    
+    self.__name__ = 'ALLAN_BASE'
+    self.P("Init ALLANEngine...")
     if log is None or (type(log).__name__ != 'Logger'):
       raise ValueError("Loggger object is invalid: {}".format(log))
     self.log = log
@@ -32,7 +33,6 @@ class ALLANEngine(LummetryObject):
     self.session = None
     self.trained = False
     self.prev_saved_model = []
-    self.__name__ = 'ALLAN_BASE'
     self.first_run = {}
     self.frames_data = None
     self.dic_word2index = None
@@ -42,7 +42,7 @@ class ALLANEngine(LummetryObject):
     self.dic_index2label = None
     self.embeddings = None
     self.model = None
-    self.unk_words_model = None
+    self.emb_gen_model = None
     self.emb_layer_name = 'emb_layer'
     self.startup()
     return
@@ -70,6 +70,7 @@ class ALLANEngine(LummetryObject):
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
     self.doc_max_words = self.config_data['DOCUMENT_MAX_WORDS']
     self.model_name = self.model_config['NAME']
+    super().startup()
     return
         
       
@@ -89,6 +90,44 @@ class ALLANEngine(LummetryObject):
           fn_emb))
     return  
   
+  def _setup_vocabs(self, fn_words_dict=None, fn_idx_dict=None):
+    if fn_words_dict is None:
+      fn_words_dict = self.fn_word2idx
+    if fn_idx_dict is None:
+      fn_idx_dict = self.fn_idx2word
+      
+    self.P("Loading vocabs...")
+    if ".txt" in fn_words_dict:
+      dict_word2idx = self.log.LoadDictFromModels(fn_words_dict)
+    else:
+      dict_word2idx = self.log.LoadPickleFromModels(fn_words_dict)
+    if dict_word2idx is None:
+      self.P("  No word2idx dict found")
+    else:
+      self.P(" Found word2idx[{}]".format(len(dict_word2idx)))
+
+    if ".txt" in fn_idx_dict:
+      dict_idx2word = self.log.LoadDictFromModels(fn_idx_dict)
+    else:
+      dict_idx2word = self.log.LoadPickleFromModels(fn_idx_dict)
+      if type(dict_idx2word) in [list, tuple]:
+        dict_idx2word = {i:v for i,v in enumerate(dict_idx2word)}
+    if dict_idx2word is None:
+      self.P(" No idx2word dict found")
+    else:
+      self.P(" Found idx2word[{}]".format(len(dict_idx2word)))
+      
+    if (dict_word2idx is None) and (dict_idx2word is not None):
+      dict_word2idx = {v:k for k,v in dict_idx2word.items()}
+      
+    if (dict_word2idx is not None) and (dict_idx2word is None):
+      dict_idx2word = {v:k for k,v in dict_word2idx.items()}
+      
+    self.dic_word2index = dict_word2idx
+    self.dic_index2word = dict_idx2word
+    return
+  
+  
   
   def word_to_char_tokens(self, word, pad_up_to=0):
     _idxs = []
@@ -107,7 +146,7 @@ class ALLANEngine(LummetryObject):
    
   def _get_approx_embed(self, word):
     char_tokens = np.array(self.word_to_char_tokens(word)).reshape((1,-1))
-    res = self.unk_words_model.predict(char_tokens)
+    res = self.emb_gen_model.predict(char_tokens)
     return res.ravel()
   
   
@@ -124,6 +163,22 @@ class ALLANEngine(LummetryObject):
       _min = _mins[:top]
     return _min
   
+  def _get_closest_idx_and_distance(self, aprox_emb, top=1):
+    """
+     get closest embedding index
+    """
+    assert self.embeddings is not None
+    dist = ((self.embeddings - aprox_emb) ** 2).sum(axis=-1)
+    _mins = np.argsort(dist)
+    _dist = dist[_mins]
+    if top == 1:
+      _min = _mins[0]
+      _dst = _dist[0]
+    else:
+      _min = _mins[:top]
+      _dst = _dist[:top]      
+    return _min, _dst
+
   
   def get_unk_word_similar_id(self, unk_word, top=1):
     if unk_word in self.dic_word2index.keys():
@@ -152,6 +207,7 @@ class ALLANEngine(LummetryObject):
       _result = self.dic_index2word[idxs]
     return _result
   
+
   
   def _word_encoder(self, word, 
            convert_unknown_words=False,

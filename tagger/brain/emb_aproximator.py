@@ -8,20 +8,39 @@ import numpy as np
 
 import tensorflow as tf
 
-from libraries.generic_obj import LummetryObject
+
+from tagger.brain.base_engine import ALLANEngine
+
 from libraries.lummetry_layers.gated import GatedDense
 
-class EmbeddingApproximator(LummetryObject):
-  def __init__(self, log, np_embeds, dct_w2i, dct_i2w, DEBUG=False):
-    super().__init__(log=log, DEBUG=DEBUG)
-    self.model = None
+class EmbeddingApproximator(ALLANEngine):
+  def __init__(self, np_embeds=None, dct_w2i=None, dct_i2w=None, **kwargs):
+    super().__init__(**kwargs)
+    self.emb_gen_model = None
     self.__name__ = 'EMBA'
     self.trained = False
+
+    if np_embeds is None:
+      self._setup_word_embeddings()
+      self.emb_size = self.embeddings.shape[-1]
+    else:
+      self.embeddings = np_embeds
+    
+    if dct_w2i is None:
+      self._setup_vocabs()
+    else:
+      self.dic_word2index = dct_w2i
+      if dct_i2w is None:
+        self.dic_index2word = {v:k for k,v in dct_w2i.items()}
+      else:
+        self.dic_index2word = dct_i2w
+    self._setup()
     return
   
-  def startup(self):
+  def _setup(self):
     self.emb_gen_model_config = self.config_data['EMB_GEN_MODEL'] if 'EMB_GEN_MODEL' in self.config_data.keys() else None    
     self.emb_gen_model_batch_size = self.emb_gen_model_config['BATCH_SIZE']
+    self.use_cuda = self.emb_gen_model_config['USE_CUDA']
     return
     
   
@@ -91,8 +110,8 @@ class EmbeddingApproximator(LummetryObject):
     self.P("Constructing unknown words embeddings generator model")
     if self.emb_gen_model_config is None:
       raise ValueError("EMB_GEN_MODEL not configured - please define dict")
-    if len(self.emb_gen_model_config['LAYERS']) == 0 :
-      raise ValueError("EMB_GEN_MODEL layers not configured - please define list of layers")
+    if len(self.emb_gen_model_config['COLUMNS']) == 0 :
+      raise ValueError("EMB_GEN_MODEL columns not configured - please define columns/layers")
 
     if 'FINAL_DROP' in self.emb_gen_model_config.keys():
       drp = self.emb_gen_model_config['FINAL_DROP']
@@ -142,7 +161,10 @@ class EmbeddingApproximator(LummetryObject):
                             )
       lst_columns.append(tf_x)
     
-    tf_x = tf.keras.layers.concatenate(lst_columns, name='concat_columns')
+    if len(lst_columns) > 1:
+      tf_x = tf.keras.layers.concatenate(lst_columns, name='concat_columns')
+    else:
+      tf_x = lst_columns[0]
     if drp > 0:
       tf_x = tf.keras.layers.Dropout(drp, name='drop1_{:.1f}'.format(drp))(tf_x)
     tf_x = GatedDense(units=self.emb_size*2, name='gated1')(tf_x)
@@ -151,10 +173,10 @@ class EmbeddingApproximator(LummetryObject):
     tf_readout = tf.keras.layers.Dense(self.emb_size, name='embed_readout')(tf_x)
     model = tf.keras.models.Model(inputs=tf_input, outputs=tf_readout)
     model.compile(optimizer='adam', loss='logcosh')
-    self.unk_words_model = model
-    self.unk_words_model_trained = False
+    self.emb_gen_model = model
+    self.emb_gen_model_trained = False
     self.P("Unknown words embeddings generator model:\n{}".format(
-        self.log.GetKerasModelSummary(self.unk_words_model)))
+        self.log.GetKerasModelSummary(self.emb_gen_model)))
     return
 
 
@@ -198,7 +220,7 @@ class EmbeddingApproximator(LummetryObject):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
-    if self.unk_words_model is None:
+    if self.emb_gen_model is None:
       self._define_emb_generator_model()
     min_size = 10
     # get generator
@@ -206,7 +228,7 @@ class EmbeddingApproximator(LummetryObject):
                               min_word_size=min_size)
     gen = self._get_unk_model_generator(x_data)
     # fit model
-    n_batches = self.embeddings.shape[0] // self.unk_words_model_batch_size
+    n_batches = self.embeddings.shape[0] // self.emb_gen_model_batch_size
 
     losses = []
     avg_losses = []
@@ -214,7 +236,7 @@ class EmbeddingApproximator(LummetryObject):
       epoch_losses = []
       for i_batch in range(n_batches):
         x_batch, y_batch = next(gen)
-        loss = self.unk_words_model.train_on_batch(x_batch, y_batch)
+        loss = self.emb_gen_model.train_on_batch(x_batch, y_batch)
         print("\r Epoch {}: {:>5.1f}% completed [loss: {:.4f}]".format(
             epoch+1, i_batch / n_batches * 100, loss), end='', flush=True)
         losses.append(loss)
@@ -244,25 +266,37 @@ class EmbeddingApproximator(LummetryObject):
   def debug_known_words(self, good_words=['ochi', 'gura','gat','picior']):
     self.P("Testing known words {}".format(good_words))
     for word in good_words:
-      top = self.get_similar_words(word, top=5)
-      self.P(" wrd: '{}' results in: {}".format(word, top))
+      idx = self.dic_word2index[word]
+      orig_emb = self.embeddings[idx]
+      idxs1, dist1 = self._get_closest_idx_and_distance(aprox_emb=orig_emb, top=5)
+      top1 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
+              for x,y in zip(idxs1, dist1)]      
+      top1 = " ".join(top1)
+      self.P(" wrd: '{}' results in embeds: {}".format(word, top1))
+      
+      aprox_emb = self._get_approx_embed(word)
+      idxs2, dist2 = self._get_closest_idx_and_distance(aprox_emb=aprox_emb, top=5)
+      top2 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
+              for x,y in zip(idxs2, dist2)]      
+      top2 = " ".join(top2)
+      self.P(" wrd: '{}' in emb based on generation: {}".format(word, top2))
+      
+      diff = np.abs(orig_emb - aprox_emb).sum()
+      self.P(" Difference between orig and generated emb: {:.3f}".format(diff))
     return
   
   
 if __name__ == '__main__':
   from libraries.logger import Logger
-  from tagger.brain.data_loader import ALLANDataLoader
   
   cfg1 = "tagger/brain/config_sngl_folder.txt"
   l = Logger(lib_name="EGEN",config_file=cfg1)
-  emb = None
-  dct_w = None
-  dct_i = None
+  
   
   eng = EmbeddingApproximator(log=l,
-                              np_embeds=emb,
-                              dct_w2i=dct_w,
-                              dct_i2w=dct_i,
                               )
   eng.train_unk_words_model()
+  
+  eng.debug_known_words()
+  
   
