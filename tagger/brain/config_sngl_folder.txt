@@ -14,6 +14,7 @@
   
   "LABEL2IDX" : "######",
   "DOCUMENT_MAX_WORDS" : "auto",
+  "DIST_FUNC" : "l2",
   
   "TRAINING" : {
     "FOLDER"     : "test1_one_folder",
@@ -95,18 +96,13 @@
   },
   
   "EMB_GEN_MODEL" : {
-    "BATCH_SIZE"  : 512,
-    "FINAL_DROP"  : 0.5,
-    "USE_CUDA"    : 1, 
+    "BATCH_SIZE"    : 512,
+    "FINAL_DROP"    : 0.5,
+    "USE_CUDA"      : 1, 
+    "CHR_EMB_SIZE"  : 16, 
     "COLUMNS" : {      
-        "COLUMN_1" : {
+        "COL_1" : {
             "LAYERS" : [
-                {
-                  "NAME"     : "EMB",
-                  "TYPE"     : "embedding",
-                  "FEATS"    : 16,
-                  "RESIDUAL" : 0
-                },
                 {
                   "NAME"     : "RNN1",
                   "TYPE"     : "lstm",

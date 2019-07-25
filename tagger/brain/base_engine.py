@@ -21,6 +21,7 @@ class ALLANEngine(LummetryObject):
     super().__init__(log=log, DEBUG=DEBUG)
     self.__name__ = 'ALLAN_BASE'
     self.P("Init ALLANEngine...")
+    self.log.SetNicePrints()
     if log is None or (type(log).__name__ != 'Logger'):
       raise ValueError("Loggger object is invalid: {}".format(log))
     self.log = log
@@ -70,6 +71,7 @@ class ALLANEngine(LummetryObject):
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
     self.doc_max_words = self.config_data['DOCUMENT_MAX_WORDS']
     self.model_name = self.model_config['NAME']
+    self.dist_func_name = self.config_data['DIST_FUNC']
     super().startup()
     return
         
@@ -143,7 +145,30 @@ class ALLANEngine(LummetryObject):
       nr_added = pad_up_to - n_chr
       _idxs += [0]* (nr_added)
     return _idxs
-   
+  
+  
+  def _setup_dist_func(self, func_name='cos'):
+    if func_name == 'l2':
+      func = lambda x,y: ((x-y)**2).sum(axis=-1)
+    elif func_name == 'l1':
+      func = lambda x,y: np.abs(x-y).sum(axis=-1)
+    elif func_name == 'cos':
+      func = lambda x,y: 1 - (x.dot(y) / (np.linalg.norm(x, axis=-1) * np.linalg.norm(y)))
+    else:
+      raise ValueError("Unknown distance function '{}'".format(func_name))
+    return func
+  
+  def dist(self, target, source=None):
+    if len(target.shape) > 1:
+      raise ValueError("Target must be a emb vector. Received {}".format(
+          target.shape))
+    if source is None:
+      source = self.embeddings
+    f = self._setup_dist_func(self.dist_func_name)
+    return f(source, target)
+      
+  
+  
   def _get_approx_embed(self, word):
     char_tokens = np.array(self.word_to_char_tokens(word)).reshape((1,-1))
     res = self.emb_gen_model.predict(char_tokens)
@@ -155,7 +180,7 @@ class ALLANEngine(LummetryObject):
      get closest embedding index
     """
     assert self.embeddings is not None
-    dist = ((self.embeddings - aprox_emb) ** 2).sum(axis=-1)
+    dist = self.dist(aprox_emb)
     _mins = np.argsort(dist)
     if top == 1:
       _min = _mins[0]
@@ -168,7 +193,7 @@ class ALLANEngine(LummetryObject):
      get closest embedding index
     """
     assert self.embeddings is not None
-    dist = ((self.embeddings - aprox_emb) ** 2).sum(axis=-1)
+    dist = self.dist(aprox_emb)
     _mins = np.argsort(dist)
     _dist = dist[_mins]
     if top == 1:
