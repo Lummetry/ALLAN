@@ -89,22 +89,24 @@ class ELMo(object):
       self.training_corpus_c = []
       self.logger.P("Tokenization underway...")
       self.logger.P("Processing {} sentences".format(len(self.raw_text)))
-      
+     
+      start_token_array = np.ones(self.max_word_length)
+      start_token_array[0] = self.char2idx.get('<S>')
       for sentence in tqdm(self.raw_text):
         
         char_tokenized_sentence = []
         word_tokenized_sentence = []
         split_sentence = word_tokenize(sentence)
         
+        #START TOKEN for each sentence in character-wise tokenization
+        char_tokenized_sentence.append(np.array(start_token_array))
+        
         #update vocabulary
         self.vocab.update(split_sentence)
         
         for word in split_sentence:
           word_tokenized_sentence.append(self.word_to_index(word))
-          
-          #START TOKEN for each word in character-wise tokenization
-          char_tokenized_word = [self.char2idx.get('<S>')]
-          
+          char_tokenized_word = []
           for char_index in range(self.max_word_length):
             if char_index < len(word):
               if word[char_index] not in self.char2idx:
@@ -150,7 +152,7 @@ class ELMo(object):
     def token_sanity_check(self):
       random_item = random.randint(0, len(self.raw_text))
       
-      self.logger.P("Sanity check on random sentence {}".format(self.raw_text[random_item]))
+      self.logger.P("Sanity check on random sentence: {}".format(self.raw_text[random_item]))
       tokenized_w = self.training_corpus_w_str[random_item]
       tokenized_c = self.training_corpus_c[random_item]
       self.logger.P("Word tokenization: {}".format(tokenized_w))
@@ -167,7 +169,7 @@ class ELMo(object):
       self.logger.P("Id2Word: {}".format(back_to_words))
       
       
-      self.logger.P("Char2Id tokenization: {}".format(tokenized_c))
+      self.logger.P("Char2Id tokenization: \n{}".format(tokenized_c))
       
       back_to_text = ''
       for word in tokenized_c:

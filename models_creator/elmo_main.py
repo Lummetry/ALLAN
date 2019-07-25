@@ -8,7 +8,7 @@ if __name__ == '__main__':
                   config_file='./models_creator/config_elmo.txt',
                   TF_KERAS = True,
                   SHOW_TIME = True)
-
+  logger.SetNicePrints()
   elmo = ELMo(logger,
               data_file_name='rowiki_dialogues_merged_v2',
               word2idx_file='rowiki_dialogues_merged_v2_wordindex_df.csv',
@@ -18,5 +18,6 @@ if __name__ == '__main__':
   elmo.corpus_tokenization()
 
   elmo.token_sanity_check()
-
+  
   elmo_model = elmo.build_model()
+#  elmo_model.fit(x=elmo.training_corpus_c, y=elmo.training_corpus_w_idx, batch_size=32, epochs=10)
