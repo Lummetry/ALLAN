@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2019-07-24 12:55+0000\n"
+"POT-Creation-Date: 2019-07-25 12:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -29,3 +29,142 @@ msgstr ""
 #: conversation_editor/templates/include/add_edit_conversation.html:30
 msgid "Title"
 msgstr "Title"
+
+#: conversation_editor/templates/include/add_edit_conversation.html:41
+msgid "Upload Conversation"
+msgstr ""
+
+#: conversation_editor/templates/include/add_edit_conversation.html:52
+msgid "Upload Labels"
+msgstr ""
+
+#: conversation_editor/templates/include/add_edit_conversation.html:64
+#: conversation_editor/templates/include/conversation_editor.html:75
+msgid "Update"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:6
+msgid "Home"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:15
+msgid "Do you want to delete?"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:17
+msgid "Cancel"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:19
+msgid "Delete?"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:24
+#: conversation_editor/templates/include/conversation_editor.html:39
+msgid "Message"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:25
+msgid "Close"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:48
+msgid "Label"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:57
+msgid "Type Person"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:65
+msgid "Bot"
+msgstr ""
+
+#: conversation_editor/templates/include/conversation_editor.html:66
+msgid "Human"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:34
+msgid "Nr. Crt."
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:35
+msgid "Name"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:36
+msgid "Created"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:37
+msgid "Updated"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:38
+msgid "Owner"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:39
+msgid "Status"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:40
+msgid "Add"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:52
+#: conversation_editor/templates/include/domain.html:61
+msgid "Draft"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:53
+msgid "Validated"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:54
+msgid "Trained"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:57
+msgid "Modify"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:58
+msgid "Messages"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:59
+msgid "Validate"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:60
+msgid "Train"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:70
+msgid "Prev"
+msgstr ""
+
+#: conversation_editor/templates/include/domain.html:76
+msgid "Next"
+msgstr ""
+
+#: conversation_editor/templates/include/footer.html:9
+msgid "Powered by"
+msgstr ""
+
+#: conversation_editor/templates/include/sidebar.html:10
+msgid "Domain"
+msgstr ""
+
+#: conversation_editor/templates/include/sidebar.html:14
+msgid "Health"
+msgstr ""
+
+#: conversation_editor/templates/include/sidebar.html:18
+msgid "Realestate"
+msgstr ""
+
+#: conversation_editor/templates/include/sidebar.html:26
+msgid "Logout"
+msgstr ""
