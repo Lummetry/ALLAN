@@ -111,13 +111,16 @@ class Tagger_Web(object):
   def change_click(self):
   #display findings
     crt_unknown_words = []
-    findings_text = 'In urma procesarii documentului tau, propun urmatoarele labeluri: <br> Label 1: <b>{}</b> cu incredere de {}  <br> Label 2: <b>{}</b> cu incredere de {}  <br> Label 3: <b>{}</b> cu incredere de {}'.format(self.findings_list[-1][0][0], str(self.findings_list[-1][0][1])[:5], self.findings_list[-1][1][0], str(self.findings_list[-1][1][1])[:5], self.findings_list[-1][2][0], str(self.findings_list[-1][2][1])[:5])
+    findings_text = 'In urma procesarii documentului tau, propun urmatoarele labeluri: <br> Label 1: <b>{}</b> cu incredere de {}  <br> Label 2: <b>{}</b> cu incredere de {}  <br> Label 3: <b>{}</b> cu incredere de {}'.format(self.findings_list[-1][0][0], str(self.findings_list[-1][0][1] * 100)[:5] + '%', self.findings_list[-1][1][0], str(self.findings_list[-1][1][1] * 100)[:5] + '%', self.findings_list[-1][2][0], str(self.findings_list[-1][2][1] * 100)[:5] + '%')
     self.p = Div(text = findings_text,
                  width=400, 
                  height=100)
     
     #display percentage
-    percentage_text = "In documentul introdus, <b>{} % </b> din cuvinte au fost prezente si in datele mele de antrenare...".format(str(self.percentage_list[-1])[:4])
+    actual_percentage = str(self.percentage_list[-1])[:4]
+    if actual_percentage == '100.':
+      actual_percentage = '100'
+    percentage_text = "In documentul introdus, <b>{}% </b> din cuvinte au fost prezente si in datele mele de antrenare...".format(actual_percentage)
     self.p_percentage = Div(text=percentage_text, 
                             width=400, 
                             height=60)
@@ -135,7 +138,7 @@ class Tagger_Web(object):
       else:
         highlight_text = highlight_text + ' <b>' + s + '</b>'
       
-      highlight_text = highlight_text
+      highlight_text = self.d.organize_text(highlight_text)
       
         
 #    highlight_text = self.d.organize_text(highlight_text)
@@ -175,7 +178,7 @@ class Tagger_Web(object):
     curdoc()
   
   def init_web_app(self):
-    self.multi_select = MultiSelect(title="Unique tokens in training data:", value=['uni'], 
+    self.multi_select = MultiSelect(title="Tokeni unici in datele de antrenare:", value=['uni'], 
                                options=app.unique_word_str, 
                                width=350, 
                                height=500)
