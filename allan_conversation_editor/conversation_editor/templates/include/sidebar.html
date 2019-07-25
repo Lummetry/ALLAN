@@ -1,6 +1,8 @@
   {% load staticfiles %}
 {% load i18n %}
       <div class="sidebar">
+
+
         <nav class="sidebar-nav">
           <ul class="nav">
             <li class="nav-title">&nbsp;</li>
@@ -20,14 +22,13 @@
                 </ul>
             </li>
 
-
             <li class="nav-item">
               <a class="nav-link" href="{% url 'logout'%}?next=/">
                 <i class="nav-icon icon-drop"></i>{% trans 'Logout' %} </a>
             </li>
+
           </ul>
         </nav>
-
 
         <button class="sidebar-minimizer brand-minimizer" type="button"></button>
 

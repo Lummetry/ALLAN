@@ -20,11 +20,11 @@ msgstr ""
 
 #: allan/settings.py:127
 msgid "English"
-msgstr ""
+msgstr "English"
 
 #: allan/settings.py:128
 msgid "Romana"
-msgstr ""
+msgstr "Romana"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:30
 msgid "Title"
@@ -32,69 +32,69 @@ msgstr "Title"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:41
 msgid "Upload Conversation"
-msgstr ""
+msgstr "Upload Conversation"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:52
 msgid "Upload Labels"
-msgstr ""
+msgstr "Upload Labels"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:64
 #: conversation_editor/templates/include/conversation_editor.html:75
 msgid "Update"
-msgstr ""
+msgstr "Update"
 
 #: conversation_editor/templates/include/conversation_editor.html:6
 msgid "Home"
-msgstr ""
+msgstr "Home"
 
 #: conversation_editor/templates/include/conversation_editor.html:15
 msgid "Do you want to delete?"
-msgstr ""
+msgstr "Do you want to delete?"
 
 #: conversation_editor/templates/include/conversation_editor.html:17
 msgid "Cancel"
-msgstr ""
+msgstr "Cancel"
 
 #: conversation_editor/templates/include/conversation_editor.html:19
 msgid "Delete?"
-msgstr ""
+msgstr "Delete?"
 
 #: conversation_editor/templates/include/conversation_editor.html:24
 #: conversation_editor/templates/include/conversation_editor.html:39
 msgid "Message"
-msgstr ""
+msgstr "Message"
 
 #: conversation_editor/templates/include/conversation_editor.html:25
 msgid "Close"
-msgstr ""
+msgstr "Close"
 
 #: conversation_editor/templates/include/conversation_editor.html:48
 msgid "Label"
-msgstr ""
+msgstr "Label"
 
 #: conversation_editor/templates/include/conversation_editor.html:57
 msgid "Type Person"
-msgstr ""
+msgstr "Type Person"
 
 #: conversation_editor/templates/include/conversation_editor.html:65
 msgid "Bot"
-msgstr ""
+msgstr "Bot"
 
 #: conversation_editor/templates/include/conversation_editor.html:66
 msgid "Human"
-msgstr ""
+msgstr "Human"
 
 #: conversation_editor/templates/include/domain.html:34
 msgid "Nr. Crt."
-msgstr ""
+msgstr "Nr. Crt."
 
 #: conversation_editor/templates/include/domain.html:35
 msgid "Name"
-msgstr ""
+msgstr "Name"
 
 #: conversation_editor/templates/include/domain.html:36
 msgid "Created"
-msgstr ""
+msgstr "Created"
 
 #: conversation_editor/templates/include/domain.html:37
 msgid "Updated"
@@ -102,69 +102,74 @@ msgstr ""
 
 #: conversation_editor/templates/include/domain.html:38
 msgid "Owner"
-msgstr ""
+msgstr "Owner"
 
 #: conversation_editor/templates/include/domain.html:39
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: conversation_editor/templates/include/domain.html:40
 msgid "Add"
-msgstr ""
+msgstr "Add"
 
 #: conversation_editor/templates/include/domain.html:52
 #: conversation_editor/templates/include/domain.html:61
 msgid "Draft"
-msgstr ""
+msgstr "Draft"
 
 #: conversation_editor/templates/include/domain.html:53
 msgid "Validated"
-msgstr ""
+msgstr "Validated"
 
 #: conversation_editor/templates/include/domain.html:54
 msgid "Trained"
-msgstr ""
+msgstr "Trained"
 
 #: conversation_editor/templates/include/domain.html:57
 msgid "Modify"
-msgstr ""
+msgstr "Modify"
 
 #: conversation_editor/templates/include/domain.html:58
 msgid "Messages"
-msgstr ""
+msgstr "Messages"
 
 #: conversation_editor/templates/include/domain.html:59
 msgid "Validate"
-msgstr ""
+msgstr "Validate"
 
 #: conversation_editor/templates/include/domain.html:60
 msgid "Train"
-msgstr ""
+msgstr "Train"
 
 #: conversation_editor/templates/include/domain.html:70
 msgid "Prev"
-msgstr ""
+msgstr "Prev"
 
 #: conversation_editor/templates/include/domain.html:76
 msgid "Next"
-msgstr ""
+msgstr "Next"
 
 #: conversation_editor/templates/include/footer.html:9
 msgid "Powered by"
-msgstr ""
+msgstr "Powered by"
 
 #: conversation_editor/templates/include/sidebar.html:10
 msgid "Domain"
-msgstr ""
+msgstr "Domain"
 
 #: conversation_editor/templates/include/sidebar.html:14
 msgid "Health"
-msgstr ""
+msgstr "Health"
 
 #: conversation_editor/templates/include/sidebar.html:18
 msgid "Realestate"
-msgstr ""
+msgstr "Realestate"
 
 #: conversation_editor/templates/include/sidebar.html:26
 msgid "Logout"
-msgstr ""
+msgstr "Logout"
+
+#: conversation_editor/templates/include/header.html:26
+msgid "language"
+msgstr "Language"
+

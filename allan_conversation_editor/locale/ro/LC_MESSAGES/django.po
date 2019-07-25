@@ -33,139 +33,143 @@ msgstr "Titlu"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:41
 msgid "Upload Conversation"
-msgstr ""
+msgstr "Incarca conversatie"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:52
 msgid "Upload Labels"
-msgstr ""
+msgstr "Incarca etichete"
 
 #: conversation_editor/templates/include/add_edit_conversation.html:64
 #: conversation_editor/templates/include/conversation_editor.html:75
 msgid "Update"
-msgstr ""
+msgstr "Actualizeaza"
 
 #: conversation_editor/templates/include/conversation_editor.html:6
 msgid "Home"
-msgstr ""
+msgstr "Acasa"
 
 #: conversation_editor/templates/include/conversation_editor.html:15
 msgid "Do you want to delete?"
-msgstr ""
+msgstr "Doriti sa stergeti?"
 
 #: conversation_editor/templates/include/conversation_editor.html:17
 msgid "Cancel"
-msgstr ""
+msgstr "Anuleaza"
 
 #: conversation_editor/templates/include/conversation_editor.html:19
 msgid "Delete?"
-msgstr ""
+msgstr "Sterge"
 
 #: conversation_editor/templates/include/conversation_editor.html:24
 #: conversation_editor/templates/include/conversation_editor.html:39
 msgid "Message"
-msgstr ""
+msgstr "Mesaj"
 
 #: conversation_editor/templates/include/conversation_editor.html:25
 msgid "Close"
-msgstr ""
+msgstr "Inchide"
 
 #: conversation_editor/templates/include/conversation_editor.html:48
 msgid "Label"
-msgstr ""
+msgstr "Eticheta"
 
 #: conversation_editor/templates/include/conversation_editor.html:57
 msgid "Type Person"
-msgstr ""
+msgstr "Tip Persoana"
 
 #: conversation_editor/templates/include/conversation_editor.html:65
 msgid "Bot"
-msgstr ""
+msgstr "Robot"
 
 #: conversation_editor/templates/include/conversation_editor.html:66
 msgid "Human"
-msgstr ""
+msgstr "Om"
 
 #: conversation_editor/templates/include/domain.html:34
 msgid "Nr. Crt."
-msgstr ""
+msgstr "Nr. Ord."
 
 #: conversation_editor/templates/include/domain.html:35
 msgid "Name"
-msgstr ""
+msgstr "Nume"
 
 #: conversation_editor/templates/include/domain.html:36
 msgid "Created"
-msgstr ""
+msgstr "Creat"
 
 #: conversation_editor/templates/include/domain.html:37
 msgid "Updated"
-msgstr ""
+msgstr "Actualizat"
 
 #: conversation_editor/templates/include/domain.html:38
 msgid "Owner"
-msgstr ""
+msgstr "Autor"
 
 #: conversation_editor/templates/include/domain.html:39
 msgid "Status"
-msgstr ""
+msgstr "Status"
 
 #: conversation_editor/templates/include/domain.html:40
 msgid "Add"
-msgstr ""
+msgstr "Adauga"
 
 #: conversation_editor/templates/include/domain.html:52
 #: conversation_editor/templates/include/domain.html:61
 msgid "Draft"
-msgstr ""
+msgstr "Ciorna"
 
 #: conversation_editor/templates/include/domain.html:53
 msgid "Validated"
-msgstr ""
+msgstr "Validat"
 
 #: conversation_editor/templates/include/domain.html:54
 msgid "Trained"
-msgstr ""
+msgstr "Antrenat"
 
 #: conversation_editor/templates/include/domain.html:57
 msgid "Modify"
-msgstr ""
+msgstr "Modifica"
 
 #: conversation_editor/templates/include/domain.html:58
 msgid "Messages"
-msgstr ""
+msgstr "Mesaje"
 
 #: conversation_editor/templates/include/domain.html:59
 msgid "Validate"
-msgstr ""
+msgstr "Valideaza"
 
 #: conversation_editor/templates/include/domain.html:60
 msgid "Train"
-msgstr ""
+msgstr "Antreneaza"
 
 #: conversation_editor/templates/include/domain.html:70
 msgid "Prev"
-msgstr ""
+msgstr "Inapoi"
 
 #: conversation_editor/templates/include/domain.html:76
 msgid "Next"
-msgstr ""
+msgstr "Inainte"
 
 #: conversation_editor/templates/include/footer.html:9
 msgid "Powered by"
-msgstr ""
+msgstr "Powered by"
 
 #: conversation_editor/templates/include/sidebar.html:10
 msgid "Domain"
-msgstr ""
+msgstr "Domeniu"
 
 #: conversation_editor/templates/include/sidebar.html:14
 msgid "Health"
-msgstr ""
+msgstr "Sanatate"
 
 #: conversation_editor/templates/include/sidebar.html:18
 msgid "Realestate"
-msgstr ""
+msgstr "Imobiliar"
 
 #: conversation_editor/templates/include/sidebar.html:26
 msgid "Logout"
-msgstr ""
+msgstr "Iesire"
+
+#: conversation_editor/templates/include/header.html:26
+msgid "language"
+msgstr "Limba"
