@@ -12,17 +12,17 @@ import traceback
 from rest_framework.views import APIView
 from rest_framework.response import Response
 import time
-
+from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 
-
+@login_required(login_url='/accounts/login/')
 def index(request):
     return render(request, 'home.html', {
         'page': 'include/main.html'
     })
 
-
+@login_required(login_url='/accounts/login/')
 def domain(request, pk):
     try:
         domain = Domain.objects.get(pk=pk)
@@ -37,6 +37,7 @@ def domain(request, pk):
                                              'error': None})
 
 
+@login_required(login_url='/accounts/login/')
 def add_edit_conversation(request, domain, id):
     domain_name = None
     chat_title = None
@@ -74,6 +75,7 @@ def add_edit_conversation(request, domain, id):
                                          'form': form})
 
 
+@login_required(login_url='/accounts/login/')
 def conversation_editor(request, id):
     # media = settings.MEDIA_ROOT
     # with open(media+"\\health\\texts\\Text1.txt") as file:
@@ -102,6 +104,7 @@ def conversation_editor(request, id):
                                          'chatLines': chatL,
                                          'form': ChatLineForm()})
 
+
 def recursiv(chatLines, parent, chat):
     if parent == None:
         for item in ChatLine.objects.filter(parent__isnull=True, chat=chat):
@@ -113,6 +116,8 @@ def recursiv(chatLines, parent, chat):
             recursiv(chatLines, item, chat)
     return chatLines
 
+
+@login_required(login_url='/accounts/login/')
 def create_message(request):
     if request.method == 'POST':
         parent_id = request.POST.get('parent')
@@ -180,6 +185,8 @@ def create_message(request):
             content_type="application/json"
         )
 
+
+@login_required(login_url='/accounts/login/')
 def update_message(request, id):
     if request.method == 'POST':
         parent_id = request.POST.get('parent')
@@ -245,6 +252,8 @@ def update_message(request, id):
             content_type="application/json"
         )
 
+
+@login_required(login_url='/accounts/login/')
 def get_message(request,id):
     response_data = {}
     try:
@@ -268,6 +277,7 @@ def get_message(request,id):
     )
 
 
+@login_required(login_url='/accounts/login/')
 def delete_message(request, id):
     confirm = request.GET['confirm']
     print(confirm)
@@ -312,6 +322,7 @@ def delete_message(request, id):
             )
 
 
+@login_required(login_url='/accounts/login/')
 def conversation_validation(request,id, domain_id):
     start = time.time()
     try:
@@ -361,6 +372,7 @@ def conversation_validation(request,id, domain_id):
                                              'error': e.args[0]})
 
 
+@login_required(login_url='/accounts/login/')
 def conversation_train(request,id):
     try:
         chat = Chat.objects.get(id=id)
@@ -373,6 +385,7 @@ def conversation_train(request,id):
     return redirect('domain', pk=domain)
 
 
+@login_required(login_url='/accounts/login/')
 def conversation_draft(request,id):
     try:
         chat = Chat.objects.get(id=id)
@@ -383,6 +396,8 @@ def conversation_draft(request,id):
     chat.save()
     return redirect('domain', pk=domain)
 
+
+@login_required(login_url='/accounts/login/')
 def get_autocomplete_labels(request,id):
     response_data = []
 
