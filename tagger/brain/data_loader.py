@@ -11,11 +11,11 @@ import os
 
 class ALLANDataLoader(ALLANEngine):
   
-  def __init__(self, log, 
+  def __init__(self, 
                multi_label=True, 
                normalize_labels=False, 
-               DEBUG=False):
-    super().__init__(log=log, DEBUG=DEBUG)
+               **kwargs):
+    super().__init__(**kwargs)
     self.__name__ = 'ALLAN_DL'
     self.multi_label = multi_label
     self.normalize_labels  = normalize_labels
@@ -57,6 +57,8 @@ class ALLANDataLoader(ALLANEngine):
                                     )
     return
   
+  
+    
     
   
   def _load_training_data(self, train_folder, 
@@ -71,35 +73,16 @@ class ALLANDataLoader(ALLANEngine):
      utility function to load training data and tokenize as follows:
      if word2idx is none then use tf tokenizer and save dict
     """
-    self.P("Loading data...")
-    dict_word2idx = None
+
     dict_labels2idx = None
-    if ".txt" in fn_words_dict:
-      dict_word2idx = self.log.LoadDictFromModels(fn_words_dict)
-    else:
-      dict_word2idx = self.log.LoadPickleFromModels(fn_words_dict)
-    if dict_word2idx is None:
-      self.P("  No word2idx dict found")
-
-    if ".txt" in fn_idx_dict:
-      dict_idx2word = self.log.LoadDictFromModels(fn_idx_dict)
-    else:
-      dict_idx2word = self.log.LoadPickleFromModels(fn_idx_dict)
-      if type(dict_idx2word) in [list, tuple]:
-        dict_idx2word = {i:v for i,v in enumerate(dict_idx2word)}
-    if dict_idx2word is None:
-      self.P(" No idx2word dict found")
-      
-    if (dict_word2idx is None) and (dict_idx2word is not None):
-      dict_word2idx = {v:k for k,v in dict_idx2word.items()}
-
     if ".txt" in fn_labels_dict:
       dict_labels2idx = self.log.LoadDictFromModels(fn_labels_dict)
     else:
       dict_labels2idx = self.log.LoadPickleFromModels(fn_labels_dict)
     if dict_labels2idx is None:
       self.P(" No labels2idx dict found")
-        
+    
+    dict_word2idx, dict_idx2word = self._setup_vocabs(fn_words_dict, fn_idx_dict)   
     
     _res = self.log.LoadDocuments(train_folder,
                                   doc_ext=doc_ext,
@@ -132,7 +115,6 @@ class ALLANDataLoader(ALLANEngine):
       self.P("Using predefined word2idx with {} words: {}".format(
           len(dict_word2idx), 
           ["{}:{}".format(k,v) for k,v in dict_word2idx.items()][:4]))
-      self.dic_word2index = dict_word2idx
       lst_splitted = [self._get_words(x) for x in lst_docs]
       x_docs = []
       for text in lst_splitted:
