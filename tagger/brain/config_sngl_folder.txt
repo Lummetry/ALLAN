@@ -94,29 +94,34 @@
     "SEQ_LEN"     : 0
   },
   
-  "UNK_WORDS_MODEL" : {
+  "EMB_GEN_MODEL" : {
     "BATCH_SIZE" : 512,
     "FINAL_DROP" : 0.5,
-    "LAYERS" : [
-      {
-        "NAME"     : "EMB",
-        "TYPE"     : "embedding",
-        "FEATS"    : 16,
-        "RESIDUAL" : 0
-      },
-      {
-        "NAME"     : "RNN1",
-        "TYPE"     : "lstm",
-        "FEATS"    : 128,
-        "RESIDUAL" : 1
-      },
-      {
-        "NAME"     : "RNN2",
-        "TYPE"     : "lstm",
-        "FEATS"    : 256,
-        "RESIDUAL" : 0
-      }
-    ]   
+    "COLUMNS" : {      
+        "COLUMN_1" : {
+            "LAYERS" : [
+                {
+                  "NAME"     : "EMB",
+                  "TYPE"     : "embedding",
+                  "FEATS"    : 16,
+                  "RESIDUAL" : 0
+                },
+                {
+                  "NAME"     : "RNN1",
+                  "TYPE"     : "lstm",
+                  "FEATS"    : 128,
+                  "RESIDUAL" : 1
+                },
+                {
+                  "NAME"     : "RNN2",
+                  "TYPE"     : "lstm",
+                  "FEATS"    : 256,
+                  "RESIDUAL" : 0
+                }
+            ]   
+        }
+    }
+    
   }
      
 }
