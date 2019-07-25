@@ -25,6 +25,7 @@ class DocUtils():
     self.dict_id2word[last_index + 1] = '<PAD>'
     self.dict_id2word[last_index + 2] = '<START>'
     self.dict_id2word[last_index + 3] = '<END>'
+    self.unknown_words = {}
     self.dict_word2id = {v:k for k,v in self.dict_id2word.items()}
 
     full_voc = "".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
@@ -366,6 +367,7 @@ class DocUtils():
   def tokenize_single_conversation(self, lines, append_to_distributions=False):
     current_conversation_w = []
     current_conversation_c = []
+    self.unknown_words_per_conv = []
    
     for line in lines:
       if line == '\n': continue
@@ -383,6 +385,7 @@ class DocUtils():
           tokens_w.append(self.dict_word2id[t])
         except:
           tokens_w.append(self.dict_word2id['<UNK>'])
+          self.unknown_words_per_conv.append(t)
           if t not in self.unknown_words:
             self.unknown_words[t] = 1
           else:
@@ -403,7 +406,6 @@ class DocUtils():
     self.num_words_distribution = []
     conversations_w = {}
     conversations_c = {}
-    self.unknown_words = {}
 
     for file in os.listdir(path):
       full_path = os.path.join(path, file)
