@@ -3,9 +3,10 @@ from models_creator.doc_utils import DocUtils
 import tensorflow as tf
 import numpy as np
 import random
+import os
 
 if __name__ == '__main__':
-  logger = LoadLogger(lib_name='DOCSUMM', config_file='models_creator/config_tagger.txt',
+  logger = LoadLogger(lib_name='DOCSUMM', config_file='./config_tagger.txt',
                       use_tf_keras=True)
   
   lstm_units = 256
@@ -18,8 +19,7 @@ if __name__ == '__main__':
   d.GenerateMasterLabels(logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190226_Production_selection_v0_3/master_labels')
   
   X_train, y_train, X_dev, y_dev, ttn, dtn, conv_w = d.GenerateTaggingData(logger.GetDropboxDrive() + '/_doc_ro_chatbot_data/00_Corpus/00_mihai_work/20190226_Production_selection_v0_3/texts')
-  
-  
+    
   tf_input = tf.keras.layers.Input(shape=(X_train.shape[1],), name='tf_input') # (batch_size, seq_len)
   EmbLayer = tf.keras.layers.Embedding(input_dim=emb_matrix.shape[0],
                                        output_dim=emb_matrix.shape[1],
@@ -73,21 +73,25 @@ if __name__ == '__main__':
   tf_x = tf.keras.layers.concatenate([tf_x1, tf_x2, tf_x3], name='concatenate')
   
   
-  lyr_readout   = tf.keras.layers.Dense(units=len(d.dict_master_label2id), 
+  lyr_readout = tf.keras.layers.Dense(units=len(d.dict_master_label2id), 
                                         name='readout', 
-  
                                       activation='softmax')
+  
   tf_x = tf.keras.layers.Dropout(rate=0.5, name='dropout')(tf_x)
   tf_x = lyr_readout(tf_x)
 
   model = tf.keras.Model(inputs=tf_input, outputs=tf_x)
   
-  model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['acc'])
+  model.summary()
   
+  model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['acc']) 
+    
   model.fit(x=X_train, y=y_train, batch_size=4, epochs=100)
+  
+  logger.SaveKerasModel(model, 'allan_tagger_1st')
 
   random_train_texts = list(map(lambda x: (x,1), random.sample(ttn, 5)))
-  random_dev_texts   = list(map(lambda x: (x,0), random.sample(dtn, 5)))
+  random_dev_texts   = list(map(lambda x: (x,0), dtn[:5]))
   
   random_texts = random_train_texts + random_dev_texts
   
@@ -102,11 +106,4 @@ if __name__ == '__main__':
     logger.P("Reality: {}".format(list(map(lambda x: d.dict_master_id2label[x], y))), noprefix=True)
     for i in best:
       logger.P('Pred Category: "{}" with probability: {}'.format(d.dict_master_id2label[i], yhat[i]), noprefix=True)
-    
-  
-  
-  
-  
-  
-
-
+      
