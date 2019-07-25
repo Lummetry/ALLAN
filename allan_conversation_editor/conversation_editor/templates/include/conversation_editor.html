@@ -1,8 +1,9 @@
 {% load staticfiles %}
+{% load i18n %}
 <main class="main">
     <!-- Breadcrumb-->
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">{% trans 'Home' %}</a></li>
 
         <!-- Breadcrumb Menu-->
     </ol>
@@ -11,17 +12,17 @@
 
         <div id="popupConfirmation">
             <div class="popup-content">
-                <h1>Vrei sa stergi?</h1>
+                <h1>{% trans 'Do you want to delete?' %}</h1>
                 <span id="txtConfirmation"></span><br><br>
-                <a href=""><span class="badge badge-success "  id="id_cancel_delete">Anuleaza</span></a>
+                <a href=""><span class="badge badge-success "  id="id_cancel_delete">{% trans 'Cancel' %}</span></a>
                                                     &nbsp;
-                <a href=""><span class="badge badge-danger "  id="id_confirmation_delete"  data-message_id="0">Sterge</span></a>
+                <a href=""><span class="badge badge-danger "  id="id_confirmation_delete"  data-message_id="0">{% trans 'Delete?' %}</span></a>
             </div>
         </div>
         <div id="popup">
             <div class="popup-content">
-                <h1 style="float: left;">Message</h1>
-                <a href="" style="float: right;"><span class="badge badge-danger " id="close" style="float: right;">Close</span></a>
+                <h1 style="float: left;">{% trans 'Message' %}</h1>
+                <a href="" style="float: right;"><span class="badge badge-danger " id="close" style="float: right;">{% trans 'Close' %}</span></a>
                 <div style="clear: both;"></div>
                 <div class="row">
                             <div class="col-md-12">
@@ -35,7 +36,7 @@
                                           {{ form.chat }}
 
                                           {{ form.label }}
-                                    <label for="id_message">Message</label>
+                                    <label for="id_message">{% trans 'Message' %}</label>
                                     <div class="input-group mb-3">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">
@@ -44,7 +45,7 @@
                                           </div>
                                           {{ form.message }}
                                     </div>
-                                    <label for="id_label_name">Label</label>
+                                    <label for="id_label_name">{% trans 'Label' %}</label>
                                     <div class="input-group mb-3">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">
@@ -53,7 +54,7 @@
                                           </div>
                                           <input class="form-control" type="text" placeholder="title" id="id_label_name" name="label_name" value="" >
                                     </div>
-                                    <label for="id_label_name">Tip Persoana</label>
+                                    <label for="id_label_name">{% trans 'Type Person' %}</label>
                                     <div class="input-group mb-3">
                                         <div class="input-group-prepend">
                                             <span class="input-group-text">
@@ -61,8 +62,8 @@
                                             </span>
                                           </div>
                                           <select class="custom-select custom-select-sm" id="id_human" name="human">
-                                              <option value="0">Bot</option>
-                                              <option value="1">Human</option>
+                                              <option value="0">{% trans 'Bot' %}</option>
+                                              <option value="1">{% trans 'Human' %}</option>
                                             </select>
                                     </div>
                                     {% if form.errors %}
@@ -71,7 +72,7 @@
                                         </div>
 
                                     {% endif %}
-                                    <button class="btn btn-block btn-primary" type="submit">Update</button>
+                                    <button class="btn btn-block btn-primary" type="submit">{% trans 'Update' %}</button>
                                 </form>
 
 

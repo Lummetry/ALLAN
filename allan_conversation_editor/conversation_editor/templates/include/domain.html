@@ -1,4 +1,5 @@
 {% load staticfiles %}
+{% load i18n %}
 
 <main class="main">
     <!-- Breadcrumb-->
@@ -30,13 +31,13 @@
                         <table class="table table-responsive-sm table-bordered table-striped table-sm">
                             <thead>
                             <tr>
-                                <th>Nr. Crt.</th>
-                                <th>Name</th>
-                                <th>Created</th>
-                                <th>Updated</th>
-                                <th>Owner</th>
-                                <th>Status</th>
-                                <th><a href="{% url 'add_edit_conversation' id=0 domain=domain%}"><span class="badge badge-success">Adauga</span></a></th>
+                                <th>{% trans 'Nr. Crt.' %}</th>
+                                <th>{% trans 'Name' %}</th>
+                                <th>{% trans 'Created' %}</th>
+                                <th>{% trans 'Updated' %}</th>
+                                <th>{% trans 'Owner' %}</th>
+                                <th>{% trans 'Status' %}</th>
+                                <th><a href="{% url 'add_edit_conversation' id=0 domain=domain%}"><span class="badge badge-success">{% trans 'Add' %}</span></a></th>
                             </tr>
                             </thead>
                             <tbody>
@@ -48,16 +49,16 @@
                                 <td>{{ chat.updated|date:'Y-m-d H:i' }}</td>
                                 <td>{{ chat.created_user }}</td>
                                 <td>
-                                    {%  if chat.status == 0 %}Draft{% endif %}
-                                    {%  if chat.status == 1 %}Validat{% endif %}
-                                    {%  if chat.status == 2 %}Antrenat{% endif %}
+                                    {%  if chat.status == 0 %}{% trans 'Draft' %}{% endif %}
+                                    {%  if chat.status == 1 %}{% trans 'Validated' %}{% endif %}
+                                    {%  if chat.status == 2 %}{% trans 'Trained' %}{% endif %}
                                 </td>
                                 <td>
-                                    <a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">Modifica</span></a>
-                                    <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">Messages</span></a>
-                                    {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id  domain_id=domain%}"><span class="badge badge-success">Valideaza</span></a>{% endif %}
-                                    {%  if chat.status == 1 %}<a href="{% url 'conversation_train' id=chat.id%}"><span class="badge badge-success">Antreneaza</span></a>{% endif %}
-                                    {%  if chat.status == 2 %}<a href="{% url 'conversation_draft' id=chat.id%}"><span class="badge badge-success">Draft</span></a>{% endif %}
+                                    <a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">{% trans 'Modify' %}</span></a>
+                                    <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">{% trans 'Messages' %}</span></a>
+                                    {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id  domain_id=domain%}"><span class="badge badge-success">{% trans 'Validate' %}</span></a>{% endif %}
+                                    {%  if chat.status == 1 %}<a href="{% url 'conversation_train' id=chat.id%}"><span class="badge badge-success">{% trans 'Train' %}</span></a>{% endif %}
+                                    {%  if chat.status == 2 %}<a href="{% url 'conversation_draft' id=chat.id%}"><span class="badge badge-success">{% trans 'Draft' %}</span></a>{% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -66,13 +67,13 @@
                         <nav>
                             <ul class="pagination">
                                 <li class="page-item">
-                                    <a class="page-link" href="#">Prev</a>
+                                    <a class="page-link" href="#">{% trans 'Prev' %}</a>
                                 </li>
                                 <li class="page-item active">
                                     <a class="page-link" href="#">1</a>
                                 </li>
                                 <li class="page-item">
-                                    <a class="page-link" href="#">Next</a>
+                                    <a class="page-link" href="#">{% trans 'Next' %}</a>
                                 </li>
                             </ul>
                         </nav>

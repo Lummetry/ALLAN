@@ -1,4 +1,5 @@
   {% load staticfiles %}
+{% load i18n %}
       <div class="sidebar">
         <nav class="sidebar-nav">
           <ul class="nav">
@@ -6,15 +7,15 @@
 
             <li class="nav-item nav-dropdown">
               <a class="nav-link nav-dropdown-toggle">
-                <i class="nav-icon cui-cloud-upload"></i> Domain</a>
+                <i class="nav-icon cui-cloud-upload"></i>{% trans 'Domain' %} </a>
                 <ul class="nav-dropdown-items">
                     <li class="nav-item">
                       <a class="nav-link" href="{% url 'domain' pk=1%}">
-                        <i class="nav-icon icon-drop"></i> Health</a>
+                        <i class="nav-icon icon-drop"></i>{% trans 'Health' %} </a>
                     </li>
                     <li class="nav-item">
                       <a class="nav-link" href="{% url 'domain' pk=2%}">
-                        <i class="nav-icon icon-drop"></i> Realestate</a>
+                        <i class="nav-icon icon-drop"></i>{% trans 'Realestate' %} </a>
                     </li>
                 </ul>
             </li>
@@ -22,7 +23,7 @@
 
             <li class="nav-item">
               <a class="nav-link" href="">
-                <i class="nav-icon icon-drop"></i> Logout</a>
+                <i class="nav-icon icon-drop"></i>{% trans 'Logout' %} </a>
             </li>
           </ul>
         </nav>
