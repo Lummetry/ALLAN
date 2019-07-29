@@ -170,6 +170,6 @@ msgid "Logout"
 msgstr "Logout"
 
 #: conversation_editor/templates/include/header.html:26
-msgid "language"
+msgid "Language"
 msgstr "Language"
 

@@ -19,7 +19,7 @@ class ChatForm(forms.ModelForm):
                 attrs={'class': 'form-control',
                        'id': 'id_txt_upload',
                        'title': 'txt_upload',
-                       'required': True,
+                       'required': False,
                        'placeholder': 'Say something...'}
             ),
             'lbl_upload': forms.FileInput(
@@ -33,7 +33,7 @@ class ChatForm(forms.ModelForm):
                 attrs={'class': 'input-hidden',
                        'id': 'id_domain',
                        'title': 'domain',
-                       'required': False,
+                       'required': True,
                        'placeholder': 'Say something...'}
             ),
             'created_user': forms.TextInput(

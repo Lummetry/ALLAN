@@ -102,7 +102,12 @@ def conversation_editor(request, id):
                                          'domain_title': domain_title,
                                          'domain_id': domain_id,
                                          'chatLines': chatL,
-                                         'form': ChatLineForm()})
+                                         'form': ChatLineForm(),
+                                         'formChat': ChatForm(initial={'title': chat.title,
+            'txt_upload': chat.txt_upload,
+            'lbl_upload': chat.lbl_upload,
+            'domain': chat.domain,
+            'created_user': chat.created_user})})
 
 
 def recursiv(chatLines, parent, chat):
@@ -185,6 +190,28 @@ def create_message(request):
             content_type="application/json"
         )
 
+@login_required(login_url='/accounts/login/')
+def edit_conversation(request):
+    if request.method == 'POST':
+        id_chat = request.POST.get('id_chat')
+        title = request.POST.get('title')
+        response_data = {}
+        response_data['result'] = 'Create post successful!'
+        try:
+            chatEdit = Chat.objects.get(pk=id_chat)
+            chatEdit.title = title
+            chatEdit.save()
+        except Domain.DoesNotExist:
+            raise Exception("Item doesn't exists")
+        return HttpResponse(
+            json.dumps(response_data),
+            content_type="application/json"
+        )
+    else:
+        return HttpResponse(
+            json.dumps({"nothing to see": "this isn't happening"}),
+            content_type="application/json"
+        )
 
 @login_required(login_url='/accounts/login/')
 def update_message(request, id):

@@ -54,7 +54,6 @@
                                     {%  if chat.status == 2 %}{% trans 'Trained' %}{% endif %}
                                 </td>
                                 <td>
-                                    <a href="{% url 'add_edit_conversation' id=chat.id  domain=domain%}"><span class="badge badge-danger">{% trans 'Modify' %}</span></a>
                                     <a href="{% url 'conversation_editor' id=chat.id%}"><span class="badge badge-primary">{% trans 'Messages' %}</span></a>
                                     {%  if chat.status == 0 %}<a href="{% url 'conversation_validation' id=chat.id  domain_id=domain%}"><span class="badge badge-success">{% trans 'Validate' %}</span></a>{% endif %}
                                     {%  if chat.status == 1 %}<a href="{% url 'conversation_train' id=chat.id%}"><span class="badge badge-success">{% trans 'Train' %}</span></a>{% endif %}

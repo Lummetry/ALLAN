@@ -19,6 +19,46 @@
                 <a href=""><span class="badge badge-danger "  id="id_confirmation_delete"  data-message_id="0">{% trans 'Delete?' %}</span></a>
             </div>
         </div>
+        <div id="popupEdit">
+            <div class="popup-content">
+                <h1 style="float: left;">{% trans 'Message' %}</h1>
+                <a href="" style="float: right;"><span class="badge badge-danger " id="closeEdit" style="float: right;">{% trans 'Close' %}</span></a>
+                <div style="clear: both;"></div>
+                <div class="row">
+                            <div class="col-md-12">
+                                <form  method="POST" id="post-edit">
+                                    {% csrf_token %}
+                                    <input type="hidden" id="id_chat_edit" name="id_chat_edit" value="{{ chat_id }}">
+                                          {{ formChat.domain }}
+                                          {{ formChat.created_user }}
+
+                                          {{ formChat.txt_upload }}
+
+                                          {{ formChat.lbl_upload }}
+                                    <label for="id_message">{% trans 'Message' %}</label>
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">
+                                              <i class="icon-calendar"></i>
+                                            </span>
+                                          </div>
+                                          {{ formChat.title }}
+                                    </div>
+                                    {% if form.errors %}
+                                        <div class="alert alert-danger" role="alert">
+                                          {{ form.errors }}
+                                        </div>
+
+                                    {% endif %}
+                                    <button class="btn btn-block btn-primary" type="submit">{% trans 'Update' %}</button>
+                                </form>
+
+
+
+                            </div>
+                        </div>
+            </div>
+        </div>
         <div id="popup">
             <div class="popup-content">
                 <h1 style="float: left;">{% trans 'Message' %}</h1>
@@ -85,7 +125,7 @@
                 <div class="col-md-12">
                     &nbsp;<div class="card">
                     <div class="card-header" style="font-size: 1.1rem;">
-                        <i class="fa fa-align-justify"></i> Lista de mesaje pentru conversatia {{ chat_title }} din {{ domain_title }}
+                        <i class="fa fa-align-justify"></i> {% trans 'List of messages for conversation' %} <span class="editChat">{{ chat_title }} <i class="fa fa-pencil-square-o" aria-hidden="true"></i></span> {% trans 'from' %} {{ domain_title }}
                         <a href="{% url 'domain' pk=domain_id%}" style="float: right;"><span class="badge badge-success">Inapoi</span></a>
 
                     </div>
@@ -97,11 +137,11 @@
                                 <table class="table table-responsive-sm table-bordered table-striped table-sm">
                                     <thead>
                                     <tr>
-                                        <th width="5%">Nr. Linie</th>
-                                        <th width="63%">Linie Conversatie</th>
-                                        <th width="9%">Intentie Linie</th>
-                                        <th width="7%">Tip Persoana</th>
-                                        <th width="17%"><!--<a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Add</span></a>--></th>
+                                        <th width="5%">{% trans 'No. Line' %}</th>
+                                        <th width="63%">{% trans 'Conversation Line' %}</th>
+                                        <th width="9%">{% trans 'Intent' %}</th>
+                                        <th width="7%">{% trans 'Person Type' %}</th>
+                                        <th width="17%"><a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">{% trans 'Add' %}</span></a></th>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -112,11 +152,11 @@
                                             <td style="color: #00ff33; font-weight: bold;">{{ chatLine.label.name }}</td>
                                             <td style="color: #0a35ff; font-weight: bold;">{%  if chatLine.human == True %}Human{% else %}Bot{% endif %}</td>
                                             <td>
-                                                    <a href=""><span class="badge badge-success btnAdd"  data-parent_id="{{ chatLine.id }}" data-message_id="0" data-chat_id="{{ chat_id }}">Adauga</span></a>
+                                                    <a href=""><span class="badge badge-success btnAdd"  data-parent_id="{{ chatLine.id }}" data-message_id="0" data-chat_id="{{ chat_id }}">{% trans 'Add' %}</span></a>
                                                     &nbsp;
-                                                    <a href=""><span class="badge badge-primary btnAdd"  data-parent_id="{% if chatLine.parent %}{{chatLine.parent.id}}{% else %}0{% endif %}" data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">Modifica</span></a>
+                                                    <a href=""><span class="badge badge-primary btnAdd"  data-parent_id="{% if chatLine.parent %}{{chatLine.parent.id}}{% else %}0{% endif %}" data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">{% trans 'Modify' %}</span></a>
                                                     &nbsp;
-                                                    <a href=""><span class="badge badge-danger btnDel"  data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">Sterge</span></a>
+                                                    <a href=""><span class="badge badge-danger btnDel"  data-message_id="{{ chatLine.id }}" data-chat_id="{{ chat_id }}">{% trans 'Delete' %}</span></a>
 
                                             </td>
                                         </tr>
@@ -128,7 +168,7 @@
                                             <td style="color: #00ff33; font-weight: bold;">&nbsp;</td>
                                             <td style="color: #0a35ff; font-weight: bold;">&nbsp;</td>
                                             <td>
-                                                <a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">Adauga</span></a>
+                                                <a href=""><span class="badge badge-success btnAdd" data-parent_id="0" data-message_id="0" data-chat_id="{{ chat_id }}">{% trans 'Add' %}</span></a>
 
                                             </td>
                                         </tr>

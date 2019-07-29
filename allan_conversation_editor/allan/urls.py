@@ -20,7 +20,8 @@ from django.conf.urls import  url, include, i18n
 from django.conf.urls.i18n import i18n_patterns
 from django.utils.translation import ugettext_lazy as _
 
-urlpatterns = [ url(r'^i18n/', include('django.conf.urls.i18n')),
+urlpatterns = [
+                url(r'^i18n/', include('django.conf.urls.i18n')),
 ]
 
 urlpatterns += i18n.i18n_patterns(

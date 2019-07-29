@@ -171,5 +171,5 @@ msgid "Logout"
 msgstr "Iesire"
 
 #: conversation_editor/templates/include/header.html:26
-msgid "language"
+msgid "Language"
 msgstr "Limba"

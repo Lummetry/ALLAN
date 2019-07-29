@@ -1,4 +1,7 @@
  $(function () {
+     //$("#id_txt_upload").hide();
+     //$("#id_lbl_upload").hide();
+
 $('#id_label_name').autocomplete({
         delay: 500,
 				minLength: 2,
@@ -57,6 +60,16 @@ $('#id_label_name').autocomplete({
             }
 
         });
+
+        $(".editChat").click(function (e) {
+            e.preventDefault();
+            $("#popupEdit").show();
+
+        });
+        $("#closeEdit").click(function(e){
+            e.preventDefault();
+            $("#popupEdit").hide();
+        });
         $("#close").click(function(e){
             e.preventDefault();
             $("#popup").hide();
@@ -82,9 +95,46 @@ $('#id_label_name').autocomplete({
         var msg_id = $('#id_message_id').val();
         create_update_message(msg_id);
     });
+    $('#post-edit').on('submit', function(e){
+        e.preventDefault();
+        console.log("form submitted!")  // sanity check
+        edit_conversation();
+    });
+    function edit_conversation(){
+
+        console.log("create post is working!") // sanity check
+        var lg = getCookie('django_language');
+        post_url = "/"+lg+"/edit_conversation/";
+
+        $.ajax({
+            url : post_url, // the endpoint
+            type : "POST", // http method
+            data : { id_chat : $('#id_chat_edit').val(),
+                    title : $('#id_title').val()
+            }, // data sent with the post request
+            // handle a successful response
+            success : function(json) {
+                $("#popupEdit").hide();
+                location.reload();
+                console.log(json); // log the returned json to the console
+                //$("#talk").prepend("<li><strong>"+json.text+"</strong> - <em> "+json.author+"</em> - <span> "+json.created+
+                //    "</span> - <a id='delete-post-"+json.postpk+"'>delete me</a></li>");
+                console.log("success"); // another sanity check
+            },
+            // handle a non-successful response
+            error : function(xhr,errmsg,err) {
+                $('#results').html("<div class='alert-box alert radius' data-alert>Oops! We have encountered an error: "+errmsg+
+                    " <a href='#' class='close'>&times;</a></div>"); // add the error to the dom
+                console.log(xhr.status + ": " + xhr.responseText); // provide a bit more info about the error to the console
+            }
+        });
+
+    }
         function deleteMessage(msg_id, confirm=false) {
+        var lg = getCookie('django_language');
+
             $.ajax({
-                url : "/delete_message/"+msg_id, // the endpoint
+                url : "/"+lg+"/delete_message/"+msg_id, // the endpoint
                 type : "GET", // http method
                 data : { 'confirm':confirm}, // data sent with the post request
                 // handle a successful response
@@ -149,10 +199,11 @@ $('#id_label_name').autocomplete({
     function create_update_message(id) {
         console.log("create post is working!") // sanity check
 
-        post_url = "/create_message/";
+        var lg = getCookie('django_language');
+        post_url = "/"+lg+"/create_message/";
 
         if (parseInt(id) > 0){
-            post_url = "/update_message/"+id;
+            post_url = "/"+lg+"/update_message/"+id;
         }
 
         $.ajax({

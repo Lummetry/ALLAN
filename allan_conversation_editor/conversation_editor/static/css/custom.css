@@ -61,7 +61,7 @@
 .text-dark {background-color: #FFFFFF!important;}
 
 
-#popup, #popupConfirmation{
+#popup, #popupConfirmation, #popupEdit{
 	display: none;
 	background-color: rgba(0,0,0,0.5);
 	position: absolute;

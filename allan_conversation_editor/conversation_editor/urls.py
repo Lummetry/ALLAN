@@ -6,6 +6,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('', views.index, name='home'),
     path('domain/<int:pk>', views.domain, name='domain'),
+    path('edit_conversation/', views.edit_conversation, name='edit_conversation'),
     path('add_edit_conversation/<int:domain>/<int:id>', views.add_edit_conversation, name='add_edit_conversation'),
     path('conversation_editor/<int:id>', views.conversation_editor, name='conversation_editor'),
     path('conversation_validation/<int:id>/<int:domain_id>', views.conversation_validation, name='conversation_validation'),
