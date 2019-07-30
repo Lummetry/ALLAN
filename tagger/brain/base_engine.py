@@ -43,7 +43,7 @@ class ALLANEngine(LummetryObject):
     self.dic_index2label = None
     self.embeddings = None
     self.model = None
-    self.emb_gen_model = None
+    self.embgen_model = None
     self.emb_layer_name = 'emb_layer'
     self.startup()
     return
@@ -86,7 +86,9 @@ class ALLANEngine(LummetryObject):
     if os.path.isfile(fn_emb):
       self.P("Loading embeddings {}...".format(fn_emb[-25:]))
       self.embeddings = np.load(fn_emb, allow_pickle=True)
-      self.P(" Loaded embeddings: {}".format(self.embeddings.shape))      
+      self.P(" Loaded embeddings: {}".format(self.embeddings.shape))    
+      self.emb_size = self.embeddings.shape[-1]
+      self.vocab_size = self.embeddings.shape[-2]
     else:
       self.P("WARNING: Embed file '{}' does not exists. embeddings='None'".format(
           fn_emb))
@@ -146,6 +148,9 @@ class ALLANEngine(LummetryObject):
       _idxs += [0]* (nr_added)
     return _idxs
   
+  def char_tokens_to_word(self, tokens):
+    chars = [self.char_full_voc[x] for x in tokens if x != 0]
+    return "".join(chars)
   
   def _setup_dist_func(self, func_name='cos'):
     if func_name == 'l2':
@@ -169,18 +174,36 @@ class ALLANEngine(LummetryObject):
       
   
   
-  def _get_approx_embed(self, word):
+  def __get_approx_embed(self, word):
+    """
+    THIS APPROACH IS NOT RELIABLE:
+        1. get aprox embed via regression model
+        2.1. calculate closest real embedding -> id 
+          or
+        2.2. send the embed directly to the mode
+    
+    CORRECT APPROACH IS TO: determine closest word based on second mebedding matrix (similarity word matrix)
+        
+    """
     char_tokens = np.array(self.word_to_char_tokens(word)).reshape((1,-1))
-    res = self.emb_gen_model.predict(char_tokens)
+    res = self.embgen_model.predict(char_tokens)
+    !!!!!
+    
+    
     return res.ravel()
   
   
-  def _get_closest_idx(self, aprox_emb, top=1):
+  def _get_closest_idx(self, aprox_emb, top=1, np_embeds=None):
     """
      get closest embedding index
     """
-    assert self.embeddings is not None
-    dist = self.dist(aprox_emb)
+    if  (self.embeddings is None) and (np_embeds is None):
+      raise ValueError("Both emb matrices are none!")
+    
+    if np_embeds is None:
+      np_embeds = self.embeddings
+      
+    dist = self.dist(target=aprox_emb, source=np_embeds)
     _mins = np.argsort(dist)
     if top == 1:
       _min = _mins[0]
@@ -188,12 +211,17 @@ class ALLANEngine(LummetryObject):
       _min = _mins[:top]
     return _min
   
-  def _get_closest_idx_and_distance(self, aprox_emb, top=1):
+  def _get_closest_idx_and_distance(self, aprox_emb, top=1, np_embeds=None):
     """
      get closest embedding index
     """
-    assert self.embeddings is not None
-    dist = self.dist(aprox_emb)
+    if  (self.embeddings is None) and (np_embeds is None):
+      raise ValueError("Both emb matrices are none!")
+    
+    if np_embeds is None:
+      np_embeds = self.embeddings
+
+    dist = self.dist(target=aprox_emb, source=np_embeds)
     _mins = np.argsort(dist)
     _dist = dist[_mins]
     if top == 1:
@@ -205,16 +233,16 @@ class ALLANEngine(LummetryObject):
     return _min, _dst
 
   
-  def get_unk_word_similar_id(self, unk_word, top=1):
+  def get_unk_word_similar_id(self, unk_word, top=1, np_embeds=None):
     if unk_word in self.dic_word2index.keys():
-      raise ValueError("'{}' is already in vocab!".format(unk_word))
+      self.P("WARNING: presumed '{}' unk word is already in vocab!".format(unk_word))
     aprox_emb = self._get_approx_embed(unk_word)
-    idx = self._get_closest_idx(aprox_emb=aprox_emb, top=top)
+    idx = self._get_closest_idx(aprox_emb=aprox_emb, top=top, np_embeds=np_embeds)
     return idx
   
   
-  def get_unk_word_similar_word(self, unk_word,top=1):
-    ids = self.get_unk_word_similar_id(unk_word, top=top)
+  def get_unk_word_similar_word(self, unk_word, top=1, np_embeds=None):
+    ids = self.get_unk_word_similar_id(unk_word, top=top, np_embeds=np_embeds)
     if type(ids) is np.ndarray:
       _result = [self.dic_index2word[x] for x in ids]
     else:
@@ -572,11 +600,11 @@ class ALLANEngine(LummetryObject):
   
   def _check_model_inputs(self):
     if len(self.model.inputs[0].shape) == 3:
-      self.generate_embeddings = True
+      self.direct_embeddings = True
       self.P("Model inputs {} identified to directly receive embeddings".format(
           self.model.inputs[0].shape))
     else:
-      self.generate_embeddings = False
+      self.direct_embeddings = False
       self.P("Model inputs {} identified to receive tokens".format(
           self.model.inputs[0].shape))
     return
@@ -622,7 +650,7 @@ class ALLANEngine(LummetryObject):
                                    to_onehot=True,
                                    rank_labels=rank_labels,
                                    convert_unknown_words=convert_unknown_words,
-                                   generate_embeddings=self.generate_embeddings)
+                                   generate_embeddings=self.direct_embeddings)
     if self.doc_max_words.lower() == 'auto':
       self.max_doc_size = self.last_max_size + 1
     else:
@@ -700,7 +728,7 @@ class ALLANEngine(LummetryObject):
   
   def _reload_embeds_from_model(self,):
     self.P("Reloading embeddings from model")
-    if self.generate_embeddings:
+    if self.direct_embeddings:
       self.P("Cannot reload embeddings: input size {}. second layer: {}".format(
           self.model.inputs[0].shape, self.model.layers[1].__class__.__name__))
       return

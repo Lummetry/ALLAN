@@ -47,7 +47,7 @@ class ALLANTagger(ALLANEngine):
     self.pre_inputs = inputs
     self.pre_outputs = outputs
     self.pre_columns_end = columns_end
-    self._setup_model()
+    self.setup_model()
     self.setup_unknown_words_model()
     return
   
@@ -70,14 +70,14 @@ class ALLANTagger(ALLANEngine):
   
   
   
-  def _init_hyperparams(self):
+  def _init_hyperparams(self, dict_model_config=None):
+    if dict_model_config is not None:
+      self.model_config = dict_model_config     
+      
     self.seq_len = self.model_config['SEQ_LEN'] if 'SEQ_LEN' in self.model_config.keys() else None
     if self.seq_len == 0:
       self.seq_len = None
     self.emb_size = self.model_config['EMBED_SIZE'] if 'EMBED_SIZE' in self.model_config.keys() else 0
-    if self.embeddings is not None:
-      self.emb_size = self.embeddings.shape[-1]
-      self.vocab_size = self.embeddings.shape[-2]
     self.emb_trainable = self.model_config['EMBED_TRAIN'] if 'EMBED_TRAIN' in self.model_config.keys() else True
     self.model_columns = self.model_config['COLUMNS']
     
@@ -191,9 +191,10 @@ class ALLANTagger(ALLANEngine):
       
     
   
-  def _setup_model(self):
+  def setup_model(self, dict_model_config=None):
+    self._init_hyperparams(dict_model_config=dict_model_config)
     self._setup_word_embeddings()
-    self._init_hyperparams()
+    
     if self.maybe_load_pretrained():
       self.P("Pretrained model:\n{}".format(
           self.log.GetKerasModelSummary(self.model)))

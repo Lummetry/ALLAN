@@ -17,7 +17,7 @@ from libraries.lummetry_layers.gated import GatedDense
 class EmbeddingApproximator(ALLANEngine):
   def __init__(self, np_embeds=None, dct_w2i=None, dct_i2w=None, **kwargs):
     super().__init__(**kwargs)
-    self.emb_gen_model = None
+    self.embgen_model = None
     self.__name__ = 'EMBA'
     self.trained = False
     self.siamese_model = None
@@ -27,6 +27,8 @@ class EmbeddingApproximator(ALLANEngine):
       self.emb_size = self.embeddings.shape[-1]
     else:
       self.embeddings = np_embeds
+      
+    self.generated_embeddings = None
     
     if dct_w2i is None:
       self._setup_vocabs()
@@ -40,9 +42,9 @@ class EmbeddingApproximator(ALLANEngine):
     return
   
   def _setup(self):
-    self.emb_gen_model_config = self.config_data['EMB_GEN_MODEL'] if 'EMB_GEN_MODEL' in self.config_data.keys() else None    
-    self.emb_gen_model_batch_size = self.emb_gen_model_config['BATCH_SIZE']
-    self.use_cuda = self.emb_gen_model_config['USE_CUDA']
+    self.embgen_model_config = self.config_data['EMB_GEN_MODEL'] if 'EMB_GEN_MODEL' in self.config_data.keys() else None    
+    self.embgen_model_batch_size = self.embgen_model_config['BATCH_SIZE']
+    self.use_cuda = self.embgen_model_config['USE_CUDA']
     return
     
   
@@ -53,19 +55,17 @@ class EmbeddingApproximator(ALLANEngine):
   def _define_emb_model_layer(self, 
                               tf_inputs, 
                               layer_name,
-                              layer_type,
-                              layer_features,
-                              residual,
+                              layer_cfg,
                               final_layer,
                               prev_features,
                               use_cuda,
                               ):
     s_name = layer_name.lower()
-    s_type = layer_type.lower()
-    n_feats = layer_features
     n_prev_feats = prev_features
-    b_residual = residual
     sequences = not final_layer
+    s_type = layer_cfg['TYPE'].lower()
+    b_residual = layer_cfg['RESIDUAL'] if 'RESIDUAL' in layer_cfg.keys() else False
+    n_feats = layer_cfg['FEATS']
     if (b_residual and final_layer) or (b_residual and 'emb' in s_type):
       raise ValueError("Pre-readound final and post-input embedding layers cannot have residual connection")
     if 'lstm' in s_type:
@@ -82,18 +82,30 @@ class EmbeddingApproximator(ALLANEngine):
       # double n_feats due to BiDi
       n_feats *= 2
     elif 'conv' in s_type:
-      raise ValueError("Conv layers not implemented")
+      n_ker = layer_cfg['KERNEL']
+      act = layer_cfg['ACT'].lower() if 'ACT' in layer_cfg.keys() else 'relu'
+      tf_x = tf.keras.layers.Conv1D(filters=n_feats,
+                                    kernel_size=n_ker,
+                                    strides=n_ker,
+                                    name=s_name+'_conv')(tf_inputs)                                    
+      tf_x = tf.keras.layers.BatchNormalization(name=s_name+'_bn')(tf_x)
+      tf_x = tf.keras.layers.Activation(act, name=s_name+'_'+act)(tf_x)
+      if final_layer:
+        tf_x1 = tf.keras.layers.GlobalAvgPool1D(name=s_name+'_GAP')(tf_x)
+        tf_x2 = tf.keras.layers.GlobalMaxPool1D(name=s_name+'_GMP')(tf_x)
+        tf_x = tf.keras.layers.concatenate([tf_x1, tf_x2], name=s_name+'_concat')
     else:
       raise ValueError("Unknown '' layer type".format(s_type))
     
     if b_residual:
-      if n_prev_feats != n_feats:
-        tf_x_prev = tf.keras.layers.Dense(n_feats, 
-                                          name=s_name+'_trnsf')(tf_inputs)
-      else:
-        tf_x_prev = tf_inputs
-      tf_x = tf.keras.layers.add([tf_x, tf_x_prev],
-                                 name=s_name+'_res')
+      if 'lstm' in s_type:
+        if n_prev_feats != n_feats:
+          tf_x_prev = tf.keras.layers.Dense(n_feats, 
+                                            name=s_name+'_trnsf')(tf_inputs)
+        else:
+          tf_x_prev = tf_inputs
+        tf_x = tf.keras.layers.add([tf_x, tf_x_prev],
+                                   name=s_name+'_res')
     
     return tf_x
       
@@ -104,25 +116,25 @@ class EmbeddingApproximator(ALLANEngine):
     embedding approximation of unknown words
     """
     self.P("Constructing unknown words embeddings generator model")
-    if self.emb_gen_model_config is None:
+    if self.embgen_model_config is None:
       raise ValueError("EMB_GEN_MODEL not configured - please define dict")
-    if len(self.emb_gen_model_config['COLUMNS']) == 0 :
+    if len(self.embgen_model_config['COLUMNS']) == 0 :
       raise ValueError("EMB_GEN_MODEL columns not configured - please define columns/layers")
 
-    if 'FINAL_DROP' in self.emb_gen_model_config.keys():
-      drp = self.emb_gen_model_config['FINAL_DROP']
+    if 'FINAL_DROP' in self.embgen_model_config.keys():
+      drp = self.embgen_model_config['FINAL_DROP']
     else:
       drp = 0
 
     tf_input = tf.keras.layers.Input((None,), name='word_input')
 
     vocab_size = len(self.char_full_voc)
-    emb_size = self.emb_gen_model_config['CHR_EMB_SIZE']
+    emb_size = self.embgen_model_config['CHR_EMB_SIZE']
     tf_emb = tf.keras.layers.Embedding(vocab_size, 
                                        emb_size, 
                                        name='inp_embd')(tf_input)
     
-    columns_cfg = self.emb_gen_model_config['COLUMNS']
+    columns_cfg = self.embgen_model_config['COLUMNS']
     lst_columns = []
     for col_name in columns_cfg:
       column_config = columns_cfg[col_name]    
@@ -131,32 +143,22 @@ class EmbeddingApproximator(ALLANEngine):
       n_layers = len(layers_cfg)
       prev_features = 0
       for L in range(n_layers-1):
-        layer_name = col_name+'_'+layers_cfg[L]['NAME']
-        layer_type = layers_cfg[L]['TYPE']
-        layer_features = layers_cfg[L]['FEATS']
-        residual = layers_cfg[L]['RESIDUAL']      
+        layer_name = col_name+'_'+layers_cfg[L]['NAME']  
         tf_x = self._define_emb_model_layer(
                                 tf_inputs=tf_x,
                                 layer_name=layer_name,
-                                layer_type=layer_type,
-                                layer_features=layer_features,
-                                residual=residual,
+                                layer_cfg=layers_cfg[L],
                                 final_layer=False,
                                 prev_features=prev_features,
                                 use_cuda=self.use_cuda
                               )
-        prev_features = layer_features
-      # final pre-readout
-      layer_name = col_name+'_'+layers_cfg[-1]['NAME']
-      layer_type = layers_cfg[-1]['TYPE']
-      layer_features = layers_cfg[-1]['FEATS']
-      residual = layers_cfg[-1]['RESIDUAL']      
+        prev_features = layers_cfg[L]['FEATS']
+      # final column end
+      layer_name = col_name+'_'+layers_cfg[-1]['NAME']     
       tf_x = self._define_emb_model_layer(
                               tf_inputs=tf_x,
                               layer_name=layer_name,
-                              layer_type=layer_type,
-                              layer_features=layer_features,
-                              residual=residual,
+                              layer_cfg=layers_cfg[-1],
                               final_layer=True,
                               prev_features=prev_features,
                               use_cuda=self.use_cuda,
@@ -172,26 +174,29 @@ class EmbeddingApproximator(ALLANEngine):
     tf_x = GatedDense(units=self.emb_size*2, name='gated1')(tf_x)
     if drp > 0:
       tf_x = tf.keras.layers.Dropout(drp, name='drop2_{:.1f}'.format(drp))(tf_x)
-    tf_readout = tf.keras.layers.Dense(self.emb_size, name='embed_readout')(tf_x)
+    
+    tf_x = tf.keras.layers.Dense(self.emb_size, name='emb_fc_readout')(tf_x)
+    l2norm_layer = tf.keras.layers.Lambda(lambda x: K.l2_normalize(x, axis=1), name='emb_l2_norm_readout')
+    tf_readout = l2norm_layer(tf_x)
     model = tf.keras.models.Model(inputs=tf_input, outputs=tf_readout)
     model.compile(optimizer='adam', loss='logcosh')
-    self.emb_gen_model = model
-    self.emb_gen_model_trained = False
+    self.embgen_model = model
+    self.embgen_model_trained = False
     self.P("Unknown words embeddings generator model:\n{}".format(
-        self.log.GetKerasModelSummary(self.emb_gen_model)))
+        self.log.GetKerasModelSummary(self.embgen_model)))
     return
 
 
   def _define_siamese_model(self):
-    if self.emb_gen_model is None:
+    if self.embgen_model is None:
       raise ValueError("The basic model is undefined")
     tf_input1 = tf.keras.layers.Input((None,), name='inp1')  
     tf_input2 = tf.keras.layers.Input((None,), name='inp2')  
     tf_input3 = tf.keras.layers.Input((None,), name='inp3')
     
-    tf_emb1 = self.emb_gen_model(tf_input1)
-    tf_emb2 = self.emb_gen_model(tf_input2)
-    tf_emb3 = self.emb_gen_model(tf_input3)
+    tf_emb1 = self.embgen_model(tf_input1)
+    tf_emb2 = self.embgen_model(tf_input2)
+    tf_emb3 = self.embgen_model(tf_input3)
       
     triple_loss_layer = tf.keras.layers.Lambda(function=self.log.K_triplet_loss,
                                                name='triplet_loss_layer')
@@ -238,6 +243,7 @@ class EmbeddingApproximator(ALLANEngine):
     lst_anchor = []
     lst_duplic = []
     lst_false  = []
+
     for word, idx in self.dic_word2index.items():
       if idx in self.SPECIALS:
         continue
@@ -247,8 +253,9 @@ class EmbeddingApproximator(ALLANEngine):
         i_false = (idx + np.random.randint(100,1000)) % len(self.dic_index2word)
         s_false  = self.dic_index2word[i_false]
         _len = max(len(s_duplic), len(s_anchor), len(s_false))
-        np_duplic = np.array(self.word_to_char_tokens(s_duplic, pad_up_to=_len))
+
         np_anchor = np.array(self.word_to_char_tokens(s_anchor, pad_up_to=_len))
+        np_duplic = np.array(self.word_to_char_tokens(s_duplic, pad_up_to=_len))
         np_false = np.array(self.word_to_char_tokens(s_false, pad_up_to=_len))
         lst_anchor.append(np_anchor)
         lst_duplic.append(np_duplic)
@@ -265,7 +272,7 @@ class EmbeddingApproximator(ALLANEngine):
   
   
   def _get_siamese_generator(self, x_a, x_d, x_f):
-    BATCH_SIZE = self.emb_gen_model_batch_size
+    BATCH_SIZE = self.embgen_model_batch_size
     while True:
       for unique_len in self._siam_data_unique_lens:        
         subset_pos = self._siam_data_lens == unique_len
@@ -305,8 +312,8 @@ class EmbeddingApproximator(ALLANEngine):
     return np.array(x_data)
           
   
-  def _get_unk_model_generator(self, x_data):  
-    BATCH_SIZE = self.emb_gen_model_batch_size
+  def _get_embgen_model_generator(self, x_data):  
+    BATCH_SIZE = self.embgen_model_batch_size
     while True:
       for unique_len in self._unique_vocab_lens:        
         subset_pos = self._vocab_lens == unique_len
@@ -321,13 +328,27 @@ class EmbeddingApproximator(ALLANEngine):
           np_y_batch = np_y_subset[b_start:b_end]
           yield np_x_batch, np_y_batch        
     
-   
+  
+  def _get_generated_embeddings(self, x_data_vocab=None):
+    self.P("Inferring generated embeddings with `embgen_model`...")
+    if x_data_vocab is None:
+      x_data_vocab = self._convert_vocab_to_training_data()
+    embs = []
+    for x_word in x_data_vocab:
+      embs.append(self.embgen_model.predict(np.array(x_word).reshape((1,-1))))
+    self.generated_embeddings = np.array(embs)
+    if self.embeddings.shape != self.generated_embeddings.shape:
+      raise ValueError("Embs {} differ from generated ones {}".format(
+          self.embeddings.shape, self.generated_embeddings.shape))
+    self.P("Done inferring generated embeddings.")
+    return self.generated_embeddings
+    
     
   def train_unk_words_model(self,epochs=2):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
-    if self.emb_gen_model is None:
+    if self.embgen_model is None:
       self._define_emb_generator_model()
     if self.siamese_model is None:
       self._define_siamese_model()
@@ -335,14 +356,21 @@ class EmbeddingApproximator(ALLANEngine):
     # get generators
     x_data = self._convert_vocab_to_training_data(
                               min_word_size=min_size)
-    gen = self._get_unk_model_generator(x_data)
+    gen = self._get_embgen_model_generator(x_data)
     
     
     xa,xd,xf = self._get_siamese_datasets()
+    self.P("Siamese data sanity check:")
+    for i in range(5):
+      irnd = np.random.randint(0, xa.shape[0])
+      sa = self.char_tokens_to_word(xa[irnd])
+      sd = self.char_tokens_to_word(xd[irnd])
+      sf = self.char_tokens_to_word(xf[irnd])
+      self.P(" A:{:>15}  D:{:>15}  F:{:>15}".format(sa,sd,sf))
     siam_gen = self._get_siamese_generator(xa,xd,xf)
     # fit model
-    n_batches = self.embeddings.shape[0] // self.emb_gen_model_batch_size
-    n_siam_batches = xa.shape[0] // self.emb_gen_model_batch_size
+    n_batches = self.embeddings.shape[0] // self.embgen_model_batch_size
+    n_siam_batches = xa.shape[0] // self.embgen_model_batch_size
 
     avg_loss1 = []
     avg_loss2 = []
@@ -369,7 +397,7 @@ class EmbeddingApproximator(ALLANEngine):
     n_batches = steps
     for i_batch in range(n_batches):
       x_batch, y_batch = next(gen)
-      loss = self.emb_gen_model.train_on_batch(x_batch, y_batch)
+      loss = self.embgen_model.train_on_batch(x_batch, y_batch)
       print("\r Basic Epoch {}: {:>5.1f}% completed [loss: {:.4f}]".format(
           epoch+1, i_batch / n_batches * 100, loss), end='', flush=True)
       epoch_losses.append(loss)
@@ -398,7 +426,8 @@ class EmbeddingApproximator(ALLANEngine):
                 unk_words, self.dist_func_name))
     for uword in unk_words:
       if uword in self.dic_word2index.keys():
-        self.P(" 'Unk' word {} found in dict at pos {}".format(uword, self.dic_word2index[uword]))
+        self.P(" 'Unk' word {} found in dict at pos {}".format(
+                    uword, self.dic_word2index[uword]))
         continue
       top = self.get_unk_word_similar_word(uword, top=3)
       self.P(" unk: '{}' results in: {}".format(uword, top))
@@ -428,6 +457,23 @@ class EmbeddingApproximator(ALLANEngine):
       self.P(" Difference between orig and generated emb: {:.3f}".format(diff))
     return
   
+  def debug_words_on_generated_embeddings(self, words):
+    if self.generated_embeddings is None:
+      self._get_generated_embeddings()
+    self.P("Testing for {} (dist='{}') using generated embeds".format(
+                words, self.dist_func_name))
+    for word in words:
+      aprox_emb = self._get_approx_embed(word)
+      idxs, dist = self._get_closest_idx_and_distance(aprox_emb=aprox_emb, 
+                                                      top=3,
+                                                      np_embeds=self.generated_embeddings)
+      top2 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
+              for x,y in zip(idxs, dist)]      
+      top2 = " ".join(top2)
+      self.P(" wrd: '{}' in emb based on generation: {}".format(word, top2))
+    
+    
+  
   
 if __name__ == '__main__':
   from libraries.logger import Logger
@@ -437,7 +483,9 @@ if __name__ == '__main__':
   
   
   eng = EmbeddingApproximator(log=l,)
-  eng.train_unk_words_model(epochs=10)
+  eng.train_unk_words_model(epochs=1)
+  
+  eng.debug_words_on_generated_embeddings(['gat','palma','creerii', 'pumul','capu','galcile'])
   
   eng.debug_known_words()
   

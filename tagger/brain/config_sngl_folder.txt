@@ -101,8 +101,10 @@
     "USE_CUDA"      : 1, 
     "CHR_EMB_SIZE"  : 16, 
     "COLUMNS" : {      
-        "COL_1" : {
-            "LAYERS" : [
+        "COL_2" : 
+          {
+              "####LAYERS" : 
+              [
                 {
                   "NAME"     : "RNN1",
                   "TYPE"     : "lstm",
@@ -115,8 +117,43 @@
                   "FEATS"    : 256,
                   "RESIDUAL" : 0
                 }
-            ]   
-        }
+              ],
+            "LAYERS" : 
+              [
+                {
+                  "NAME"    : "CNV1",
+                  "TYPE"    : "conv",
+                  "FEATS"   : 64,
+                  "KERNEL"  : 2
+                }
+              ]               
+          },
+          
+        "COL_3" : 
+          {
+              "LAYERS" : 
+              [
+                {
+                  "NAME"    : "CNV1",
+                  "TYPE"    : "conv",
+                  "FEATS"   : 64,
+                  "KERNEL"  : 3
+                }
+              ]               
+          },
+          
+        "COL_4" : 
+          {
+              "LAYERS" : 
+              [
+                {
+                  "NAME"    : "CNV1",
+                  "TYPE"    : "conv",
+                  "FEATS"   : 64,
+                  "KERNEL"  : 4
+                }
+              ]               
+          }
     }
     
   }
