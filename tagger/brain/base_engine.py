@@ -12,12 +12,14 @@ import numpy as np
 from collections import OrderedDict
 
 from libraries.generic_obj import LummetryObject
+from libraries.logger import Logger
+from time import time
 
 class ALLANEngine(LummetryObject):
   """
   ALLAN 'Abstract' Engine
   """
-  def __init__(self, log, DEBUG=False, MAX_CHR=100000):
+  def __init__(self, log: Logger, DEBUG=False, MAX_CHR=100000):
     super().__init__(log=log, DEBUG=DEBUG)
     self.__name__ = 'ALLAN_BASE'
     self.P("Init ALLANEngine...")
@@ -45,6 +47,7 @@ class ALLANEngine(LummetryObject):
     self.generated_embeddings = None
     self.model = None
     self.embgen_model = None
+    self.x_data_vocab = None
     self.emb_layer_name = 'emb_layer'
     self.startup()
     return
@@ -101,16 +104,45 @@ class ALLANEngine(LummetryObject):
       raise ValueError("`embgen_model` must be trained before generating embeddings")
     self.P("Inferring generated embeddings with `embgen_model`...")
     if x_data_vocab is None:
-      x_data_vocab = self._convert_vocab_to_training_data()
+      if self.x_data_vocab is None:
+        self.x_data_vocab = self._convert_vocab_to_training_data()
+        x_data_vocab = self.x_data_vocab
+      else:
+        x_data_vocab = self.x_data_vocab
+      
     embs = []
+    t1 = time()
     for x_word in x_data_vocab:
       embs.append(self.embgen_model.predict(np.array(x_word).reshape((1,-1))))
     self.generated_embeddings = np.array(embs)
     if self.embeddings.shape != self.generated_embeddings.shape:
       raise ValueError("Embs {} differ from generated ones {}".format(
           self.embeddings.shape, self.generated_embeddings.shape))
-    self.P("Done inferring generated embeddings.")
+    t2 = time()
+    self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
     return 
+
+
+  def _convert_vocab_to_training_data(self, min_word_size=5):
+    self.P("Converting vocabulary to training data...")
+    self.P(" Post-processing with min_word_size={}:".format(min_word_size))
+    t1 = time()
+    x_data = []
+    for i_word in range(self.embeddings.shape[0]):
+      if i_word in self.SPECIALS:
+        x_data.append([i_word] + [self.PAD_ID]* min_word_size)
+        continue
+      else:
+        x_data.append(self.word_to_char_tokens(self.dic_index2word[i_word], 
+                                       pad_up_to=min_word_size))
+    lens = [len(x) for x in x_data]
+    self.log.ShowTextHistogram(lens)
+    self._vocab_lens = np.array(lens)
+    self._unique_vocab_lens = np.unique(lens)
+    self.P(" Training data unique lens: {}".format(self._unique_vocab_lens))
+    t2 = time()
+    self.P("Done generating vocab training data in {:.1f}s.".format(t2-t1))
+    return np.array(x_data)
 
   
   def _setup_vocabs(self, fn_words_dict=None, fn_idx_dict=None):
@@ -201,7 +233,7 @@ class ALLANEngine(LummetryObject):
           or
         2.2. send the embed directly to the mode
     
-    CORRECT APPROACH IS TO: 
+    CORRECT (CURRENT) APPROACH IS TO: 
       determine closest word based on second mebedding matrix (similarity word matrix)
         
     """
@@ -251,16 +283,20 @@ class ALLANEngine(LummetryObject):
     return _min, _dst
 
   
-  def get_unk_word_similar_id(self, unk_word, top=1, np_embeds=None):
+  def get_unk_word_similar_id(self, unk_word, top=1):
     if unk_word in self.dic_word2index.keys():
       self.P("WARNING: presumed '{}' unk word is already in vocab!".format(unk_word))
-    aprox_emb = self._get_approx_embed(unk_word)
-    idx = self._get_closest_idx(aprox_emb=aprox_emb, top=top, np_embeds=np_embeds)
+    if self.generated_embeddings is None:
+      raise ValueError("`generated_embeddings` matrix must be initialized before calculating unk word similarity")
+    # first compute generated embedding
+    aprox_emb = self.__get_approx_embed(unk_word)
+    # get closest words id from the generated embeddings the ids will be the same in the real embeddings matrix
+    idx = self._get_closest_idx(aprox_emb=aprox_emb, top=top, np_embeds=self.generated_embeddings)
     return idx
   
   
-  def get_unk_word_similar_word(self, unk_word, top=1, np_embeds=None):
-    ids = self.get_unk_word_similar_id(unk_word, top=top, np_embeds=np_embeds)
+  def get_unk_word_similar_word(self, unk_word, top=1):
+    ids = self.get_unk_word_similar_id(unk_word, top=top)
     if type(ids) is np.ndarray:
       _result = [self.dic_index2word[x] for x in ids]
     else:
@@ -293,14 +329,11 @@ class ALLANEngine(LummetryObject):
            convert_unknown_words=False,
            convert_to_embeddings=False,):
     idx = self.dic_word2index[word] if word in self.dic_word2index.keys() else self.UNK_ID
+    if convert_unknown_words and (idx == self.UNK_ID):
+        idx = self.get_unk_word_similar_id(word)      
     if convert_to_embeddings:
       res = self.embeddings[idx]
-      if convert_unknown_words and (idx == self.UNK_ID):
-        res = self._get_approx_embed(word)
-    else:
-      if convert_unknown_words and (idx == self.UNK_ID):
-        # we dont want embeds but we want to find the right word
-        idx = self.get_unk_word_similar_id(word)
+    else:      
       res = idx
     return res
       
@@ -319,7 +352,7 @@ class ALLANEngine(LummetryObject):
              to_onehot=True,
              rank_labels=False,
              convert_unknown_words=True,
-             generate_embeddings=False,
+             direct_embeddings=False,
              min_len=0):
     """
     this function will tokenize or directly output the embedding represenation
@@ -327,14 +360,14 @@ class ALLANEngine(LummetryObject):
     document
     """
     s = "Starting text corpus conversion"
-    if generate_embeddings:
+    if direct_embeddings:
       s += ' into embeddings'
     else:
       s += ' into tokens'
       
     if convert_unknown_words:
       s += ' and converting unknown words'
-      if generate_embeddings:
+      if direct_embeddings:
         s += ' into embeddings'
       else:
         s += ' into similar tokens'
@@ -353,11 +386,11 @@ class ALLANEngine(LummetryObject):
       for word in splitted:
         token = self._word_encoder(word, 
                                    convert_unknown_words=convert_unknown_words,
-                                   convert_to_embeddings=generate_embeddings)
+                                   convert_to_embeddings=direct_embeddings)
         tokens.append(token)
       if len(tokens) < min_len:
         added = min_len - len(tokens)
-        if generate_embeddings:
+        if direct_embeddings:
           tokens += [self.embeddings[self.PAD_ID]] * added
         else:
           tokens += [self.PAD_ID] * added
@@ -373,7 +406,7 @@ class ALLANEngine(LummetryObject):
         for lbl in text_label:
           l_labels =[self.dic_labels[x] for x in lbl]
           lst_enc_labels.append(l_labels)
-    if generate_embeddings:
+    if direct_embeddings:
       lst_enc_texts = np.array(lst_enc_texts)
     if len(lst_enc_labels) > 0:
       return lst_enc_texts, lst_enc_labels
@@ -484,15 +517,15 @@ class ALLANEngine(LummetryObject):
     self.maybe_generate_idx2labels()
     threshold = 0.5 if "tag" in self.model_output else 0 
     self.P("Inferring '{}'".format(text))
-    generate_embeddings = False
+    direct_embeddings = False
     if len(self.model.inputs[0].shape) == 3:
-      generate_embeddings = True
+      direct_embeddings = True
       self.P("Model inputs {} identified to directly receive embeddings".format(
           self.model.inputs[0].shape))
     
     tokens = self.encode(text, 
                          convert_unknown_words=convert_unknown_words,
-                         generate_embeddings=generate_embeddings,
+                         direct_embeddings=direct_embeddings,
                          min_len=self.min_seq_len)
     np_tokens = np.array(tokens)
     tags_probas = self._predict_single(np_tokens)
@@ -677,7 +710,7 @@ class ALLANEngine(LummetryObject):
                                    to_onehot=True,
                                    rank_labels=rank_labels,
                                    convert_unknown_words=convert_unknown_words,
-                                   generate_embeddings=self.direct_embeddings)
+                                   direct_embeddings=self.direct_embeddings)
     if self.doc_max_words.lower() == 'auto':
       self.max_doc_size = self.last_max_size + 1
     else:
@@ -768,6 +801,22 @@ class ALLANEngine(LummetryObject):
     self.embeddings = lyr_emb.get_weights()[0]
     self.P("Embeddings reloaded from model {}".format(
         self.embeddings.shape))
+    
+  def maybe_load_pretrained(self):
+    _res = False
+    if "PRETRAINED" in self.model_config:
+      fn = self.model_config['PRETRAINED']
+      if self.log.GetModelsFile(fn) is not None:
+        self.P("Loading pretrained model {}".format(fn))
+        self.model = self.log.LoadKerasModel(
+                                  fn,
+                                  custom_objects={
+                                      "GatedDense" : GatedDense,
+                                      })
+        _res = True
+        self._reload_embeds_from_model()
+    return _res
+    
   
   
 if __name__ == '__main__':

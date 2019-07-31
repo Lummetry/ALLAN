@@ -288,27 +288,7 @@ class EmbeddingApproximator(ALLANEngine):
           yield np_x_a_batch, np_x_d_batch, np_x_f_batch        
     
     
-      
-  
-  
-  def _convert_vocab_to_training_data(self, min_word_size=5):
-    self.P("Converting embeddings to training data...")
-    self.P(" Post-processing with min_word_size={}:".format(min_word_size))
-    x_data = []
-    for i_word in range(self.embeddings.shape[0]):
-      if i_word in self.SPECIALS:
-        x_data.append([i_word] + [self.PAD_ID]* min_word_size)
-        continue
-      else:
-        x_data.append(self.word_to_char_tokens(self.dic_index2word[i_word], 
-                                       pad_up_to=min_word_size))
-    lens = [len(x) for x in x_data]
-    self.log.ShowTextHistogram(lens)
-    self._vocab_lens = np.array(lens)
-    self._unique_vocab_lens = np.unique(lens)
-    self.P(" Training data unique lens: {}".format(self._unique_vocab_lens))
-    return np.array(x_data)
-          
+                
   
   def _get_embgen_model_generator(self, x_data):  
     BATCH_SIZE = self.embgen_model_batch_size
@@ -329,7 +309,7 @@ class EmbeddingApproximator(ALLANEngine):
   
     
     
-  def train_unk_words_model(self,epochs=2):
+  def train_unk_words_model(self,epochs=2, approximate_embeddings=False):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
@@ -341,7 +321,9 @@ class EmbeddingApproximator(ALLANEngine):
     # get generators
     x_data = self._convert_vocab_to_training_data(
                               min_word_size=min_size)
-    gen = self._get_embgen_model_generator(x_data)
+    self.x_data_vocab = x_data
+    if approximate_embeddings:
+      gen = self._get_embgen_model_generator(x_data)
     
     
     xa,xd,xf = self._get_siamese_datasets()
@@ -361,11 +343,12 @@ class EmbeddingApproximator(ALLANEngine):
     avg_loss2 = []
     self.P("")
     for epoch in range(epochs):
-      loss1 = self._train_basic(gen, n_batches, epoch)
-      avg_loss1.append(loss1)
-      self.P("Epoch {} basic training done. loss:{:>7.4f}  avg:{:>7.4f}".format(
-          epoch+1, loss1, np.mean(avg_loss1)))
-      self.debug_unk_words_model(['creerii', 'pumul','capu','galcile'])      
+      if approximate_embeddings:
+        loss1 = self._train_basic(gen, n_batches, epoch)
+        avg_loss1.append(loss1)
+        self.P("Epoch {} basic training done. loss:{:>7.4f}  avg:{:>7.4f}".format(
+            epoch+1, loss1, np.mean(avg_loss1)))
+        self.debug_unk_words_model(['creerii', 'pumul','capu','galcile'])      
 
       loss2 = self._train_siamese(siam_gen, n_siam_batches, epoch)
       avg_loss2.append(loss2)
@@ -402,6 +385,7 @@ class EmbeddingApproximator(ALLANEngine):
       epoch_losses.append(loss)
     print("\r",end="")
     epoch_loss = np.mean(epoch_losses)
+    self._get_generated_embeddings()
     return epoch_loss
   
     

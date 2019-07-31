@@ -174,20 +174,6 @@ class ALLANTagger(ALLANEngine):
     return tf_x
     
 
-  def maybe_load_pretrained(self):
-    _res = False
-    if "PRETRAINED" in self.model_config:
-      fn = self.model_config['PRETRAINED']
-      if self.log.GetModelsFile(fn) is not None:
-        self.P("Loading pretrained model {}".format(fn))
-        self.model = self.log.LoadKerasModel(
-                                  fn,
-                                  custom_objects={
-                                      "GatedDense" : GatedDense,
-                                      })
-        _res = True
-        self._reload_embeds_from_model()
-    return _res
       
     
   
