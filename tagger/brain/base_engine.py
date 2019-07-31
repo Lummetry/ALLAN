@@ -121,9 +121,28 @@ class ALLANEngine(LummetryObject):
     t2 = time()
     self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
     return 
-
+  
+  
+  def analize_vocab_and_data(self, compute_lens=False):
+    self.P("Analyzing given vocabulary:")
+    voc_lens = [len(self.dic_index2word[x]) for x in range(len(self.dic_index2word))]
+    self.log.ShowTextHistogram(voc_lens, 
+                               caption='Vocabulary word len distrib',
+                               show_both_ends=True)
+    if self.x_data_vocab is not None:
+      data_lens = [len(x) for x in self.x_data_vocab]
+      self.log.ShowTextHistogram(data_lens, show_both_ends=True)
+      if compute_lens:
+        self._vocab_lens = np.array(data_lens)
+        self._unique_vocab_lens = np.unique(data_lens)
+    else:
+      self.P("x_data_vocab` is `none`")
+    return voc_lens
+    
 
   def _convert_vocab_to_training_data(self, min_word_size=5):
+    if self.x_data_vocab is not None:
+      self.P("WARNING: `x_data_vocab` already is loaded")
     self.P("Converting vocabulary to training data...")
     self.P(" Post-processing with min_word_size={}:".format(min_word_size))
     t1 = time()
@@ -135,14 +154,19 @@ class ALLANEngine(LummetryObject):
       else:
         x_data.append(self.word_to_char_tokens(self.dic_index2word[i_word], 
                                        pad_up_to=min_word_size))
-    lens = [len(x) for x in x_data]
-    self.log.ShowTextHistogram(lens)
-    self._vocab_lens = np.array(lens)
-    self._unique_vocab_lens = np.unique(lens)
+    self.analize_vocab_and_data(compute_lens=True)
     self.P(" Training data unique lens: {}".format(self._unique_vocab_lens))
     t2 = time()
     self.P("Done generating vocab training data in {:.1f}s.".format(t2-t1))
     return np.array(x_data)
+  
+  
+  def get_vocab_training_data(self, min_word_size=5):
+    x_data = self._convert_vocab_to_training_data(
+                              min_word_size=min_word_size)
+    self.x_data_vocab = x_data
+    return
+    
 
   
   def _setup_vocabs(self, fn_words_dict=None, fn_idx_dict=None):

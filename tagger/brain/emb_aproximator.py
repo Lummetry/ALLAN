@@ -14,6 +14,8 @@ from tagger.brain.base_engine import ALLANEngine
 
 from libraries.lummetry_layers.gated import GatedDense
 
+from time import time
+
 class EmbeddingApproximator(ALLANEngine):
   def __init__(self, np_embeds=None, dct_w2i=None, dct_i2w=None, **kwargs):
     super().__init__(**kwargs)
@@ -235,17 +237,22 @@ class EmbeddingApproximator(ALLANEngine):
     new_word = "".join(new_word)
     return new_word
   
-  def _get_siamese_datasets(self):
+  def _get_siamese_datasets(self, min_word_size=4, min_nr_words=5):
     if self.dic_word2index is None:
       raise ValueError("Vocab not loaded!")
     lst_anchor = []
     lst_duplic = []
     lst_false  = []
 
+    self.P("Generating siamese net training data from vocab")
+    vlens = self.analize_vocab_and_data()
+    len_couns = np.bincount(vlens)
+    t1 = time()
     for word, idx in self.dic_word2index.items():
       if idx in self.SPECIALS:
         continue
-      if len(word) > 4:
+      l_word = len(word)
+      if  (l_word > min_word_size) and (len_couns[l_word] > min_nr_words):
         s_duplic = self._word_morph(word)
         s_anchor = word
         i_false = (idx + np.random.randint(100,1000)) % len(self.dic_index2word)
@@ -258,8 +265,13 @@ class EmbeddingApproximator(ALLANEngine):
         lst_anchor.append(np_anchor)
         lst_duplic.append(np_duplic)
         lst_false.append(np_false)    
-        
+    t2 = time()
+    self.P(" Done generating in {:.1f}s".format(t2-t1))    
     self._siam_data_lens = [x.size for x in lst_anchor]
+    self.P("")
+    self.log.ShowTextHistogram(self._siam_data_lens, 
+                               caption='Siam data len distrib',
+                               show_both_ends=True)
     self._siam_data_unique_lens = np.unique(self._siam_data_lens)
         
     x_anchor = np.array(lst_anchor)
@@ -307,6 +319,8 @@ class EmbeddingApproximator(ALLANEngine):
           yield np_x_batch, np_y_batch        
     
   
+  
+  
     
     
   def train_unk_words_model(self,epochs=2, approximate_embeddings=False):
@@ -317,13 +331,12 @@ class EmbeddingApproximator(ALLANEngine):
       self._define_emb_generator_model()
     if self.siamese_model is None:
       self._define_siamese_model()
-    min_size = 4
-    # get generators
-    x_data = self._convert_vocab_to_training_data(
-                              min_word_size=min_size)
-    self.x_data_vocab = x_data
+
     if approximate_embeddings:
-      gen = self._get_embgen_model_generator(x_data)
+      min_size = 4
+      # get generators
+      self.get_vocab_training_data(min_size)
+      gen = self._get_embgen_model_generator(self.x_data_vocab)
     
     
     xa,xd,xf = self._get_siamese_datasets()
@@ -452,10 +465,15 @@ if __name__ == '__main__':
   
   
   eng = EmbeddingApproximator(log=l,)
-  eng.train_unk_words_model(epochs=1)
   
-  eng.debug_words_on_generated_embeddings(['gat','palma','creerii', 'pumul','capu','galcile'])
+  eng._get_siamese_datasets(min_nr_words=0)
+  eng._get_siamese_datasets()
   
-  eng.debug_known_words()
+  if False:
+    eng.train_unk_words_model(epochs=1)
+    
+    eng.debug_words_on_generated_embeddings(['gat','palma','creerii', 'pumul','capu','galcile'])
+    
+    eng.debug_known_words()
   
   
