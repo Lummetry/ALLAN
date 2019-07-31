@@ -17,7 +17,6 @@ from libraries.lummetry_layers.gated import GatedDense
 class EmbeddingApproximator(ALLANEngine):
   def __init__(self, np_embeds=None, dct_w2i=None, dct_i2w=None, **kwargs):
     super().__init__(**kwargs)
-    self.embgen_model = None
     self.__name__ = 'EMBA'
     self.trained = False
     self.siamese_model = None
@@ -28,7 +27,6 @@ class EmbeddingApproximator(ALLANEngine):
     else:
       self.embeddings = np_embeds
       
-    self.generated_embeddings = None
     
     if dct_w2i is None:
       self._setup_vocabs()
@@ -329,19 +327,6 @@ class EmbeddingApproximator(ALLANEngine):
           yield np_x_batch, np_y_batch        
     
   
-  def _get_generated_embeddings(self, x_data_vocab=None):
-    self.P("Inferring generated embeddings with `embgen_model`...")
-    if x_data_vocab is None:
-      x_data_vocab = self._convert_vocab_to_training_data()
-    embs = []
-    for x_word in x_data_vocab:
-      embs.append(self.embgen_model.predict(np.array(x_word).reshape((1,-1))))
-    self.generated_embeddings = np.array(embs)
-    if self.embeddings.shape != self.generated_embeddings.shape:
-      raise ValueError("Embs {} differ from generated ones {}".format(
-          self.embeddings.shape, self.generated_embeddings.shape))
-    self.P("Done inferring generated embeddings.")
-    return self.generated_embeddings
     
     
   def train_unk_words_model(self,epochs=2):

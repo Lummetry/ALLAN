@@ -42,6 +42,7 @@ class ALLANEngine(LummetryObject):
     self.dic_labels = None
     self.dic_index2label = None
     self.embeddings = None
+    self.generated_embeddings = None
     self.model = None
     self.embgen_model = None
     self.emb_layer_name = 'emb_layer'
@@ -93,6 +94,24 @@ class ALLANEngine(LummetryObject):
       self.P("WARNING: Embed file '{}' does not exists. embeddings='None'".format(
           fn_emb))
     return  
+  
+  
+  def _get_generated_embeddings(self, x_data_vocab=None):
+    if self.embgen_model is None:
+      raise ValueError("`embgen_model` must be trained before generating embeddings")
+    self.P("Inferring generated embeddings with `embgen_model`...")
+    if x_data_vocab is None:
+      x_data_vocab = self._convert_vocab_to_training_data()
+    embs = []
+    for x_word in x_data_vocab:
+      embs.append(self.embgen_model.predict(np.array(x_word).reshape((1,-1))))
+    self.generated_embeddings = np.array(embs)
+    if self.embeddings.shape != self.generated_embeddings.shape:
+      raise ValueError("Embs {} differ from generated ones {}".format(
+          self.embeddings.shape, self.generated_embeddings.shape))
+    self.P("Done inferring generated embeddings.")
+    return 
+
   
   def _setup_vocabs(self, fn_words_dict=None, fn_idx_dict=None):
     if fn_words_dict is None:
@@ -176,20 +195,18 @@ class ALLANEngine(LummetryObject):
   
   def __get_approx_embed(self, word):
     """
-    THIS APPROACH IS NOT RELIABLE:
+    INITIAL APPROACH WAS NOT RELIABLE:
         1. get aprox embed via regression model
         2.1. calculate closest real embedding -> id 
           or
         2.2. send the embed directly to the mode
     
-    CORRECT APPROACH IS TO: determine closest word based on second mebedding matrix (similarity word matrix)
+    CORRECT APPROACH IS TO: 
+      determine closest word based on second mebedding matrix (similarity word matrix)
         
     """
     char_tokens = np.array(self.word_to_char_tokens(word)).reshape((1,-1))
     res = self.embgen_model.predict(char_tokens)
-    !!!!!
-    
-    
     return res.ravel()
   
   
@@ -210,6 +227,7 @@ class ALLANEngine(LummetryObject):
     else:
       _min = _mins[:top]
     return _min
+  
   
   def _get_closest_idx_and_distance(self, aprox_emb, top=1, np_embeds=None):
     """
@@ -250,7 +268,7 @@ class ALLANEngine(LummetryObject):
     return _result
   
   
-  def get_similar_words(self, word, top=1):
+  def get_similar_words_by_text(self, word, top=1):
     idx = self.dic_word2index[word]
     embed = self.embeddings[idx]
     idxs = self._get_closest_idx(aprox_emb=embed, top=top)
@@ -260,6 +278,15 @@ class ALLANEngine(LummetryObject):
       _result = self.dic_index2word[idxs]
     return _result
   
+
+  def get_similar_words_by_id(self, id_word, top=1):
+    embed = self.embeddings[id_word]
+    idxs = self._get_closest_idx(aprox_emb=embed, top=top)
+    if type(idxs) is np.ndarray:
+      _result = [self.dic_index2word[x] for x in idxs]
+    else:
+      _result = self.dic_index2word[idxs]
+    return _result
 
   
   def _word_encoder(self, word, 
