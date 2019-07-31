@@ -102,7 +102,10 @@ class Tagger_Web(object):
   #textinput callback: adding user input to list
   def callback_print(self, args, old, new):
     if new:
-      preds, percs, unknown_words = app.predict_new_doc(new.rstrip())
+      new = new.replace('\n', ' ').replace('\r', '')
+      new = new.encode('utf8')
+      new = new.decode('utf8')
+      preds, percs, unknown_words = app.predict_new_doc(new)
       self.findings_list.append(preds)
       self.percentage_list.append(percs)
       self.unknown_words_list.append(unknown_words)
@@ -112,7 +115,7 @@ class Tagger_Web(object):
   #display findings
     crt_unknown_words = []
     findings_text = 'In urma procesarii documentului tau, propun urmatoarele labeluri: <br> Label 1: <b>{}</b> cu incredere de {}  <br> Label 2: <b>{}</b> cu incredere de {}  <br> Label 3: <b>{}</b> cu incredere de {}'.format(self.findings_list[-1][0][0], str(self.findings_list[-1][0][1] * 100)[:5] + '%', self.findings_list[-1][1][0], str(self.findings_list[-1][1][1] * 100)[:5] + '%', self.findings_list[-1][2][0], str(self.findings_list[-1][2][1] * 100)[:5] + '%')
-    self.p = Div(text = findings_text,
+    self.p = Div(text=findings_text,
                  width=400, 
                  height=100)
     
@@ -127,6 +130,7 @@ class Tagger_Web(object):
     
     #highlight words not in training data
     user_input = self.document_list[-1]
+    print(user_input)
     crt_unknown_words = self.unknown_words_list[-1]
     highlight_text = 'Cuvintele ingrosate nu sunt prezente in datele mele de antrenare: <br> <br>'
     for i in user_input:
