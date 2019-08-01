@@ -10,13 +10,13 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 
 
-from tagger.brain.base_engine import ALLANEngine
+from tagger.brain.base_engine import ALLANTaggerEngine
 
 from libraries.lummetry_layers.gated import GatedDense
 
 from time import time
 
-class EmbeddingApproximator(ALLANEngine):
+class EmbeddingApproximator(ALLANTaggerEngine):
   def __init__(self, np_embeds=None, dct_w2i=None, dct_i2w=None, **kwargs):
     super().__init__(**kwargs)
     self.__name__ = 'EMBA'
@@ -42,7 +42,6 @@ class EmbeddingApproximator(ALLANEngine):
     return
   
   def _setup(self):
-    self.embgen_model_config = self.config_data['EMB_GEN_MODEL'] if 'EMB_GEN_MODEL' in self.config_data.keys() else None    
     self.embgen_model_batch_size = self.embgen_model_config['BATCH_SIZE']
     self.use_cuda = self.embgen_model_config['USE_CUDA']
     return
@@ -213,11 +212,19 @@ class EmbeddingApproximator(ALLANEngine):
   def _word_morph(self, word):
     if len(word) <= 4:
       raise ValueError("Not morphing words less than 5")
-    mistk_src = ['i','o','I','o','1','0','O','1','!','6','G','5','S','s','5']
-    mistk_dst = ['1','0','1','0','I','O','0','!','1','G','6','s','5','5','S']
+    mistk_src = ['i','o','I','o','1','0','O','1','!','6','G','5','S','s','5','r','t']
+    mistk_dst = ['1','0','1','0','I','O','0','!','1','G','6','s','5','5','S','t','r']
 
     mistk_src += ['7','G','E','A','1','V','T','1','l','8','B','l','I','*','-']
     mistk_dst += ['T','E','G','V','i','A','7','l','1','B','8','I','l','-','*']
+
+    mistk_src += ['Î','ț','ă','î','Ă','Ș','ș','Ț']
+    mistk_dst += ['I','t','a','i','A','S','s','T']
+
+    mistk_src += ['I','t','a','i','A','S','s','T']
+    mistk_dst += ['Î','ț','ă','î','Ă','Ș','ș','Ț']
+
+
     letter2letter = 'cfijkopszuvwxy'
     
     for letter in letter2letter:
@@ -226,38 +233,70 @@ class EmbeddingApproximator(ALLANEngine):
       mistk_src.append(letter.upper())
       mistk_dst.append(letter)
     new_word = []
+    proba = 0.5
+    modded = False
     for i,ch in enumerate(word):
-      if np.random.rand() > 0.5 and ch in mistk_src:
-        new_word.append(mistk_dst[i])
+      if np.random.rand() > proba and ch in mistk_src:
+        proba -= 0.10
+        new_ch = mistk_dst[mistk_src.index(ch)]
+        new_word.append(new_ch)
+        modded = True
       else:
-        if np.random.rand() < 0.9:
+        if (i == 0) or (np.random.rand() < 0.95):
           new_word.append(ch)
+        else:
+          modded = True
+    if not modded:
+      new_word = new_word[:-1]
+      modded = True
     if len(new_word) < 4:
       new_word += ['1'] * 2
     new_word = "".join(new_word)
     return new_word
   
-  def _get_siamese_datasets(self, min_word_size=4, min_nr_words=5):
+  def _get_siamese_datasets(self, min_word_size=4, min_nr_words=5,
+                            max_word_min_count=15):
     if self.dic_word2index is None:
       raise ValueError("Vocab not loaded!")
     lst_anchor = []
     lst_duplic = []
     lst_false  = []
+    
+    if 'DATAFILE' in self.embgen_model_config.keys():
+      fn = self.embgen_model_config['DATAFILE']
+      if self.log.GetDataFile(fn) is not None:
+        xa, xd, xf = self.log.LoadPickleFromData(fn)
+        self._siam_data_lens = [len(x) for x in xa]
+        self._siam_data_unique_lens = np.unique(self._siam_data_lens)
+        return xa, xd, xf
 
     self.P("Generating siamese net training data from vocab")
     vlens = self.analize_vocab_and_data()
-    len_couns = np.bincount(vlens)
+    n_words = len(self.dic_word2index)
+    len_counts = np.bincount(vlens)
+    for x in range(len(len_counts)-1,1, -1):
+      if len_counts[x] > max_word_min_count:
+        break
+    max_word_size = x
     t1 = time()
+    i = 0
     for word, idx in self.dic_word2index.items():
+      print("\rGenerating siamese dataset {:.1f}%".format(
+          (i/n_words)*100), end='', flush=True)
+      i += 1
       if idx in self.SPECIALS:
         continue
       l_word = len(word)
-      if  (l_word > min_word_size) and (len_couns[l_word] > min_nr_words):
+
+      if  (l_word > min_word_size) and (l_word < max_word_size):
         s_duplic = self._word_morph(word)
         s_anchor = word
         i_false = (idx + np.random.randint(100,1000)) % len(self.dic_index2word)
         s_false  = self.dic_index2word[i_false]
-        _len = max(len(s_duplic), len(s_anchor), len(s_false))
+        _len = l_word #max(len(s_duplic), len(s_anchor), len(s_false))
+        s_anchor = s_anchor[:_len]
+        s_duplic = s_duplic[:_len]
+        s_false = s_false[:_len]
 
         np_anchor = np.array(self.word_to_char_tokens(s_anchor, pad_up_to=_len))
         np_duplic = np.array(self.word_to_char_tokens(s_duplic, pad_up_to=_len))
@@ -266,6 +305,7 @@ class EmbeddingApproximator(ALLANEngine):
         lst_duplic.append(np_duplic)
         lst_false.append(np_false)    
     t2 = time()
+    print("")
     self.P(" Done generating in {:.1f}s".format(t2-t1))    
     self._siam_data_lens = [x.size for x in lst_anchor]
     self.P("")
@@ -278,7 +318,11 @@ class EmbeddingApproximator(ALLANEngine):
     x_duplic = np.array(lst_duplic)
     x_false  = np.array(lst_false)
     self.P("Prepared siamese data with {} obs".format(x_anchor.shape[0]))
-    return x_anchor, x_duplic, x_false
+    data = x_anchor, x_duplic, x_false
+    if 'DATAFILE' in self.embgen_model_config.keys():
+      fn = self.embgen_model_config['DATAFILE']
+      self.log.SavePickleToData(data, fn)
+    return data
   
   
   def _get_siamese_generator(self, x_a, x_d, x_f):
@@ -323,7 +367,8 @@ class EmbeddingApproximator(ALLANEngine):
   
     
     
-  def train_unk_words_model(self,epochs=2, approximate_embeddings=False):
+  def train_unk_words_model(self, epochs=2, approximate_embeddings=False,
+                            save_embeds_every=2):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
@@ -354,7 +399,7 @@ class EmbeddingApproximator(ALLANEngine):
 
     avg_loss1 = []
     avg_loss2 = []
-    self.P("")
+    self.P("Training EmbGen model for {} epochs".format(epochs))
     for epoch in range(epochs):
       if approximate_embeddings:
         loss1 = self._train_basic(gen, n_batches, epoch)
@@ -367,11 +412,18 @@ class EmbeddingApproximator(ALLANEngine):
       avg_loss2.append(loss2)
       self.P("Epoch {} siam training done. loss:{:>7.4f}  avg:{:>7.4f}".format(
           epoch+1, loss2, np.mean(avg_loss2)))
-      self.debug_unk_words_model(['creerii', 'pumul','capu','galcile'])      
-      self.P("")
-        
-            
+      if ((save_embeds_every % (epoch+1)) == 0):
+        self.save_model()
+        self._get_generated_embeddings()
+        self.debug_unk_words_model()      
+        self.P("")                    
     return
+  
+  
+  def save_model(self):
+    self.log.SaveKerasModel(self.embgen_model, label='embgen_model', use_prefix=True)
+    return
+    
   
   def _train_basic(self, gen, steps, epoch):
     epoch_losses = []
@@ -398,12 +450,11 @@ class EmbeddingApproximator(ALLANEngine):
       epoch_losses.append(loss)
     print("\r",end="")
     epoch_loss = np.mean(epoch_losses)
-    self._get_generated_embeddings()
     return epoch_loss
   
     
       
-  def debug_unk_words_model(self, unk_words):
+  def debug_unk_words_model(self, unk_words=['creieru', 'pumnu','capu','amigdala', 'stomacel','burtica']):
     self.P("Testing for {} (dist='{}')".format(
                 unk_words, self.dist_func_name))
     for uword in unk_words:
@@ -416,7 +467,7 @@ class EmbeddingApproximator(ALLANEngine):
     return
       
       
-  def debug_known_words(self, good_words=['ochi', 'gura','gat','picior']):
+  def debug_known_words(self, good_words=['ochi', 'gura','gat','picior','mana','genunchi']):
     self.P("Testing known words {} (dist='{}')".format(
         good_words, self.dist_func_name))
     for word in good_words:
@@ -426,34 +477,20 @@ class EmbeddingApproximator(ALLANEngine):
       top1 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
               for x,y in zip(idxs1, dist1)]      
       top1 = " ".join(top1)
-      self.P(" wrd: '{}' results in embeds: {}".format(word, top1))
+      self.P(" wrd: '{}' >>> embeds >>>: {}".format(word, top1))
       
       aprox_emb = self._get_approx_embed(word)
-      idxs2, dist2 = self._get_closest_idx_and_distance(aprox_emb=aprox_emb, top=5)
+      idxs2, dist2 = self._get_closest_idx_and_distance(aprox_emb=aprox_emb, top=5,
+                                                        np_embeds=self.generated_embeddings)
       top2 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
               for x,y in zip(idxs2, dist2)]      
       top2 = " ".join(top2)
-      self.P(" wrd: '{}' in emb based on generation: {}".format(word, top2))
+      self.P(" wrd: '{}' >>> w. embgen >>>: {}".format(word, top2))
       
-      diff = self.dist(orig_emb, aprox_emb)
-      self.P(" Difference between orig and generated emb: {:.3f}".format(diff))
     return
   
-  def debug_words_on_generated_embeddings(self, words):
-    if self.generated_embeddings is None:
-      self._get_generated_embeddings()
-    self.P("Testing for {} (dist='{}') using generated embeds".format(
-                words, self.dist_func_name))
-    for word in words:
-      aprox_emb = self._get_approx_embed(word)
-      idxs, dist = self._get_closest_idx_and_distance(aprox_emb=aprox_emb, 
-                                                      top=3,
-                                                      np_embeds=self.generated_embeddings)
-      top2 = ["'{}':{:.3f}".format(self.dic_index2word[x],y)  
-              for x,y in zip(idxs, dist)]      
-      top2 = " ".join(top2)
-      self.P(" wrd: '{}' in emb based on generation: {}".format(word, top2))
-    
+  
+      
     
   
   
@@ -466,14 +503,20 @@ if __name__ == '__main__':
   
   eng = EmbeddingApproximator(log=l,)
   
-  eng._get_siamese_datasets(min_nr_words=0)
-  eng._get_siamese_datasets()
-  
   if False:
-    eng.train_unk_words_model(epochs=1)
-    
-    eng.debug_words_on_generated_embeddings(['gat','palma','creerii', 'pumul','capu','galcile'])
-    
+    #eng._get_siamese_datasets(min_nr_words=0)
+    xa, xd, xf = eng._get_siamese_datasets()
+    for i in range(5):
+      irnd = np.random.randint(0, xa.shape[0])
+      sa = eng.char_tokens_to_word(xa[irnd])
+      sd = eng.char_tokens_to_word(xd[irnd])
+      sf = eng.char_tokens_to_word(xf[irnd])
+      l.P(" A:{:>15}  D:{:>15}  F:{:>15}".format(sa,sd,sf))
+
+  
+  if True:
+    eng.train_unk_words_model(epochs=4)
+       
     eng.debug_known_words()
   
   

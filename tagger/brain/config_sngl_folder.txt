@@ -17,22 +17,22 @@
   "DIST_FUNC" : "l2",
   
   "TRAINING" : {
-    "FOLDER"     : "test1_one_folder",
-    "###FOLDER"    : "test2_two_folders",
+    "####FOLDER"     : "test1_one_folder",
+    "FOLDER"    : "test2_two_folders",
     "SUBFOLDERS" : 
         {
-          "ENABLED" : 0,
-          "DOCS"    : "texts",
-          "LABELS"  : "master_labels"
+          "ENABLED" : 1,
+          "DOCS"    : "Texts",
+          "LABELS"  : "Labels"
         },
     "DOCUMENT"   : ".txt",
-    "LABEL"      : ".label"
+    "LABEL"      : ".txt"
   },
   
   
   "MODEL" : {
     "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "test1.h5",
+    "PRETRAINED"  : "allan_tagger_v2.h5",
     "###INPUT_TYPES"  : ["direct-embeds", "tokens"],
     "INPUT"       : "direct-embeds",
     "###OUTPUT_TYPES" : ["single-ranking", "multi-ranking", "tagging"],
@@ -96,6 +96,9 @@
   },
   
   "EMB_GEN_MODEL" : {
+    "DATAFILE"      : "embgen_dataset.pkl",
+    "EMBED_FILE"    : "embgen_full_embeds.npy",
+    "PRETRAINED"    : "embgen_v1.h5",
     "BATCH_SIZE"    : 512,
     "FINAL_DROP"    : 0.5,
     "USE_CUDA"      : 1, 

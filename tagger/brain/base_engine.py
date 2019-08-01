@@ -12,14 +12,21 @@ import numpy as np
 from collections import OrderedDict
 
 from libraries.generic_obj import LummetryObject
+from libraries.lummetry_layers.gated import GatedDense
 from libraries.logger import Logger
 from time import time
 
-class ALLANEngine(LummetryObject):
+class ALLANTaggerEngine(LummetryObject):
   """
   ALLAN 'Abstract' Engine
   """
-  def __init__(self, log: Logger, DEBUG=False, MAX_CHR=100000):
+  def __init__(self, log: Logger, 
+               dict_word2index=None,
+               dict_label2index=None,
+               output_size=None,
+               vocab_size=None,
+               embed_size=None,
+               DEBUG=False, MAX_CHR=100000):
     super().__init__(log=log, DEBUG=DEBUG)
     self.__name__ = 'ALLAN_BASE'
     self.P("Init ALLANEngine...")
@@ -38,16 +45,20 @@ class ALLANEngine(LummetryObject):
     self.prev_saved_model = []
     self.first_run = {}
     self.frames_data = None
-    self.dic_word2index = None
-    self.dic_index2word = None
     self.model_ouput = None
-    self.dic_labels = None
-    self.dic_index2label = None
     self.embeddings = None
     self.generated_embeddings = None
     self.model = None
     self.embgen_model = None
     self.x_data_vocab = None
+    self.output_size = len(dict_label2index) if dict_label2index is not None else output_size
+    self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
+    self.dic_word2index = dict_word2index
+    if dict_word2index is not None:
+      self._get_reverse_word_dict()
+      self._get_vocab_stats()
+    self.dic_labels = dict_label2index
+    self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
     self.startup()
     return
@@ -67,6 +78,7 @@ class ALLANEngine(LummetryObject):
         self.EOS_ID,
         ]
     self.train_folder = self.train_config['FOLDER']
+    self.embgen_model_config = self.config_data['EMB_GEN_MODEL'] if 'EMB_GEN_MODEL' in self.config_data.keys() else None    
     self.model_config = self.config_data['MODEL']
     self.doc_ext = self.train_config['DOCUMENT']
     self.label_ext = self.train_config['LABEL']
@@ -99,27 +111,81 @@ class ALLANEngine(LummetryObject):
     return  
   
   
+  def _setup_similarity_embeddings(self, embeds_filename=None):
+    self.generated_embeddings = None
+    fn_emb = embeds_filename
+    if fn_emb is None:
+      fn_emb = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else ""
+    if self.log.GetModelsFile(fn_emb) is not None:
+      self.P("Loading similarity embeddings {}...".format(fn_emb))
+      self.generated_embeddings = self.log.LoadPickleFromModels(fn_emb)
+      self.P(" Loaded similarity embeddings: {}".format(self.embeddings.shape))    
+    else:
+      self.P("WARNING: Embed file '{}' does not exists. generated_embeddings='None'".format(
+          fn_emb))
+    return  
+
+
+  def _init_hyperparams(self, dict_model_config=None):
+    if dict_model_config is not None:
+      self.model_config = dict_model_config     
+      
+    self.seq_len = self.model_config['SEQ_LEN'] if 'SEQ_LEN' in self.model_config.keys() else None
+    if self.seq_len == 0:
+      self.seq_len = None
+    self.emb_size = self.model_config['EMBED_SIZE'] if 'EMBED_SIZE' in self.model_config.keys() else 0
+    self.emb_trainable = self.model_config['EMBED_TRAIN'] if 'EMBED_TRAIN' in self.model_config.keys() else True
+    self.model_columns = self.model_config['COLUMNS']
+    
+    if self.pre_inputs is not None:
+      self.model_input = self.pre_inputs
+    else:
+      self.model_input = self.model_config['INPUT']
+      
+    self.use_cuda = self.model_config['USE_CUDA'] if 'USE_CUDA' in self.model_config.keys() else True
+    
+    if self.pre_outputs:
+      self.model_output = self.pre_outputs
+    else:
+      self.model_output = self.model_config['OUTPUT']
+      
+    self.dropout_end = self.model_config['DROPOUT_CONCAT'] if 'DROPOUT_CONCAT' in self.model_config.keys() else 0.2 
+    self.end_fc = self.model_config['END_FC']    
+    return
+  
+  
   def _get_generated_embeddings(self, x_data_vocab=None):
     if self.embgen_model is None:
       raise ValueError("`embgen_model` must be trained before generating embeddings")
     self.P("Inferring generated embeddings with `embgen_model`...")
     if x_data_vocab is None:
-      if self.x_data_vocab is None:
-        self.x_data_vocab = self._convert_vocab_to_training_data()
-        x_data_vocab = self.x_data_vocab
+      if self.x_data_vocab is None:        
+        x_data_vocab = self._convert_vocab_to_training_data()
       else:
         x_data_vocab = self.x_data_vocab
       
-    embs = []
+    np_embs = np.zeros((self.embeddings.shape), dtype=np.float32)
+    lens = np.array([len(x) for x in self.x_data_vocab])
+    unique_lens = np.unique(lens)
     t1 = time()
-    for x_word in x_data_vocab:
-      embs.append(self.embgen_model.predict(np.array(x_word).reshape((1,-1))))
-    self.generated_embeddings = np.array(embs)
+    iters = len(unique_lens)
+    for i,unique_len in enumerate(unique_lens):
+      print("\rInferring generated embeddings: {:.1f}%".format(
+          ((i+1)/iters)*100), end='', flush=True)
+      mask = lens == unique_len
+      batch = self.x_data_vocab[mask].tolist()
+      np_batch = np.array(batch)
+      yhat = self.embgen_model.predict(np_batch)
+      np_embs[mask]  = yhat
+    print("\r",end='')
+    self.generated_embeddings = np_embs
     if self.embeddings.shape != self.generated_embeddings.shape:
       raise ValueError("Embs {} differ from generated ones {}".format(
           self.embeddings.shape, self.generated_embeddings.shape))
     t2 = time()
     self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
+    fn = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else "embgen_embeds.pkl"
+    self.log.SavePickleToModels(self.generated_embeddings, fn)
     return 
   
   
@@ -131,7 +197,9 @@ class ALLANEngine(LummetryObject):
                                show_both_ends=True)
     if self.x_data_vocab is not None:
       data_lens = [len(x) for x in self.x_data_vocab]
-      self.log.ShowTextHistogram(data_lens, show_both_ends=True)
+      self.log.ShowTextHistogram(data_lens, 
+                                 caption='Vocab-based {} obs'.format(len(data_lens)),
+                                 show_both_ends=True)
       if compute_lens:
         self._vocab_lens = np.array(data_lens)
         self._unique_vocab_lens = np.unique(data_lens)
@@ -154,17 +222,17 @@ class ALLANEngine(LummetryObject):
       else:
         x_data.append(self.word_to_char_tokens(self.dic_index2word[i_word], 
                                        pad_up_to=min_word_size))
+    self.x_data_vocab = np.array(x_data)
     self.analize_vocab_and_data(compute_lens=True)
     self.P(" Training data unique lens: {}".format(self._unique_vocab_lens))
     t2 = time()
     self.P("Done generating vocab training data in {:.1f}s.".format(t2-t1))
-    return np.array(x_data)
+    return self.x_data_vocab
   
   
   def get_vocab_training_data(self, min_word_size=5):
-    x_data = self._convert_vocab_to_training_data(
+    self._convert_vocab_to_training_data(
                               min_word_size=min_word_size)
-    self.x_data_vocab = x_data
     return
     
 
@@ -248,6 +316,8 @@ class ALLANEngine(LummetryObject):
     return f(source, target)
       
   
+  def _get_approx_embed(self, word):
+    return self.__get_approx_embed(word)
   
   def __get_approx_embed(self, word):
     """
@@ -349,17 +419,12 @@ class ALLANEngine(LummetryObject):
     return _result
 
   
-  def _word_encoder(self, word, 
-           convert_unknown_words=False,
-           convert_to_embeddings=False,):
+  def _word_encoder(self, word, convert_unknown_words=False,):
     idx = self.dic_word2index[word] if word in self.dic_word2index.keys() else self.UNK_ID
     if convert_unknown_words and (idx == self.UNK_ID):
-        idx = self.get_unk_word_similar_id(word)      
-    if convert_to_embeddings:
-      res = self.embeddings[idx]
-    else:      
-      res = idx
-    return res
+      idx = self.get_unk_word_similar_id(word)      
+    emb = self.embeddings[idx]
+    return idx, emb
       
   
   def _get_reverse_word_dict(self):
@@ -377,7 +442,8 @@ class ALLANEngine(LummetryObject):
              rank_labels=False,
              convert_unknown_words=True,
              direct_embeddings=False,
-             min_len=0):
+             min_len=0,
+             DEBUG=False):
     """
     this function will tokenize or directly output the embedding represenation
     of the input list of documents together with the given labels for each
@@ -406,12 +472,24 @@ class ALLANEngine(LummetryObject):
     for txt in text:
       splitted = self._get_words(txt)
       self.last_max_size = max(self.last_max_size, len(splitted))
-      tokens = []
+      tkns = []
+      embs = []
       for word in splitted:
-        token = self._word_encoder(word, 
+        tk,em = self._word_encoder(word, 
                                    convert_unknown_words=convert_unknown_words,
                                    convert_to_embeddings=direct_embeddings)
-        tokens.append(token)
+        tkns.append(tk)
+        embs.append(em)
+
+      if direct_embeddings:
+        tokens = embs
+      else:
+        tokens = tkns
+      if DEBUG:
+        self.P("Converted:")
+        self.P("  '{}'".format(text))
+        self.P(" into")
+        self.P("  '{}'".format(self.decode(tkns))) 
       if len(tokens) < min_len:
         added = min_len - len(tokens)
         if direct_embeddings:
@@ -460,7 +538,8 @@ class ALLANEngine(LummetryObject):
           seq = seq_idxs
         c_labels = [self.dic_index2labels[x] for x in seq]
         labels.append(c_labels)
-    return texts, labels
+      return texts, labels
+    return texts
 
   @property
   def loaded_vocab_size(self):
@@ -531,7 +610,7 @@ class ALLANEngine(LummetryObject):
   
   def predict_text(self, 
                    text, 
-                   convert_unknown_words=False,
+                   convert_unknown_words=True,
                    convert_tags=True,
                    top=5):
     """
@@ -550,7 +629,8 @@ class ALLANEngine(LummetryObject):
     tokens = self.encode(text, 
                          convert_unknown_words=convert_unknown_words,
                          direct_embeddings=direct_embeddings,
-                         min_len=self.min_seq_len)
+                         min_len=self.min_seq_len,
+                         DEBUG=True)
     np_tokens = np.array(tokens)
     tags_probas = self._predict_single(np_tokens)
     tags_probas = tags_probas.ravel()
@@ -828,7 +908,7 @@ class ALLANEngine(LummetryObject):
     
   def maybe_load_pretrained(self):
     _res = False
-    if "PRETRAINED" in self.model_config:
+    if "PRETRAINED" in self.model_config.keys():
       fn = self.model_config['PRETRAINED']
       if self.log.GetModelsFile(fn) is not None:
         self.P("Loading pretrained model {}".format(fn))
@@ -840,8 +920,104 @@ class ALLANEngine(LummetryObject):
         _res = True
         self._reload_embeds_from_model()
     return _res
-    
   
+  
+  def maybe_load_pretrained_embgen(self):
+    _res = False
+    if "PRETRAINED" in self.embgen_model_config.keys():
+      fn = self.embgen_model_config['PRETRAINED']
+      if self.log.GetModelsFile(fn) is not None:
+        self.P("Loading pretrained embgen model {}".format(fn))
+        self.embgen_model = self.log.LoadKerasModel(
+                                    fn,
+                                    custom_objects={
+                                      "GatedDense" : GatedDense,
+                                      })
+        _res = True
+    return _res
+  
+  
+  def setup_embgen_model(self):
+    self.maybe_load_pretrained_embgen()
+    self._setup_similarity_embeddings()
+    return
+  
+
+  def setup_pretrained_model(self):
+    self._setup_word_embeddings()    
+    if self.maybe_load_pretrained():
+      self.P("Pretrained model:\n{}".format(
+          self.log.GetKerasModelSummary(self.model)))
+      self.trained = True
+    return  
+    
+
+  def _get_vocab_stats(self,):
+    if self.dic_word2index is None:
+      raise ValueError("Vocab dict is not available !")
+    if self.dic_index2word is None:
+      raise ValueError("Reverse vocab dict is not available !")
+    lens = [len(k) for k in self.dic_word2index]
+    dct_stats = {
+          "Max" : int(np.max(lens)),
+          "Avg" : int(np.mean(lens)),
+          "Med" : int(np.median(lens)),
+        }
+    self.P("Loaded vocab:")
+    for k in dct_stats:
+      self.P("  {} word size: {}".format(k, dct_stats[k]))
+    self.log.ShowTextHistogram(lens)
+    return dct_stats
+  
+  
+  def initialize(self):
+    self.setup_embgen_model()
+    self.setup_pretrained_model()
+    if self.embeddings is None:
+      raise ValueError("Embeddings loading failed!")
+    if self.model is None:
+      raise ValueError("Model loading failed!")
+    if self.embgen_model is None:
+      raise ValueError("EmbGen model loading failed!")
+    if self.generated_embeddings is None:
+      raise ValueError("Generated similarity siamese embeddings loading failed!")
+
+  
+    
+      
   
 if __name__ == '__main__':
-  pass
+  from libraries.logger import Logger
+  from tagger.brain.data_loader import ALLANDataLoader
+  
+  cfg1 = "tagger/brain/config_sngl_folder.txt"
+  
+  use_raw_text = True
+  save_model = True
+  force_batch = True
+  use_model_conversion = False
+  epochs = 30
+  use_loaded = True
+  
+  l = Logger(lib_name="ALNT",config_file=cfg1)
+  l.SupressTFWarn()
+  
+  loader = ALLANDataLoader(log=l, multi_label=True, 
+                           normalize_labels=False)
+  loader.LoadData()
+  
+  eng = ALLANTaggerEngine(log=l, 
+                          dict_word2index=loader.dic_word2index,
+                          dict_label2index=loader.dic_labels)
+  eng.initialize()
+  
+    
+  l.P("")
+  tags = eng.predict_text("ma doare stomacul")
+  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+  
+  l.P("")
+  tags = eng.predict_text("ma doare capul, in gât si nările")
+  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
