@@ -454,7 +454,17 @@ class EmbeddingApproximator(ALLANTaggerEngine):
   
     
       
-  def debug_unk_words_model(self, unk_words=['creieru', 'pumnu','capu','amigdala', 'stomacel','burtica']):
+  def debug_unk_words_model(self, unk_words=['creieru', 
+                                             'pumnu',
+                                             'capu',
+                                             'amigdala', 
+                                             'stomacel',
+                                             'burtica',
+                                             'geunchi',
+                                             'spatic',
+                                             'gurita',
+                                             'creieras',
+                                             'caputul']):
     self.P("Testing for {} (dist='{}')".format(
                 unk_words, self.dist_func_name))
     for uword in unk_words:
@@ -497,7 +507,7 @@ class EmbeddingApproximator(ALLANTaggerEngine):
 if __name__ == '__main__':
   from libraries.logger import Logger
   
-  cfg1 = "tagger/brain/config_sngl_folder.txt"
+  cfg1 = "tagger/brain/config.txt"
   l = Logger(lib_name="EGEN",config_file=cfg1)
   
   

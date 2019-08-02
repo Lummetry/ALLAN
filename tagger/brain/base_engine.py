@@ -28,7 +28,7 @@ class ALLANTaggerEngine(LummetryObject):
                embed_size=None,
                DEBUG=False, MAX_CHR=100000):
     super().__init__(log=log, DEBUG=DEBUG)
-    self.__name__ = 'ALLAN_BASE'
+    self.__name__ = 'AT_TE'
     self.P("Init ALLANEngine...")
     self.log.SetNicePrints()
     if log is None or (type(log).__name__ != 'Logger'):
@@ -42,6 +42,9 @@ class ALLANTaggerEngine(LummetryObject):
     self.sess = None
     self.session = None
     self.trained = False
+    self.pre_inputs = None
+    self.pre_outputs = None
+    self.pre_columns_end = None
     self.prev_saved_model = []
     self.first_run = {}
     self.frames_data = None
@@ -58,6 +61,7 @@ class ALLANTaggerEngine(LummetryObject):
       self._get_reverse_word_dict()
       self._get_vocab_stats()
     self.dic_labels = dict_label2index
+    self._generate_idx2labels()
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
     self.startup()
@@ -108,6 +112,8 @@ class ALLANTaggerEngine(LummetryObject):
     else:
       self.P("WARNING: Embed file '{}' does not exists. embeddings='None'".format(
           fn_emb))
+      if self.emb_size == 0:
+        raise ValueError("No `EMBED_SIZE` defined in config and embed file could not be loaded!")
     return  
   
   
@@ -119,7 +125,7 @@ class ALLANTaggerEngine(LummetryObject):
     if self.log.GetModelsFile(fn_emb) is not None:
       self.P("Loading similarity embeddings {}...".format(fn_emb))
       self.generated_embeddings = self.log.LoadPickleFromModels(fn_emb)
-      self.P(" Loaded similarity embeddings: {}".format(self.embeddings.shape))    
+      self.P(" Loaded similarity embeddings: {}".format(self.generated_embeddings.shape))    
     else:
       self.P("WARNING: Embed file '{}' does not exists. generated_embeddings='None'".format(
           fn_emb))
@@ -128,7 +134,8 @@ class ALLANTaggerEngine(LummetryObject):
 
   def _init_hyperparams(self, dict_model_config=None):
     if dict_model_config is not None:
-      self.model_config = dict_model_config     
+      self.model_config = dict_model_config    
+      self.P("Using external model parameters")
       
     self.seq_len = self.model_config['SEQ_LEN'] if 'SEQ_LEN' in self.model_config.keys() else None
     if self.seq_len == 0:
@@ -420,6 +427,10 @@ class ALLANTaggerEngine(LummetryObject):
 
   
   def _word_encoder(self, word, convert_unknown_words=False,):
+    if self.embeddings is None:
+      self._setup_word_embeddings()
+      if self.embeddings is None:
+        raise ValueError("Embeddings loading failed!")
     idx = self.dic_word2index[word] if word in self.dic_word2index.keys() else self.UNK_ID
     if convert_unknown_words and (idx == self.UNK_ID):
       idx = self.get_unk_word_similar_id(word)      
@@ -477,7 +488,7 @@ class ALLANTaggerEngine(LummetryObject):
       for word in splitted:
         tk,em = self._word_encoder(word, 
                                    convert_unknown_words=convert_unknown_words,
-                                   convert_to_embeddings=direct_embeddings)
+                                   )
         tkns.append(tk)
         embs.append(em)
 
@@ -657,7 +668,10 @@ class ALLANTaggerEngine(LummetryObject):
     return
          
   def _generate_idx2labels(self):
-    self.dic_index2label = {v:k for k,v in self.dic_labels.items()}
+    if self.dic_labels is not None:
+      self.dic_index2label = {v:k for k,v in self.dic_labels.items()}
+    else:
+      self.dic_index2label = None
     return
   
   def get_stats(self, X_tokens, show=True):
@@ -715,7 +729,7 @@ class ALLANTaggerEngine(LummetryObject):
         X_batch = np.array(X_data[batch_start:batch_end])
         y_batch = np.array(y_data[batch_start:batch_end])
         loss = self.model.train_on_batch(X_batch, y_batch)
-        print("\r Epoch {}: {:>5.1f}% completed [loss: {:.4f}]".format(
+        print("\r Epoch {:>3}: {:>5.1f}% completed [loss: {:.4f}]".format(
             epoch+1, i_batch / n_batches * 100, loss), end='', flush=True)
         self.train_losses.append(loss)
         epoch_losses.append(loss)
@@ -789,6 +803,8 @@ class ALLANTaggerEngine(LummetryObject):
     and text labels after tokenizing and (if required) converting to embeddings 
     the inputs all based on the structure of the existing `model` inputs
     """
+    if self.model is None:
+      raise ValueError("Model is undefined!")
     
     if self.model_output is None:
       raise ValueError("Model output config must be defined")
@@ -892,8 +908,9 @@ class ALLANTaggerEngine(LummetryObject):
   
   def _reload_embeds_from_model(self,):
     self.P("Reloading embeddings from model")
+    self._check_model_inputs()
     if self.direct_embeddings:
-      self.P("Cannot reload embeddings: input size {}. second layer: {}".format(
+      self.P("Skip reload: Cannot reload embeddings (input is: {}, second layer: {}".format(
           self.model.inputs[0].shape, self.model.layers[1].__class__.__name__))
       return
     lyr_emb = None
@@ -971,6 +988,8 @@ class ALLANTaggerEngine(LummetryObject):
   
   
   def initialize(self):
+    self.P("Full initialization started ...")
+    self._init_hyperparams()
     self.setup_embgen_model()
     self.setup_pretrained_model()
     if self.embeddings is None:
@@ -981,6 +1000,14 @@ class ALLANTaggerEngine(LummetryObject):
       raise ValueError("EmbGen model loading failed!")
     if self.generated_embeddings is None:
       raise ValueError("Generated similarity siamese embeddings loading failed!")
+    self.P("Full initialization done.")
+    
+    
+  def tagdict_to_text(self, tags):
+    txt = ''
+    for k in tags:
+      txt = txt + "'{}':{:.2f} ".format(k, tags[k])
+    return txt
 
   
     
@@ -990,7 +1017,7 @@ if __name__ == '__main__':
   from libraries.logger import Logger
   from tagger.brain.data_loader import ALLANDataLoader
   
-  cfg1 = "tagger/brain/config_sngl_folder.txt"
+  cfg1 = "tagger/brain/config.txt"
   
   use_raw_text = True
   save_model = True
@@ -1013,11 +1040,27 @@ if __name__ == '__main__':
   
     
   l.P("")
-  tags = eng.predict_text("ma doare stomacul")
-  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+  tags = eng.predict_text("ma doare stomacelul")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
-  
+
   l.P("")
-  tags = eng.predict_text("ma doare capul, in gât si nările")
-  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+  tags = eng.predict_text("ma doare caputul, in gatutul si nasucul")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
+      
+  l.P("")
+  tags = eng.predict_text("cred ca am o durerica la gurita din cauza de la creieras")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
+
+  l.P("")
+  tags = eng.predict_text("simt un disconform la spatic pentru ca sunt cam dus cu caputul")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+      

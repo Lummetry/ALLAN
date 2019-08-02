@@ -10,7 +10,6 @@ import numpy as np
 import tensorflow as tf
 
 from libraries.lummetry_layers.gated import GatedDense
-from tagger.brain.emb_aproximator import EmbeddingApproximator
 
 _VER_ = '0.8.1'
 
@@ -30,12 +29,11 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     super().__init__(**kwargs)
     self.trained = False
     self.__version__ = _VER_
-    self.__name__ = 'ALLAN_TAG'
+    self.__name__ = 'AT_MC'
     self.pre_inputs = inputs
     self.pre_outputs = outputs
     self.pre_columns_end = columns_end
-    self.setup_model()
-    self.setup_unknown_words_model()
+    self.model_prepared = False
     return
   
 
@@ -43,7 +41,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
   
   def _define_column(self, tf_input, kernel, filters, name, 
                               activation='relu', last_step='lstm',
-                              use_cuda=True,
+                              use_cuda=True, step=1,
                               depth=0):
     """
     inputs:
@@ -61,8 +59,8 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     for L in range(1, depth+1):
       tf_x = tf.keras.layers.Conv1D(filters=filters,
                                     kernel_size=kernel,
-                                    strides=kernel,
-                                    name=name+'_conv{}'.format(L))(tf_x)
+                                    strides=step,
+                                    name=name+'_conv{}_{}'.format(kernel,L))(tf_x)
       tf_x = tf.keras.layers.BatchNormalization(name=name+'_bn{}'.format(L))(tf_x)
       tf_x = tf.keras.layers.Activation(activation, 
                                         name=name+'_{}{}'.format(activation,L))(tf_x)
@@ -98,7 +96,8 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
         lyr_gated = GatedDense(units=lyr_units,
                                activation=lyr_act,
                                batch_norm=lyr_bn,
-                               name=lyr_name+"_gated{}".format(i+1))
+                               name=lyr_name+"_gated_bn{}_{}_{}".format(
+                                   lyr_bn, lyr_act, i+1))
         tf_x = lyr_gated(tf_x)
         tf_x = tf.keras.layers.Dropout(lyr_drop, 
                                        name=lyr_name+'_drop_{}_{}'.format(
@@ -119,9 +118,10 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     
     
   
-  def setup_model(self, dict_model_config=None):
-    
+  def setup_model(self, dict_model_config=None):    
     self._init_hyperparams(dict_model_config=dict_model_config)
+    if self.embeddings is None:
+      self._setup_word_embeddings()
     if 'embeds' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len, self.emb_size), 
                                        name='tagger_input')
@@ -147,6 +147,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       ker_size = col['KERNEL']
       col_depth = col['DEPTH']
       end_type = col['END']
+      step = col['STEP'] if 'STEP' in col.keys() else ker_size
       if self.pre_columns_end is not None:
         end_type = self.pre_columns_end
       tf_x = self._define_column(tf_input=tf_embeds,
@@ -154,6 +155,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                  name='C'+str(i+1),
                                  filters=n_feats,
                                  depth=col_depth,
+                                 step=step,
                                  last_step=end_type,
                                  use_cuda=self.use_cuda
                                  )
@@ -163,7 +165,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     tf_x = tf.keras.layers.Dropout(drp, 
                                    name='drop_{}_{}'.format(
                                        drp,0))(tf_x)
-    self.n_concat_outs = len(self.model_columns) * n_feats
+    self.n_concat_outs = len(self.model_columns) * n_feats * 2
     
     tf_x = self._get_end_fc(tf_x, self.end_fc)
     
@@ -191,18 +193,13 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       raise ValueError("Unknown model output '{}'".format(self.model_output))
     self.model = model
     self.P("Final model:\n{}".format(self.log.GetKerasModelSummary(self.model)))
+    self.model_prepared = True
     return
   
   
 
-  
-  def setup_unknown_words_model(self):
-    self.eng_emb_aprox = EmbeddingApproximator(log=self.log,
-                                               np_embeds=self.embeddings,
-                                               dct_w2i=self.dic_word2index,
-                                               dct_i2w=self.dic_index2word)
-    self.unk_words_model = self.eng_emb_aprox.get_model()
-    return
+  def benchmark_model(self, texts_and_labels):
+    pass
   
   
   
@@ -212,7 +209,7 @@ if __name__ == '__main__':
   from libraries.logger import Logger
   from tagger.brain.data_loader import ALLANDataLoader
   
-  cfg1 = "tagger/brain/config_sngl_folder.txt"
+  cfg1 = "tagger/brain/config.txt"
   
   use_raw_text = True
   save_model = True
@@ -231,6 +228,8 @@ if __name__ == '__main__':
   eng = ALLANTaggerCreator(log=l, 
                            dict_word2index=loader.dic_word2index,
                            dict_label2index=loader.dic_labels)
+  
+  eng.setup_model(dict_model_config=None) # default architecture
   
   if use_raw_text:
     eng.train_on_texts(loader.raw_documents,
@@ -251,16 +250,25 @@ if __name__ == '__main__':
     
   l.P("")
   tags = eng.predict_text("ma doare stomacul")
-  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   l.P("")
   tags = eng.predict_text("ma doare capul, in gât si nările")
-  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
   l.P("")
   tags = eng.predict_text("vreau sa slabesc si fac sport si ma doare la umăr")
-  l.P("Result::\n {} \n {}".format(tags, ['{}:{:.2f}'.format(x,p) 
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
+  l.P("")
+  tags = eng.predict_text("ma doare stomacul si nu am pofta de mancare si nu am fost la doctor")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
   
