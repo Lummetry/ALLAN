@@ -1,3 +1,4 @@
+import re
 import nltk
 import requests
 import pandas as pd
@@ -10,6 +11,16 @@ from nltk.tokenize import RegexpTokenizer
 
 def flatten_list(a):
   return [item for sublist in a for item in sublist]
+
+def is_number_larger_than_x(number, x):
+  try:
+    if int(number) > x:
+      return True
+    else:
+      return False
+  except ValueError:
+    return False
+    
 
 #Expand dataset by: using website archive: hotnews.ro/arhiva/2018-01-01 to get links     
       
@@ -26,6 +37,7 @@ class Spider(object):
                cycle_range,
                urls_tag,
                data_tag,
+               title_tag,
                occurence_threshold=None):
     
     self.logger = logger
@@ -113,7 +125,7 @@ class Spider(object):
       archive_url = self.domain_url + self.archive[0]
       url_pages = self.get_news_urls(archive_url, self.archive[1])
       for page in url_pages[:50]:
-        self.logger.P('Getting urls from {}...'.format(page))
+        if self.DEBUG:self.logger.P('Getting urls from {}...'.format(page))
         articles_on_page = self.get_news_urls(page, self.urls_tag) 
         self.article_sources.append(articles_on_page)
         self.logger.P('Found stories on this page: {}'.format(len(articles_on_page)))
@@ -133,6 +145,12 @@ class Spider(object):
     
     if self.data_tag[3] == '':
       self.data_tag[3] = None
+    
+    if self.title_tag[1] == '':
+      self.title_tag[1] = 0
+    
+    if self.title_tag[3] == '': 
+      self.title_tag[3] = None
       
     #populate document
     news_article = news_source.find(self.data_tag[0], 
@@ -149,13 +167,14 @@ class Spider(object):
     text = ''
     for i in news_text:
       text = text + i.get_text()
-    #check document length
-    length_of_doc = nltk.tokenize.word_tokenize(text)    
     
-#    if self.DEBUG:  self.logger.P('Found <{} class={}> tag in the webpage, found {} number of <{} class={}> tag(s) containing {} words'.format(self.data_tag[0], self.data_tag[1], len(news_text) ,self.data_tag[2], self.data_tag[3], len(text.split())))
+    #keep document length
+    length_of_doc = nltk.tokenize.word_tokenize(text)    
     self.doc_lengths.append(len(length_of_doc))
+
+    if self.DEBUG:  self.logger.P('Found <{} class={}> tag in the webpage, found {} number of <{} class={}> tag(s) containing {} words'.format(self.data_tag[0], self.data_tag[1], len(news_text) ,self.data_tag[2], self.data_tag[3], len(text.split())))
   
-    # populate labels
+    # populate labels with metadata
     metatags = news_source.find_all('meta',attrs={'name':'keywords'})
     labels = []
     for tag in metatags:
@@ -163,12 +182,19 @@ class Spider(object):
       s = self.tokenizer.tokenize(s.lower())
       #remove words from list of undesirable words
       for i in s:
-        if i in self.undesirable_tags:
+        if i in self.undesirable_tags or len(i) < 2:
           s.remove(i)      
       labels.append(s)      
     
+    #get tags from title (if necessary)
+    title = news_source.find('meta',attrs={'property':'og:title'})
+    title = title.get('content')
+    title_tags = self.process_title(title)
+    labels.append(title_tags)
+    
     #flatten list
     labels = flatten_list(labels)
+    
     #remove duplicates
     labels = list(set(labels))
     
@@ -192,7 +218,7 @@ class Spider(object):
     df_length_distrib = df_lengths.describe()
 
     self.logger.P("Distribution of document lengths as extracted on {}: \n {}".format(self.domain_url, df_length_distrib.to_string()))
-#
+
     self.min_document_length = df_length_distrib.loc['25%']['doc_len']
     self.max_document_length = df_length_distrib.loc['75%']['doc_len']
     
@@ -204,14 +230,26 @@ class Spider(object):
       try:
         self.labels[i].remove(tag)
       except:
-#        self.logger.P('Tried removing tag {}, not found'.format(tag))
+        if self.DEBUG:self.logger.P('Tried removing tag {}, not found'.format(tag))
         pass
-  
+
+
+  #method to return tags from title in url 
+  def process_title(self, title):
+    title = self.tokenizer.tokenize(title)
+
+    #remove string numbers larger than 3000 
+    for i in title:
+      if(is_number_larger_than_x(i,3000)) or i in self.undesirable_tags:
+        title.remove(i)
+
+    return title
+
   def process_labels(self):
     self.flattened_labels = flatten_list(self.labels)
     self.dict_label_occurence = Counter(self.flattened_labels)
     self.common_labels = []
-    
+
     self.logger.P('Word frequency of documents before common tag removal:\n {}'.format(self.dict_label_occurence))
     
     #REMOVE COMMON WORDS
@@ -220,58 +258,52 @@ class Spider(object):
       if percentage > self.occurence_threshold:
         self.logger.P('{} word appears in {}% of documents, will be removed from dataset'.format(i, str(percentage * 100)))
         self.common_labels.append(i)
-        
-        
+
+
     self.logger.P('Most common tags that will be removed from list of labels:')
     for i in self.common_labels:
       self.remove_tag_from_labels(i)
-      
+
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
-    
-    #RUN function removing documents shorter than min len, larger than maxlen
-    self.process_texts()
-    
+
     #update flattened labels to exclude removed labels
     self.flattened_labels = flatten_list(self.labels)
     self.dict_label_occurence = Counter(self.flattened_labels)
-  
+
     self.inv_dict_label_occurence = {}
     for k, count in self.dict_label_occurence.items():
       try:
         self.inv_dict_label_occurence[count].append(k)
       except KeyError:
         self.inv_dict_label_occurence[count] = [k]
-    
-    print(self.inv_dict_label_occurence)
-        
+
     self.dict_label_count = {}
     total_count = 0
     for k, v in self.inv_dict_label_occurence.items():
       length = len(v)
       self.dict_label_count[k] = length
-      total_count += length
-    
+      total_count += k * length
+
     self.lengths_of_labels = []
     for i in range(len(self.labels)):
       self.lengths_of_labels.append(len(self.labels[i]))
-        
+
     df_lbl_len = pd.DataFrame(columns=['len'])
     df_lbl_len.len = self.lengths_of_labels
     df_lbl_len_distrib = df_lbl_len.describe()
-    
+
     self.logger.P('The distribution of lengths of labels for each document: \n {}'.format(df_lbl_len_distrib.to_string()))
-    
+
     self.logger.P('Length of flattened labels array {} must be equal to added values in dict of word lengths {}'.format(len(self.flattened_labels), total_count))
-    
+
     self.logger.P('Labels grouped by frequency \n {}'.format(self.dict_label_count))
-#    self.dict_id_to_label = dict(zip(range(len(self.dates)), self.dates)) 
-    
+
     df = pd.DataFrame(columns=['labels'])
     df.labels = self.flattened_labels
     df_distrib = df.describe(include='all')
-    
+
     self.logger.P("Distribution of labels: \n {}".format(df_distrib.to_string()))
-    
+
     return
   
   def remove_data_row(self, index):
@@ -292,19 +324,18 @@ class Spider(object):
         n = n - 1
       else:
         i = i + 1
-            
+
     assert(len(self.documents) == len(self.labels)) 
-      
+
     self.logger.P('cleaning the data to only include documents of length in range {} {}'.format(self.min_document_length, self.max_document_length))
     self.logger.P('Total number of documents left {}'.format(len(self.documents)))
-#    
+
       
 if __name__ == '__main__':
   logger = Logger(lib_name='DOC-COLLECTOR', 
                 config_file='./tagger/crawler/config_crawler.txt')
 
-  Digi24 = Spider(logger, False, 'digi24.ro', [] ,'/stiri/actualitate?p=', range(2,74) , ('h4','article-title'), ['article', 'article-story', 'p',''])
+  Digi24 = Spider(logger, False, 'digi24.ro', [] ,'/stiri/actualitate?p=', range(2,4) , ('h4','article-title'), ['article', 'article-story', 'p',''], ['div','col-8 col-md-9 col-sm-12','h1',''])
   
 #  Hotnews = Spider(logger, False, 'hotnews.ro', ['/arhiva/2019', ('td', 'calendarDayEnabled')], '', 0, ('div','result_item'), ['div','articol_render','div',''])
-#  Hotnews = Spider(logger, True, 'hotnews.ro', '/arhiva/2019-01-01', ('a','result_title'), ['div','articol_render','div',''])
   
