@@ -54,11 +54,12 @@ class Spider(object):
     self.cycle = cycle_range
     self.urls_tag = urls_tag
     self.data_tag = data_tag
+    self.title_tag = title_tag
     self.doc_lengths = []
     
-    self.undesirable_tags = ['de', 'a', 'pentru', 'ce', '?', 'cand', 'cum', 'cine', 'sa', 'se', 'nu', 'da',
-                              'din', 'care', 'dupa', 'lui', 'despre', 'era', 'dar', 'doua', 'cel', 'unei', 'sau',
-                              'este', 'mai', 'fost', '1', '000', 'in']
+    self.undesirable_tags = ['de', 'pentru', 'ce', 'cand', 'cum', 'cine', 'sa', 'se', 'nu', 'da', 'din', 
+                             'care', 'dupa', 'lui', 'despre', 'era', 'dar', 'doua', 'cel', 'unei', 'sau',
+                              'este', 'mai', 'fost', '000', 'in']
     
     self.article_sources = []
     
@@ -182,8 +183,9 @@ class Spider(object):
       s = self.tokenizer.tokenize(s.lower())
       #remove words from list of undesirable words
       for i in s:
-        if i in self.undesirable_tags or len(i) < 2:
-          s.remove(i)      
+        if i in self.undesirable_tags:
+          s.remove(i)
+
       labels.append(s)      
     
     #get tags from title (if necessary)
@@ -197,7 +199,11 @@ class Spider(object):
     
     #remove duplicates
     labels = list(set(labels))
-    
+    for i in labels:
+      if len(i) < 5:
+        print(i)
+        labels.remove(i)
+#    
     return text, labels
 
   #get document and label list from all urls in article_source   
@@ -236,21 +242,21 @@ class Spider(object):
 
   #method to return tags from title in url 
   def process_title(self, title):
-    title = self.tokenizer.tokenize(title)
-
+    title_tags = self.tokenizer.tokenize(title)
+    
     #remove string numbers larger than 3000 
-    for i in title:
+    for i in title_tags:
       if(is_number_larger_than_x(i,3000)) or i in self.undesirable_tags:
-        title.remove(i)
+        title_tags.remove(i)
 
-    return title
+    return title_tags
 
   def process_labels(self):
     self.flattened_labels = flatten_list(self.labels)
     self.dict_label_occurence = Counter(self.flattened_labels)
     self.common_labels = []
 
-    self.logger.P('Word frequency of documents before common tag removal:\n {}'.format(self.dict_label_occurence))
+    if self.DEBUG: self.logger.P('Word frequency in documents before common tag removal:\n {}'.format(self.dict_label_occurence))
     
     #REMOVE COMMON WORDS
     for i in self.dict_label_occurence.keys():
@@ -263,12 +269,15 @@ class Spider(object):
     self.logger.P('Most common tags that will be removed from list of labels:')
     for i in self.common_labels:
       self.remove_tag_from_labels(i)
-
+    
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
 
     #update flattened labels to exclude removed labels
     self.flattened_labels = flatten_list(self.labels)
     self.dict_label_occurence = Counter(self.flattened_labels)
+
+    self.logger.P('Word frequency in documents:\n {}'.format(self.dict_label_occurence))
+
 
     self.inv_dict_label_occurence = {}
     for k, count in self.dict_label_occurence.items():
