@@ -2,7 +2,9 @@
     "BASE_FOLDER" : "Dropbox",
     "APP_FOLDER"  : "_allan_data/_allan_crawler",
     
-    "OCCURENCE_THRESHOLD" : 0.3,
-    "MINIMUM_LABEL_LENGTH": 3
+    
+    "MINIMUM_DOCUMENT_LENGTH" : 20,
+    "OCCURENCE_THRESHOLD"     : 0.3,
+    "MINIMUM_LABEL_LENGTH"    : 3
     
 }
