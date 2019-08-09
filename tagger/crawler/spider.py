@@ -267,16 +267,28 @@ class Spider(object):
 
     return title_tags
 
-  def process_labels(self):
-    self.flattened_labels = flatten_list(self.labels)
-    self.dict_label_occurence = Counter(self.flattened_labels)
-    self.common_labels = []
+  def generate_dict_label_occ_in_docs(self):
+    self.unqiue_labels  = list(set(flatten_list(self.labels)))
+    dictonary = {}
+    for i in self.labels:
+      for k in self.unqiue_labels:
+        if k in i:
+          try:
+            dictonary[k] += 1
+          except:
+            dictonary[k] = 1
+    
+    return dictonary
 
+  def process_labels(self):
+    self.dict_label_occurence = self.generate_dict_label_occ_in_docs()
+    self.common_labels = []
+    
     if self.DEBUG: 
       self.logger.P('Word frequency in documents before common tag removal:\n {}'.format(self.dict_label_occurence))
       self.logger.P('label information before removing common labels and removing document lengths')
       self.label_information()
-
+    
     #REMOVE COMMON WORDS
     for i in self.dict_label_occurence.keys():
       percentage = self.dict_label_occurence.get(i)/len(self.documents)
@@ -289,33 +301,32 @@ class Spider(object):
       self.remove_tag_from_labels(i)
     
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
-
     
-    self.logger.P('---------- label information following cleaning ----------', noprefix=True)
-    self.label_information()
-    self.logger.P('---------- END label information following cleaning ----------', noprefix=True)
-
-  
+    if len(self.common_labels) > 1:
+      self.logger.P('----------  LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
+      self.label_information(self.labels)
+      self.logger.P('---------- END LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
+    
     return
   
   def label_information(self):
     #update flattened labels
     self.flattened_labels = flatten_list(self.labels)
     #update label occurence counter
-    self.dict_label_occurence = Counter(self.flattened_labels)
+    self.dict_label_frequency = Counter(self.flattened_labels)
     
-    self.logger.P('Word frequency in labels:\n {}'.format(self.dict_label_occurence))
+    self.logger.P('Word frequency in labels:\n {}'.format(self.dict_label_frequency))
 
-    self.inv_dict_label_occurence = {}
-    for k, count in self.dict_label_occurence.items():
+    self.inv_dict_label_frequency = {}
+    for k, count in self.dict_label_frequency.items():
       try:
-        self.inv_dict_label_occurence[count].append(k)
+        self.inv_dict_label_frequency[count].append(k)
       except KeyError:
-        self.inv_dict_label_occurence[count] = [k]
+        self.inv_dict_label_frequency[count] = [k]
 
     self.dict_label_count = {}
     total_count = 0
-    for k, v in self.inv_dict_label_occurence.items():
+    for k, v in self.inv_dict_label_frequency.items():
       length = len(v)
       self.dict_label_count[k] = [length, str((k/len(self.documents))*100)[:6] + '%']
       total_count += k * length
@@ -518,12 +529,11 @@ class Dataset(object):
 
   def remove_tag_from_labels(self, tag):
     self.logger.P('Removing tag {} from all labels...'.format(tag))
-    for i in range(len(self.labels)):
-      try:
-        self.labels[i].remove(tag)
-      except:
-        if self.DEBUG:self.logger.P('Tried removing tag {}, not found'.format(tag))
-        pass
+    new_labels = []
+    for i in self.labels:
+      new_labels.append(list(filter(lambda a: a != tag, i)))
+      
+    self.labels = new_labels
 
   def remove_data_row(self, index):
     self.logger.P('Deleting row {}'.format(index))
@@ -533,10 +543,22 @@ class Dataset(object):
     del self.metadata[index]
     if not self.include_titles:
       del self.title_tags[index]
+      
+  def generate_dict_label_occ_in_docs(self):
+    self.unqiue_labels  = list(set(flatten_list(self.labels)))
+    dictonary = {}
+    for i in self.labels:
+      for k in self.unqiue_labels:
+        if k in i:
+          try:
+            dictonary[k] += 1
+          except:
+            dictonary[k] = 1
+    
+    return dictonary
 
   def process_labels(self):
-    self.flattened_labels = flatten_list(self.labels)
-    self.dict_label_occurence = Counter(self.flattened_labels)
+    self.dict_label_occurence = self.generate_dict_label_occ_in_docs()
     self.common_labels = []
     
     if self.DEBUG: 
@@ -619,11 +641,11 @@ if __name__ == '__main__':
 
 #  stiri_pe_surse = Spider(logger, True, 'stiripesurse.ro', ['/arhiva/', ('section', 'left-container column ld-three-fourths md-two-thirds sd-one-full')], '', 0, ('section', 'main container_16'), ['article', 'post article-single', 'p', ''], [])
   
-  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']],
+  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,3) , ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,3) , ('h4','article-title'), ['article', 'article-story', 'p','']],
                         ['digi24.ro', [] ,'/stiri/politica?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']],
                         ['digi24.ro', [] ,'/stiri/economie?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']]]
   
-  crawled_data = Dataset(logger, False, False, list_of_parameters, False, False)
+  crawled_data = Dataset(logger, False, False, list_of_parameters[:1], False, False)
   
   a=0
