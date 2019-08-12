@@ -6,7 +6,7 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 from collections import Counter
 from libraries.logger import Logger
-from nltk.tokenize import RegexpTokenizer
+from nltk.tokenize import RegexpTokenizer   
 
 def flatten_list(a):
   return [item for sublist in a for item in sublist]
@@ -20,13 +20,6 @@ def is_number_larger_than_x(number, x):
   except ValueError:
     return False
 
-#Expand dataset by: using website archive: hotnews.ro/arhiva/2018-01-01 to get links     
-      
-#Spider takes main domain, 
-#             a page from where it pulls articles,
-#             the html tag where links to articles are on the page where it pulls articles from,
-#             the html tags where the text data is found: list[article tag, article class, text data tag, text data class]
-
 class Spider(object):
   def __init__(self, logger, DEBUG,
                domain,
@@ -35,23 +28,13 @@ class Spider(object):
                cycle_range,
                urls_tag,
                data_tag,
-               include_title=False,
-               data_processing=False,
-               occurence_threshold=None,
-               min_document_length=None,
-               min_label_length=None):
+               include_title=False):
     
     self.logger = logger
     self.DEBUG = DEBUG
-    self.occurence_threshold = occurence_threshold
-    self.min_document_length = min_document_length
-    self.min_label_length = min_label_length
-    
     
     self.include_title = include_title
-    self.data_processing = data_processing
     self.config_data = self.logger.config_data
-    self._parse_config_data()
     
     self.domain_name = domain
     self.domain_url = 'https://' + domain
@@ -62,33 +45,13 @@ class Spider(object):
     self.data_tag = data_tag
     self.doc_lengths = []
     
-    self.undesirable_tags = ['de', 'pentru', 'ce', 'cand', 'cum', 'cine', 'sa', 'se', 'nu', 'da', 'din', 
-                             'care', 'dupa', 'lui', 'despre', 'era', 'dar', 'doua', 'cel', 'unei', 'sau',
-                              'este', 'mai', 'fost', '000', 'in', 'decat', 'incat', 'cele', 'unui', 'nici'
-                              'mulți', 'înainte', 'unor']
-
-    
     self.article_sources = []
     
     self.cycle_for_urls()
     
     self.documents, self.labels, self.title_tags = self.get_labeled_documents()
       
-    if self.data_processing:
-      self.process_labels()
-      self.process_texts()
-    self.label_information()    
     
-  
-  def _parse_config_data(self):
-    if self.occurence_threshold is None:
-      self.occurence_threshold = self.config_data['OCCURENCE_THRESHOLD']
-    if self.min_label_length is None:
-      self.min_label_length = self.config_data['MINIMUM_LABEL_LENGTH']
-    if self.min_document_length is None:
-      self.min_document_length = self.config_data['MINIMUM_DOCUMENT_LENGTH']
-    return
-  
   def validate_url(self, url):
     request = requests.get(url)
     if request.status_code == 200:
@@ -144,7 +107,7 @@ class Spider(object):
     else:
       archive_url = self.domain_url + self.archive[0]
       url_pages = self.get_news_urls(archive_url, self.archive[1])
-      for page in url_pages[:1]:
+      for page in url_pages:
         articles_on_page = self.get_news_urls(page, self.urls_tag) 
         self.article_sources.append(articles_on_page)
         self.logger.P('Found {} stories on {}'.format(len(articles_on_page), page))
@@ -172,7 +135,6 @@ class Spider(object):
                                     class_=self.data_tag[1])
     #check tags
     if news_article is None:
-      self.doc_lengths.append(0)
       if self.DEBUG: self.logger.P('Found no <{} class={}> at url {}'.format(self.data_tag[0], self.data_tag[1], url))
       return [], [], []
 
@@ -184,10 +146,6 @@ class Spider(object):
       text = text + i.get_text() + ' '
     text = text[:-1]
     
-    #keep document length
-    length_of_doc = nltk.tokenize.word_tokenize(text)    
-    self.doc_lengths.append(len(length_of_doc))
-
     if self.DEBUG:  self.logger.P('Found <{} class={}> tag in the webpage, found {} number of <{} class={}> tag(s) containing {} words'.format(self.data_tag[0], self.data_tag[1], len(news_text) ,self.data_tag[2], self.data_tag[3], len(text.split())))
   
     # populate labels with metadata
@@ -198,16 +156,20 @@ class Spider(object):
       s = self.tokenizer.tokenize(s.lower())
       #only add words not in undesirable list and of appropriate length
       for i in s:
-        if i not in self.undesirable_tags and len(i) > self.min_label_length:
-          labels.append(i)
+        labels.append(i)
     
     #get tags from title (if necessary)
     title = news_source.find('meta',attrs={'property':'og:title'})
     if title is None:
-      print('AAAAAAAAAAAAAA')
+      self.logger.P('[ERROR]Meta tag containing title not found...')
     title = title.get('content')
+    
     title_tags = []
-    title_tags = self.process_title(title.lower())
+    
+    split_title = self.tokenizer.tokenize(title.lower())
+    for i in split_title:
+      title_tags.append(i)
+    
     if self.include_title:
       for i in title_tags:
         labels.append(i)
@@ -232,186 +194,47 @@ class Spider(object):
         documents.append(doc)
         labels.append(lbl)
         meta_data.append(i)
+        #keep document lengths
+        document_length = len(self.tokenizer.tokenize(doc))
+        self.doc_lengths.append(document_length)
+      
         if self.include_title == False:
           title_labels.append(title_lbl)
       
     df_lengths = pd.DataFrame(columns=['doc_len'])
     df_lengths.doc_len = self.doc_lengths
     df_length_distrib = df_lengths.describe()
-
-    if self.DEBUG:self.logger.P("Distribution of document lengths as extracted on {}: \n {}".format(self.domain_url, df_length_distrib.to_string()))
-
     self.max_document_length = df_length_distrib.loc['75%']['doc_len']
+    
+    if self.DEBUG:self.logger.P("Distribution of document lengths as extracted on {}: \n {}".format(self.domain_url, df_length_distrib.to_string()))
     
     return documents, labels, title_labels
   
-  def remove_tag_from_labels(self, tag):
-    self.logger.P('Removing tag {} from all labels...'.format(tag))
-    for i in range(len(self.labels)):
-      try:
-        self.labels[i].remove(tag)
-      except:
-        if self.DEBUG:self.logger.P('Tried removing tag {}, not found'.format(tag))
-        pass
-
-
-  #method to return tags from title 
-  def process_title(self, title):
-    title_tags = []
-    tags = self.tokenizer.tokenize(title)
-    #remove string numbers larger than 3000 
-    for i in tags:
-      if len(i) > self.min_label_length:
-        if not ((is_number_larger_than_x(i,3000)) or i in self.undesirable_tags):
-          title_tags.append(i)
-
-    return title_tags
-
-  def generate_dict_label_occ_in_docs(self):
-    self.unqiue_labels  = list(set(flatten_list(self.labels)))
-    dictonary = {}
-    for i in self.labels:
-      for k in self.unqiue_labels:
-        if k in i:
-          try:
-            dictonary[k] += 1
-          except:
-            dictonary[k] = 1
-    
-    return dictonary
-
-  def process_labels(self):
-    self.dict_label_occurence = self.generate_dict_label_occ_in_docs()
-    self.common_labels = []
-    
-    if self.DEBUG: 
-      self.logger.P('Word frequency in documents before common tag removal:\n {}'.format(self.dict_label_occurence))
-      self.logger.P('label information before removing common labels and removing document lengths')
-      self.label_information()
-    
-    #REMOVE COMMON WORDS
-    for i in self.dict_label_occurence.keys():
-      percentage = self.dict_label_occurence.get(i)/len(self.documents)
-      if percentage > self.occurence_threshold:
-        self.logger.P('{} word appears in {}% of documents, will be removed from dataset'.format(i, str(percentage * 100)))
-        self.common_labels.append(i)
-      
-    self.logger.P('Most common tags that will be removed from list of labels:')
-    for i in self.common_labels:
-      self.remove_tag_from_labels(i)
-    
-    self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
-    
-    if len(self.common_labels) > 1:
-      self.logger.P('----------  LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
-      self.label_information(self.labels)
-      self.logger.P('---------- END LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
-    
-    return
-  
-  def label_information(self):
-    #update flattened labels
-    self.flattened_labels = flatten_list(self.labels)
-    #update label occurence counter
-    self.dict_label_frequency = Counter(self.flattened_labels)
-    
-    self.logger.P('Word frequency in labels:\n {}'.format(self.dict_label_frequency))
-
-    self.inv_dict_label_frequency = {}
-    for k, count in self.dict_label_frequency.items():
-      try:
-        self.inv_dict_label_frequency[count].append(k)
-      except KeyError:
-        self.inv_dict_label_frequency[count] = [k]
-
-    self.dict_label_count = {}
-    total_count = 0
-    for k, v in self.inv_dict_label_frequency.items():
-      length = len(v)
-      self.dict_label_count[k] = [length, str((k/len(self.documents))*100)[:6] + '%']
-      total_count += k * length
-
-    self.lengths_of_labels = []
-    for i in range(len(self.labels)):
-      self.lengths_of_labels.append(len(self.labels[i]))
-
-    df_lbl_len = pd.DataFrame(columns=['len'])
-    df_lbl_len.len = self.lengths_of_labels
-    df_lbl_len_distrib = df_lbl_len.describe()
-
-    self.logger.P('The distribution of lengths of labels for each document: \n {}'.format(df_lbl_len_distrib.to_string()))
-
-    self.logger.P('Length of flattened labels array {} must be equal to added values in dict of word lengths {}'.format(len(self.flattened_labels), total_count))
-
-    self.logger.P('Labels grouped by frequency \n {}'.format(self.dict_label_count))
-
-    df = pd.DataFrame(columns=['labels'])
-    df.labels = self.flattened_labels
-    df_distrib = df.describe(include='all')
-
-    self.logger.P("Distribution of labels: \n {}".format(df_distrib.to_string()))
-    
-    return
-  
-  def remove_data_row(self, index):
-    self.logger.P('Deleting row {}'.format(index))
-    del self.documents[index]
-    del self.labels[index]
-    del self.doc_lengths[index]
-    del self.article_sources[index]
-    if not self.include_title:
-      del self.title_tags[index]
-    
-  def process_texts(self):
-    self.min_document_length = 25
-    
-    self.logger.P('To remove outliers, will keep the documents with lengths between {} and {}...'.format(self.min_document_length, self.max_document_length))
-    self.logger.P('Total number of documents before cleaning {}'.format(len(self.documents)))
-    
-    i = 0
-    n = len(self.labels)
-    
-    
-    while i < n:
-      if self.doc_lengths[i] < self.min_document_length or self.doc_lengths[i] > self.max_document_length or len(self.labels[i]) < 2:
-        self.remove_data_row(i)
-        n = n - 1
-      else:
-        i = i + 1
-
-    assert(len(self.documents) == len(self.labels)) 
-
-    self.logger.P('cleaning the data to only include documents of length in range {} {}'.format(self.min_document_length, self.max_document_length))
-    self.logger.P('Total number of documents left {}'.format(len(self.documents)))
-
-#CLASS CONTAINING MULTIPLE SPIDERS
-
-class Dataset(object):
-  def __init__(self, logger, DEBUG, DEBUG_SPIDERS, list_of_params,
-               spider_processing=False,
+class Crawled_Dataset(object):
+  def __init__(self, logger, DEBUG, 
+               spider_params,
                include_titles=False,
+               spider_level_processing=False,
                occurence_threshold=None,
-               min_label_length=None,
-               min_document_length=None):
+               min_document_length=None,
+               min_label_length=None):
+    
     
     self.logger = logger
     self.DEBUG = DEBUG
     
-    self.spider_processing = spider_processing
+    self.spider_params = spider_params
+    self.spider_level_processing = spider_level_processing
     self.include_titles = include_titles
+        
     self.occurence_threshold = occurence_threshold
     self.min_document_length = min_document_length
     self.min_label_length = min_label_length
-    
-    self.list_of_spiders = []
-    
     self.config_data = self.logger.config_data
     self._parse_config_data()
-
-    self.list_of_params = list_of_params
     
     self.start_crawl()
-        
+    
     self.logger.P('----------------------- LABEL INFORMATION ON RAW DATASET -----------------------', noprefix=True)
     self.label_information(self.labels)
     self.logger.P('----------------------- END LABEL INFORMATION ON RAW DATASET -----------------------', noprefix=True)
@@ -421,47 +244,6 @@ class Dataset(object):
     self.document_information()
     
     self.process_texts()
-    
-#    if not include_titles:
-#      self.logger.P('----------------------- LABEL INFORMATION ON LABELS FROM TITLES -----------------------', noprefix=True)
-#      self.label_information(self.title_tags)
-#      self.logger.P('----------------------- END LABEL INFORMATION ON LABELS FROM TITLES -----------------------', noprefix=True)
-#
-#    
-    
-    self.document_information()
-#    self.write_data()
-    
-  def start_crawl(self):
-    self.documents = []
-    self.labels = []
-    self.title_tags = []
-    self.document_lengths = []
-    self.metadata = []
-    self.logger.P('-------------------------- START CRAWL --------------------------', noprefix=True)
-    for i in self.list_of_params:
-      self.logger.P('Started crawling {}'.format(i[0] + i[2]))
-      self.logger.P('---------------- LOGGER ON SPIDER {} ----------------'.format((i[0] + i[2])), noprefix=True)
-      s = Spider(self.logger, self.DEBUG, i[0], i[1], i[2], i[3], i[4], i[5], self.spider_processing, self.include_titles, self.occurence_threshold, self.min_document_length, self.min_label_length)
-      self.logger.P('---------------- END LOGGER ON SPIDER {} ----------------'.format((i[0] + i[2])), noprefix=True)
-
-      self.list_of_spiders.append(s)
-      self.documents.append(s.documents)
-      self.labels.append(s.labels)
-      self.document_lengths.append(s.doc_lengths)
-      self.metadata.append(s.article_sources)
-      self.title_tags.append(s.title_tags)
-      
-      self.logger.P('Collected {} documents from {}'.format(len(s.documents),i[0] + i[2]))
-      
-    self.logger.P('-------------------------- END CRAWL --------------------------', noprefix=True)
-    self.logger.P('Data collection complete.')
-    self.documents = flatten_list(self.documents)
-    self.labels = flatten_list(self.labels)
-    self.document_lengths = flatten_list(self.document_lengths)
-    self.metadata = flatten_list(self.metadata)
-    if len(self.title_tags) > 0:
-      self.title_tags = flatten_list(self.title_tags)
 
   def _parse_config_data(self):
     if self.occurence_threshold is None:
@@ -470,8 +252,43 @@ class Dataset(object):
       self.min_label_length = self.config_data['MINIMUM_LABEL_LENGTH']
     if self.min_document_length is None:
       self.min_document_length = self.config_data['MINIMUM_DOCUMENT_LENGTH']
-      
     return
+  
+  def start_crawl(self):
+    
+    self.spider_list = []
+    self.documents = []
+    self.labels = []
+    self.title_tags = []
+    self.document_lengths = []
+    self.metadata = []
+    
+    self.logger.P('-------------------------- START CRAWL --------------------------', noprefix=True)
+    for i in self.spider_params:
+      self.logger.P('Started crawling {}'.format(i[0] + i[2]))
+      self.logger.P('---------------- LOGGER ON SPIDER {} ----------------'.format((i[0] + i[2])), noprefix=True)
+      s = Spider(self.logger, self.DEBUG, i[0], i[1], i[2], i[3], i[4], i[5], self.include_titles)
+      self.logger.P('---------------- END LOGGER ON SPIDER {} ----------------'.format((i[0] + i[2])), noprefix=True)
+
+      self.spider_list.append(s)
+      self.documents.append(s.documents)
+      self.labels.append(s.labels)
+      self.document_lengths.append(s.doc_lengths)
+      self.metadata.append(s.article_sources)
+      self.title_tags.append(s.title_tags)
+    
+      
+      self.logger.P('Collected {} documents from {}'.format(len(s.documents),i[0] + i[2]))
+      
+    self.logger.P('-------------------------- END CRAWL --------------------------', noprefix=True)
+    self.logger.P('Data collection complete.')
+    self.documents = flatten_list(self.documents)
+    self.labels = flatten_list(self.labels)
+    self.metadata = flatten_list(self.metadata)
+    self.document_lengths = flatten_list(self.document_lengths)
+          
+    if len(self.title_tags) > 0:
+      self.title_tags = flatten_list(self.title_tags)
   
   def document_information(self):
     
@@ -634,18 +451,17 @@ class Dataset(object):
             f_title_labels.write(t + '\n')
         
         f_title_labels.close()
-        
+  
+     
 if __name__ == '__main__':
   logger = Logger(lib_name='DOC-COLLECTOR', 
                   config_file='./tagger/crawler/config_crawler.txt', TF_KERAS=False)
 
-#  stiri_pe_surse = Spider(logger, True, 'stiripesurse.ro', ['/arhiva/', ('section', 'left-container column ld-three-fourths md-two-thirds sd-one-full')], '', 0, ('section', 'main container_16'), ['article', 'post article-single', 'p', ''], [])
+  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,4) , ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/politica?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/economie?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']]]
   
-  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,3) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,3) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/politica?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/economie?p=', range(1,5) , ('h4','article-title'), ['article', 'article-story', 'p','']]]
-  
-  crawled_data = Dataset(logger, False, False, list_of_parameters[:1], False, False)
-  
-  a=0
+  crawled_data = Crawled_Dataset(logger, False, list_of_parameters[:1], False, False) 
+
+  a = 0
