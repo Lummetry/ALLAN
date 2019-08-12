@@ -1,4 +1,3 @@
-import nltk
 import requests
 import pandas as pd
 
@@ -214,7 +213,6 @@ class Crawled_Dataset(object):
   def __init__(self, logger, DEBUG, 
                spider_params,
                include_titles=False,
-               spider_level_processing=False,
                occurence_threshold=None,
                min_document_length=None,
                min_label_length=None):
@@ -224,34 +222,45 @@ class Crawled_Dataset(object):
     self.DEBUG = DEBUG
     
     self.spider_params = spider_params
-    self.spider_level_processing = spider_level_processing
     self.include_titles = include_titles
         
     self.occurence_threshold = occurence_threshold
     self.min_document_length = min_document_length
     self.min_label_length = min_label_length
+    
     self.config_data = self.logger.config_data
     self._parse_config_data()
-    
+     
+    #get data from websites
     self.start_crawl()
     
     self.logger.P('----------------------- LABEL INFORMATION ON RAW DATASET -----------------------', noprefix=True)
     self.label_information(self.labels)
     self.logger.P('----------------------- END LABEL INFORMATION ON RAW DATASET -----------------------', noprefix=True)
     
+    #process data 
     self.process_labels()
-    
     self.document_information()
-    
     self.process_texts()
+    
+    
+    self.logger.P('----------------------- LABEL INFORMATION ON PROCESSED DATASET -----------------------', noprefix=True)
+    self.label_information(self.labels)
+    self.logger.P('----------------------- END LABEL INFORMATION ON  DATASET -----------------------', noprefix=True)
+    
+    self.write_data()
 
   def _parse_config_data(self):
     if self.occurence_threshold is None:
       self.occurence_threshold = self.config_data['OCCURENCE_THRESHOLD']
+      self.logger.P('Initialized occurence threshold with {}'.format(self.occurence_threshold))
     if self.min_label_length is None:
       self.min_label_length = self.config_data['MINIMUM_LABEL_LENGTH']
+      self.logger.P('Initialized min label length with {}'.format(self.min_label_length))
     if self.min_document_length is None:
       self.min_document_length = self.config_data['MINIMUM_DOCUMENT_LENGTH']
+      self.logger.P('Initialized min doc length with {}'.format(self.min_document_length))
+
     return
   
   def start_crawl(self):
@@ -287,6 +296,8 @@ class Crawled_Dataset(object):
     self.metadata = flatten_list(self.metadata)
     self.document_lengths = flatten_list(self.document_lengths)
           
+    self.logger.P('Got {} documents, with {} labels'.format(len(self.documents), len(self.labels)))
+    
     if len(self.title_tags) > 0:
       self.title_tags = flatten_list(self.title_tags)
   
@@ -382,25 +393,21 @@ class Crawled_Dataset(object):
       self.logger.P('Word frequency in documents before common tag removal:\n {}'.format(self.dict_label_occurence))
       self.logger.P('label information before removing common labels and removing document lengths')
       self.label_information()
-    
+        
     #REMOVE COMMON WORDS
     for i in self.dict_label_occurence.keys():
       percentage = self.dict_label_occurence.get(i)/len(self.documents)
       if percentage > self.occurence_threshold:
         self.logger.P('{} word appears in {}% of documents, will be removed from dataset'.format(i, str(percentage * 100)))
         self.common_labels.append(i)
-      
+
     self.logger.P('Most common tags that will be removed from list of labels:')
     for i in self.common_labels:
       self.remove_tag_from_labels(i)
     
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
     
-    if len(self.common_labels) > 1:
-      self.logger.P('----------  LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
-      self.label_information(self.labels)
-      self.logger.P('---------- END LABEL INFORMATION ON PROCESSED DATASET ----------', noprefix=True)
-    
+
     return
   
   
@@ -426,6 +433,7 @@ class Crawled_Dataset(object):
     self.logger.P('Total number of documents left {}'.format(len(self.documents)))
 
   def write_data(self):
+    
     dir_location = self.logger.GetDropboxDrive()  + '/' + self.logger.config_data['APP_FOLDER']
     for i in range(len(self.documents)):
       with open(dir_location + '/_output/Texts/Text_%s.txt' % i, 'w', encoding='utf-8') as f_doc:
@@ -457,11 +465,11 @@ if __name__ == '__main__':
   logger = Logger(lib_name='DOC-COLLECTOR', 
                   config_file='./tagger/crawler/config_crawler.txt', TF_KERAS=False)
 
-  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,4) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/politica?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']],
-                        ['digi24.ro', [] ,'/stiri/economie?p=', range(1,2) , ('h4','article-title'), ['article', 'article-story', 'p','']]]
+  list_of_parameters = [['digi24.ro', [] ,'/stiri/actualitate?p=', range(1,20), ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/externe?p=', range(1,20), ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/politica?p=', range(1,20), ('h4','article-title'), ['article', 'article-story', 'p','']],
+                        ['digi24.ro', [] ,'/stiri/economie?p=', range(1,20), ('h4','article-title'), ['article', 'article-story', 'p','']]]
   
-  crawled_data = Crawled_Dataset(logger, False, list_of_parameters[:1], False, False) 
+  crawled_data = Crawled_Dataset(logger, False, list_of_parameters, False) 
 
   a = 0
