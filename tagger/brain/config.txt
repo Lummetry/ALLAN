@@ -18,7 +18,7 @@
   
   "TRAINING" : {
     "####FOLDER"     : "test1_one_folder",
-    "FOLDER"    : "test2_two_folders",
+    "FOLDER"    : "EY_FAQ",
     "SUBFOLDERS" : 
         {
           "ENABLED" : 1,
