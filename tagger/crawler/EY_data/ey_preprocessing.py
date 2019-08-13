@@ -29,7 +29,7 @@ class EY_Data(object):
     
     self.process_labels()
  
-#    self.build_outputs()
+    self.build_outputs()
 #    self.write_to_file()
     
   def read_files(self):
@@ -213,7 +213,9 @@ class EY_Data(object):
       #only choose relevant labels
       lbl = self.intersect_text_and_labels(self.answers[i], self.labels[i])
       output_labels.append(lbl)
-    
+      
+      
+    self.label_information(output_labels)  
     return output_texts, output_labels, validation_texts, validation_labels
   
   def write_to_file(self):
