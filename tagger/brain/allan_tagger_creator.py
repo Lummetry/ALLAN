@@ -198,9 +198,9 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
   
   
 
-  def benchmark_model(self, texts_and_labels):
-    pass
-  
+
+          
+      
   
   
         
@@ -249,25 +249,25 @@ if __name__ == '__main__':
                         skip_if_pretrained=use_loaded)
     
   l.P("")
-  tags = eng.predict_text("ma doare stomacul")
-  res = eng.tagdict_to_text(tags)
+  dct_tags = eng.predict_text("ma doare stomacul")
+  res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   l.P("")
-  tags = eng.predict_text("ma doare capul, in gât si nările")
-  res = eng.tagdict_to_text(tags)
+  dct_tags = eng.predict_text("ma doare capul, in gât si nările")
+  res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
   l.P("")
-  tags = eng.predict_text("vreau sa slabesc si fac sport si ma doare la umăr")
-  res = eng.tagdict_to_text(tags)
+  dct_tags = eng.predict_text("vreau sa slabesc si fac sport si ma doare la umăr")
+  res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
   l.P("")
-  tags = eng.predict_text("ma doare stomacul si nu am pofta de mancare si nu am fost la doctor")
-  res = eng.tagdict_to_text(tags)
+  dct_tags = eng.predict_text("ma doare stomacul si nu am pofta de mancare si nu am fost la doctor")
+  res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   

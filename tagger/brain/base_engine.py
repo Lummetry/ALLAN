@@ -626,6 +626,14 @@ class ALLANTaggerEngine(LummetryObject):
                    top=5):
     """
     given a simple document will output the results based on curent model
+      Args:
+        text : the document that can be one string or a list of strings
+        convert_unknown_words : True will use siamse net to find unk words
+        convert_tags : True will convert tag-id into tag names
+        top : number of top findings (5)
+      
+      Returns:
+        the found tags dict in {tag: proba ...} format
     """
     assert self.trained and self.model is not None
     self.maybe_generate_idx2labels()
@@ -1010,7 +1018,31 @@ class ALLANTaggerEngine(LummetryObject):
     return txt
 
   
-    
+  def test_model(self, lst_docs, lst_labels, top=5):
+    if type(lst_docs) == str:
+      lst_docs = [lst_docs]
+    if type(lst_labels[0]) == str:
+      lst_labels = [lst_labels]
+    docs_acc = []
+    tags_per_doc = []
+    for idx, doc in enumerate(lst_docs):
+      doc_acc = 0
+      tags = self.predict_text(doc, convert_tags=True, convert_unknown_words=True, top=top)
+      gt_tags = lst_labels[idx]
+      for y_true in gt_tags:
+        if y_true.lower() in tags.lower():
+          doc_acc += 1
+      doc_prc = doc_acc / len(gt_tags)
+      tags_per_doc.append(len(gt_tags))
+      docs_acc.append(doc_prc)
+    self.P("Tagger benchmark on {} documents with {:.1f} avg tags/doc".format(
+        len(lst_docs), np.mean(tags_per_doc)))
+    overall_acc = np.mean(docs_acc)
+    self.P("  Overall recall: {:.1f}%".format(overall_acc * 100))
+    self.P("  Max doc recall: {:.1f}%".format(np.max(docs_acc) * 100))
+    self.P("  Min doc recall: {:.1f}%".format(np.min(docs_acc) * 100))
+    self.P("  Med doc recall: {:.1f}%".format(np.median(docs_acc) * 100))
+    return overall_acc    
       
   
 if __name__ == '__main__':
