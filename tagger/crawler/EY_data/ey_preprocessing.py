@@ -23,7 +23,24 @@ class EY_Data(object):
     
     self.read_files()
     
-    self.undesirable_list = ['']
+    self.undesirable_list = ['acest', 'pot', 'legate', 'gasesc', 'prezent',
+                             'consta', 'dau', 'cadrul', 'parcurg', 'dureaza', 'trebuie',
+                             'primesc', 'aflu', 'trec', 'dupa', 'chiar', 'mail', 'fiu', 'indifierent',
+                             'companie', 'avem', 'exista', 'alte', 'compania', 'pentru', 'angajatilor','acoperite', 'langa','afara', 'lucru',
+                             'fel','fac','faceti',
+                             'inseamna',
+                             'exista', 'timp','avea',
+                             'trebui', 'face',
+                             'inseamna', 'noi', 'de',
+                             'desfasoara',
+                             'functie', 'are', 'voi',
+                             'unui',
+                             'oferiti',
+                             'abordarea','privind','alt','posibilitatea',
+                             'lucru',
+                             'description',
+                             'face', 'lucrez',
+                             'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta']
     
     self.generate_raw_labels()
     
@@ -104,7 +121,7 @@ class EY_Data(object):
     while '' in tokenized_line:
       tokenized_line.remove('')
     for i in tokenized_line:
-      if len(i) > 2:
+      if len(i) > 2 and i not in self.undesirable_list:
         tags.append(i)
     
     return tags
@@ -153,6 +170,10 @@ class EY_Data(object):
     self.dict_label_occurence = self.generate_dict_label_occ_in_docs(self.labels)
     self.logger.P('dict label occurence: \n {}'.format(self.dict_label_occurence))
     
+    print('----------------- labels before processing -----------------')
+    self.label_information(self.labels)
+    print('----------------- end labels before processing -----------------')
+
     #REMOVE COMMON WORDS
     for i in self.dict_label_occurence.keys():
       if self.occurence_threshold < 1:
@@ -169,6 +190,10 @@ class EY_Data(object):
     for i in self.common_labels:
       self.remove_tag_from_labels(i)
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))
+    
+    self.logger.P('Removing tags from undesirable list...')
+    for i in self.undesirable_list:
+      self.remove_tag_from_labels(i)
     
     self.dict_label_occurence = self.generate_dict_label_occ_in_docs(self.labels)
     self.logger.P('dict label occurence: \n {}'.format(self.dict_label_occurence))
@@ -194,6 +219,8 @@ class EY_Data(object):
     validation_labels = []
     for i in range(len(self.answers)):
       qs = self.questions[i].splitlines()
+      self.logger.P('======= INDEX {} ======'.format(i))
+      self.logger.P(str(self.labels[i]))
       #populate validation set with random questions from each topic
       if validation_index < self.validation_set_length:
         random_q_idx = random.randint(0,len(qs) - 1)
@@ -205,15 +232,18 @@ class EY_Data(object):
       while '' in qs:
         qs.remove('')
       for j in qs:
+        self.logger.P(j)
         output_texts.append(j)
         #only choose relevant labels
         lbl = self.intersect_text_and_labels(j, self.labels[i])
+        self.logger.P(str(lbl))
         output_labels.append(lbl)
       output_texts.append(self.answers[i])
+      self.logger.P(self.answers[i])
       #only choose relevant labels
-      lbl = self.intersect_text_and_labels(self.answers[i], self.labels[i])
+      lbl = self.labels[i]
+      self.logger.P(str(lbl))
       output_labels.append(lbl)
-      
       
     self.label_information(output_labels)  
     return output_texts, output_labels, validation_texts, validation_labels
@@ -252,4 +282,4 @@ if __name__ == '__main__':
                   config_file='./tagger/crawler/EY_data/config_eydata.txt',
                   TF_KERAS=False)
   
-  data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=3)
+  data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=0.25)
