@@ -3,6 +3,8 @@
 Created on Fri Jul 12 08:13:19 2019
 
 @author: Andrei DAMIAN
+
+
 """
 import tensorflow as tf
 import numpy as np

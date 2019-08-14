@@ -4,6 +4,12 @@ Created on Thu Jul 11 13:22:51 2019
 
 @author: damian
 
+
+
+TODO:
+  - add EmbeddingEncoderModel as alternative to embedding-lookup and similarity model
+  
+
 """
 
 import tensorflow as tf
@@ -89,7 +95,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.fn_word2idx = self.config_data['WORD2IDX'] if 'WORD2IDX' in self.config_data.keys() else None
     self.fn_idx2word = self.config_data['IDX2WORD'] if 'IDX2WORD' in self.config_data.keys() else None
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
-    self.doc_max_words = self.config_data['DOCUMENT_MAX_WORDS']
+    self.doc_size = self.model_config['DOC_SIZE']
     self.model_name = self.model_config['NAME']
     self.dist_func_name = self.config_data['DIST_FUNC']
     super().startup()
@@ -382,7 +388,23 @@ class ALLANTaggerEngine(LummetryObject):
       _min = _mins[:top]
       _dst = _dist[:top]      
     return _min, _dst
-
+  
+  
+  def _get_token_from_embed(self, np_embed):
+    if self.embeddings is None:
+      raise ValueError("Embeddings matrix is undefined!")
+    matches = (self.embeddings == np_embed).sum(axis=-1) == len(np_embed)
+    if np.any(matches):
+      return np.argmax(matches)
+    else:
+      return -1
+    
+  def _get_tokens_from_embeddings(self, np_embeddings):
+    tokens = []
+    for np_embed in np_embeddings:
+      tokens.append(self._get_token_from_embed(np_embed))
+    return tokens
+  
   
   def get_unk_word_similar_id(self, unk_word, top=1):
     if unk_word in self.dic_word2index.keys():
@@ -453,7 +475,7 @@ class ALLANTaggerEngine(LummetryObject):
              rank_labels=False,
              convert_unknown_words=True,
              direct_embeddings=False,
-             min_len=0,
+             fixed_len=0,
              DEBUG=False):
     """
     this function will tokenize or directly output the embedding represenation
@@ -473,8 +495,8 @@ class ALLANTaggerEngine(LummetryObject):
       else:
         s += ' into similar tokens'
     self.P(s)
-    if min_len:
-      self.P("Sequences less then {} will pe padded".format(min_len))
+    if fixed_len:
+      self.P("Sequences less then {} will pe padded and those above will be truncated".format(fixed_len))
     if type(text) in [str]:
       text = [text]
     lst_enc_texts = []
@@ -501,12 +523,14 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("  '{}'".format(text))
         self.P(" into")
         self.P("  '{}'".format(self.decode(tkns))) 
-      if len(tokens) < min_len:
-        added = min_len - len(tokens)
+      if len(tokens) < fixed_len:
+        added = fixed_len - len(tokens)
         if direct_embeddings:
           tokens += [self.embeddings[self.PAD_ID]] * added
         else:
           tokens += [self.PAD_ID] * added
+      if fixed_len > 0:
+        tokens = tokens[:fixed_len]
       lst_enc_texts.append(tokens)
     if text_label is not None:
       assert type(text_label) in [list, tuple, np.ndarray], "labels must be provided as list/list or lists"
@@ -527,23 +551,29 @@ class ALLANTaggerEngine(LummetryObject):
       return lst_enc_texts
 
     
-  def decode(self, tokens, labels_idxs=None, from_onehot=True):
+  def decode(self, tokens, 
+             tokens_as_embeddings=False,
+             labels_idxs=None, 
+             labels_from_onehot=True):
     """
     this function will transform a series of token sequences into text as well 
     as a list of sequences of labels indices into coresponding indices
     """
-    if type(tokens[0]) in [int]:
+    if ((type(tokens[0]) in [int]) or 
+        (type(tokens) == np.ndarray and len(tokens.shape) == 2)):
       tokens = [tokens]
     texts = []
     labels = []
     for seq in tokens:
-      txt = " ".join([self.dic_index2word[x] for x in seq])
+      if tokens_as_embeddings:
+        seq = self._get_tokens_from_embeddings(seq)
+      txt = " ".join([self.dic_index2word[x] for x in seq if x != self.PAD_ID]) 
       texts.append(txt)
     if labels_idxs is not None:
       if type(labels_idxs[0]) in [int]:
         labels_idxs = [labels_idxs]
       for seq_idxs in labels_idxs:
-        if from_onehot:
+        if labels_from_onehot:
           seq = np.argwhere(seq_idxs).ravel().tolist()
         else:
           seq = seq_idxs
@@ -623,7 +653,8 @@ class ALLANTaggerEngine(LummetryObject):
                    text, 
                    convert_unknown_words=True,
                    convert_tags=True,
-                   top=5):
+                   top=5,
+                   DEBUG=True):
     """
     given a simple document will output the results based on curent model
       Args:
@@ -637,7 +668,7 @@ class ALLANTaggerEngine(LummetryObject):
     """
     assert self.trained and self.model is not None
     self.maybe_generate_idx2labels()
-    threshold = 0.5 if "tag" in self.model_output else 0 
+     
     self.P("Inferring '{}'".format(text))
     direct_embeddings = False
     if len(self.model.inputs[0].shape) == 3:
@@ -648,26 +679,34 @@ class ALLANTaggerEngine(LummetryObject):
     tokens = self.encode(text, 
                          convert_unknown_words=convert_unknown_words,
                          direct_embeddings=direct_embeddings,
-                         min_len=self.min_seq_len,
+                         fixed_len=self.doc_size,
                          DEBUG=True)
+    if DEBUG:
+      self.P("  Post ENC: {}".format(self.decode(tokens=tokens, 
+             tokens_as_embeddings=direct_embeddings)))
     np_tokens = np.array(tokens)
     tags_probas = self._predict_single(np_tokens)
-    tags_probas = tags_probas.ravel()
-    tags_idxs = np.argsort(tags_probas)[::-1]
+    return self.array_to_tags(tags_probas, top=top, convert_tags=convert_tags)
+  
+  
+  def array_to_tags(self, np_probas, top=5, convert_tags=True):
+    threshold = 0.5 if "tag" in self.model_output else 0
+    np_probas = np_probas.ravel()
+    tags_idxs = np.argsort(np_probas)[::-1]
     top_idxs = tags_idxs[:top]
     top_labels = [self.dic_index2label[idx] for idx in top_idxs]
-    top_prob = tags_probas[top_idxs]
+    top_prob = np_probas[top_idxs]
     self.last_probas = top_prob
     self.last_labels = top_labels
     dct_res = OrderedDict()
     for i, idx in enumerate(top_idxs):
-      if (i > 0) and tags_probas[idx] < threshold:
+      if (i > 0) and np_probas[idx] < threshold:
         # skip after first if below threshold
         continue
       if convert_tags:
-        dct_res[self.dic_index2label[idx]] = tags_probas[idx]
+        dct_res[self.dic_index2label[idx]] = np_probas[idx]
       else:
-        dct_res[idx] = tags_probas[idx]
+        dct_res[idx] = np_probas[idx]
     return dct_res
   
   def maybe_generate_idx2labels(self):
@@ -682,9 +721,10 @@ class ALLANTaggerEngine(LummetryObject):
       self.dic_index2label = None
     return
   
-  def get_stats(self, X_tokens, show=True):
+  def get_stats(self, X_tokens, show=True, X_docs=None, X_labels=None):
     self.P("Calculating documens stats...")
     sizes = [len(seq) for seq in X_tokens]
+    idxs_min = np.argsort(sizes)
     dict_stats = {
         "Min" : int(np.min(sizes)), 
         "Max" : int(np.max(sizes)), 
@@ -694,10 +734,24 @@ class ALLANTaggerEngine(LummetryObject):
     self.P("Done calculating documents stats.")
     if show:
       for stat in dict_stats:
-        self.P(" {} docs size: {}".format(stat, dict_stats[stat]))
+        self.P("  {} docs size: {}".format(stat, dict_stats[stat]))
+      self.P("  Example of small docs:")
+      for i in range(5):
+        idx = idxs_min[i]
+        i_sz = sizes[idx]
+        if X_docs is not None:
+          s_doc = X_docs[idx]
+        else:
+          s_doc = self.decode(X_tokens[idx], 
+                              tokens_as_embeddings=self.direct_embeddings)
+        lbl = ''
+        if X_labels is not None:
+          lbl = 'Label: {}'.format(X_labels[idx])
+        self.P("    ID:{:>4} Size:{:>2}  Doc: '{}'  {}".format(
+            idx, i_sz, s_doc, lbl))
     return dict_stats
   
-  def pad_data(self, X_tokens, max_doc_size=None):
+  def __pad_data(self, X_tokens, max_doc_size=None):
     """
      pad data based on 'max_doc_size' or on predefined self.max_doc_size
     """
@@ -734,7 +788,7 @@ class ALLANTaggerEngine(LummetryObject):
       for i_batch in range(n_batches):
         batch_start = (i_batch * batch_size) % n_obs
         batch_end = min(batch_start + batch_size, n_obs)
-        X_batch = np.array(X_data[batch_start:batch_end])
+        X_batch = np.array(X_data[batch_start:batch_end].tolist())
         y_batch = np.array(y_data[batch_start:batch_end])
         loss = self.model.train_on_batch(X_batch, y_batch)
         print("\r Epoch {:>3}: {:>5.1f}% completed [loss: {:.4f}]".format(
@@ -802,9 +856,8 @@ class ALLANTaggerEngine(LummetryObject):
             convert_unknown_words=True,
             batch_size=32, 
             n_epochs=1,
-            force_batch=False,
             save=True,
-            skip_if_pretrained=True
+            skip_if_pretrained=True            
             ):
     """
     this methods trains the loaded/created `model` directly on text documents
@@ -830,30 +883,52 @@ class ALLANTaggerEngine(LummetryObject):
       raise ValueError("X and y contain different number of observations")
 
     self._check_model_inputs()
+    
+    if convert_unknown_words and self.generated_embeddings is None:
+      self.setup_embgen_model()
+      
 
     rank_labels = 'multi' in self.model_output
+    
+    
+    pad_data = self.doc_size
     
     X_tokens, y_data = self.encode(X_texts, 
                                    text_label=y_labels,
                                    to_onehot=True,
                                    rank_labels=rank_labels,
                                    convert_unknown_words=convert_unknown_words,
-                                   direct_embeddings=self.direct_embeddings)
-    if self.doc_max_words.lower() == 'auto':
-      self.max_doc_size = self.last_max_size + 1
-    else:
-      self.max_doc_size = int(self.doc_max_words)
+                                   direct_embeddings=self.direct_embeddings,
+                                   fixed_len=pad_data)
+
+    self.max_doc_size = self.doc_size
 
     self.P("Training on sequences of max {} words".format(self.max_doc_size))
 
-    if force_batch:
-      X_data = self.pad_data(X_tokens=X_tokens)
+    if pad_data > 0:
+      X_data = X_tokens
     else:
       batch_size = 1
       X_data = X_tokens
-      self.get_stats(X_data)
+      self.get_stats(X_data, X_labels=y_labels)
       self.P("Reducing batch_size to 1 and processing doc by doc")
       
+    if self.direct_embeddings:
+      self.P("Sanity check before training loop for direct embeddings:")
+      idxs_chk = np.random.choice(n_obs, size=3, replace=False)
+      for idx in idxs_chk:
+        x_e = X_tokens[idx]
+        y_l = y_data[idx]
+        txt = X_texts[idx]
+        lbl = y_labels[idx]
+        x_txt = self.decode(tokens=x_e, tokens_as_embeddings=True)
+        y_lbl = self.array_to_tags(y_l)
+        self.P("  Doc: '{}'".format(txt))
+        self.P("  DEC: '{}'".format(x_txt))
+        self.P("  Lbl:  {}".format(lbl))
+        self.P("  DEC:  {}".format(y_lbl))
+        self.P("")
+
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
                      save_best=save, save_end=save)
     return
@@ -865,7 +940,6 @@ class ALLANTaggerEngine(LummetryObject):
                       y_labels,
                       batch_size=32, 
                       n_epochs=1,
-                      force_batch=False,
                       save=True,
                       skip_if_pretrained=False):
     """
@@ -891,10 +965,7 @@ class ALLANTaggerEngine(LummetryObject):
     
     y_data = self.labels_to_onehot_targets(y_labels, rank=rank_labels)
 
-    if self.doc_max_words.lower() == 'auto':
-      self.max_doc_size = max([len(s) for s in X_tokens]) + 1
-    else:
-      self.max_doc_size = int(self.doc_max_words)
+    self.max_doc_size = self.doc_size
     
     self.P("Training on sequences of max {} words".format(self.max_doc_size))
 

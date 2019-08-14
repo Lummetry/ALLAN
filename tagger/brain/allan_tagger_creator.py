@@ -66,10 +66,12 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                         name=name+'_{}{}'.format(activation,L))(tf_x)
     if last_step == 'lstm':
       if use_cuda:
-        lyr_last1 = tf.keras.layers.CuDNNLSTM(filters, name=name+'_CUlsmt')
+        nc = '_CUlsmt'
+        lyr_last1 = tf.keras.layers.CuDNNLSTM(filters, name=name+nc)
       else:
-        lyr_last1 = tf.keras.layers.LSTM(filters, name=name+'_lstm')
-      lyr_last2 = tf.keras.layers.Bidirectional(lyr_last1, name=name+'_bidi')
+        nc = '_lsmt'
+        lyr_last1 = tf.keras.layers.LSTM(filters, name=name+nc)
+      lyr_last2 = tf.keras.layers.Bidirectional(lyr_last1, name=name+'_bidi'+nc)
       tf_x = lyr_last2(tf_x)
     elif last_step == 'gp':
       lyr_last1 = tf.keras.layers.GlobalMaxPool1D(name=name+'_GMP')
@@ -118,10 +120,12 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     
     
   
-  def setup_model(self, dict_model_config=None):    
+  def setup_model(self, dict_model_config=None):   
+    self.P("Initializing hyperparameters...")
     self._init_hyperparams(dict_model_config=dict_model_config)
     if self.embeddings is None:
       self._setup_word_embeddings()
+    self.P("Defining model...")
     if 'embeds' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len, self.emb_size), 
                                        name='tagger_input')
@@ -213,9 +217,8 @@ if __name__ == '__main__':
   
   use_raw_text = True
   save_model = True
-  force_batch = True
-  use_model_conversion = False
-  epochs = 30
+  use_model_conversion = True
+  epochs = 5
   use_loaded = True
   
   l = Logger(lib_name="ALNT",config_file=cfg1)
@@ -234,7 +237,6 @@ if __name__ == '__main__':
   if use_raw_text:
     eng.train_on_texts(loader.raw_documents,
                        loader.raw_labels,
-                       force_batch=force_batch,
                        n_epochs=epochs,
                        convert_unknown_words=use_model_conversion,
                        save=save_model,
@@ -243,30 +245,29 @@ if __name__ == '__main__':
     eng.train_on_tokens(loader.x_docs, 
                         loader.y_labels,
                         n_epochs=epochs,
-                        force_batch=force_batch,
                         convert_unknown_words=use_model_conversion,
                         save=save_model,
                         skip_if_pretrained=use_loaded)
     
   l.P("")
-  dct_tags = eng.predict_text("ma doare stomacul")
+  dct_tags = eng.predict_text("as vrea info despre salarizare daca se poate")
   res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   l.P("")
-  dct_tags = eng.predict_text("ma doare capul, in gât si nările")
+  dct_tags = eng.predict_text("unde aveti sediile ca as vrea sa fie aproape de casa?")
   res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
   
   l.P("")
-  dct_tags = eng.predict_text("vreau sa slabesc si fac sport si ma doare la umăr")
+  dct_tags = eng.predict_text("in ce departamente aveti pozitii deschise la acest moment?")
   res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
   l.P("")
-  dct_tags = eng.predict_text("ma doare stomacul si nu am pofta de mancare si nu am fost la doctor")
+  dct_tags = eng.predict_text("ce calificare este necesara pentru un post de contabil?")
   res = eng.tagdict_to_text(dct_tags)
   l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))

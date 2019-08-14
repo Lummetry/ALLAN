@@ -13,7 +13,6 @@
   },
   
   "LABEL2IDX" : "######",
-  "DOCUMENT_MAX_WORDS" : "auto",
   "DIST_FUNC" : "l2",
   
   "TRAINING" : {
@@ -32,7 +31,9 @@
   
   "MODEL" : {
     "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "20190801_allan_tagger_v2.h5",
+    "PRETRAINED"  : "#####.h5",
+    "DOC_SIZE"    : 200,
+    "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
     "###INPUT_TYPES"  : ["direct-embeds", "tokens"],
     "INPUT"       : "direct-embeds",
     "###OUTPUT_TYPES" : ["single-ranking", "multi-ranking", "tagging"],
@@ -43,7 +44,7 @@
         "STEP"    : 1,
         "FEATURES" : 128,
         "DEPTH" : 0,
-        "END" : "gp", 
+        "END" : "lstm", 
         "### END_TYPES" : ["gp", "lstm"]
       },
 
@@ -51,21 +52,21 @@
         "KERNEL" : 3,
         "FEATURES" : 128,
         "DEPTH" : 0,
-        "END" : "gp" 
+        "END" : "lstm" 
       },
 
       {
         "KERNEL" : 5,
         "FEATURES" : 128,
         "DEPTH" : 0,
-        "END" : "gp" 
+        "END" : "lstm" 
       },
       
       {
         "KERNEL" : 7,
         "FEATURES" : 128,
         "DEPTH" : 1,
-        "END" : "gp" 
+        "END" : "lstm" 
       }
     ],
     "DROPOUT_CONCAT" : 0.5,
@@ -99,7 +100,7 @@
   "EMB_GEN_MODEL" : {
     "DATAFILE"      : "embgen_dataset.pkl",
     "EMBED_FILE"    : "embgen_full_embeds.npy",
-    "PRETRAINED"    : "20190801_embgen_v1.h5",
+    "PRETRAINED"    : "embgen_model.h5",
     "BATCH_SIZE"    : 512,
     "FINAL_DROP"    : 0.5,
     "USE_CUDA"      : 1, 

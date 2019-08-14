@@ -212,8 +212,19 @@ class EmbeddingApproximator(ALLANTaggerEngine):
   def _word_morph(self, word):
     if len(word) <= 4:
       raise ValueError("Not morphing words less than 5")
-    mistk_src = ['i','o','I','o','1','0','O','1','!','6','G','5','S','s','5','r','t']
-    mistk_dst = ['1','0','1','0','I','O','0','!','1','G','6','s','5','5','S','t','r']
+    mistk_src = []
+    mistk_dst = []
+
+    letter2letter = [chr(x) for x in range(97, 123)]
+    
+    for letter in letter2letter:
+      mistk_src.append(letter)
+      mistk_dst.append(letter.upper())
+      mistk_src.append(letter.upper())
+      mistk_dst.append(letter)
+    
+    mistk_src += ['i','o','I','o','1','0','O','1','!','6','G','5','S','s','5','r','t']
+    mistk_dst += ['1','0','1','0','I','O','0','!','1','G','6','s','5','5','S','t','r']
 
     mistk_src += ['7','G','E','A','1','V','T','1','l','8','B','l','I','*','-']
     mistk_dst += ['T','E','G','V','i','A','7','l','1','B','8','I','l','-','*']
@@ -225,44 +236,36 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     mistk_dst += ['Î','ț','ă','î','Ă','Ș','ș','Ț']
 
 
-    letter2letter = 'cfijkopszuvwxy'
-    
-    for letter in letter2letter:
-      mistk_src.append(letter)
-      mistk_dst.append(letter.upper())
-      mistk_src.append(letter.upper())
-      mistk_dst.append(letter)
     new_word = []
     proba = 0.5
-    modded = False
+    modded = 0
     for i,ch in enumerate(word):
-      if np.random.rand() > proba and ch in mistk_src:
-        proba -= 0.10
-        new_ch = mistk_dst[mistk_src.index(ch)]
-        new_word.append(new_ch)
-        modded = True
+      if np.random.rand() < proba:
+        if ch in mistk_src:
+          new_ch = mistk_dst[mistk_src.index(ch)]
+          new_word.append(new_ch)
+        modded += 1
+        proba -= 0.24
       else:
-        if (i == 0) or (np.random.rand() < 0.95):
-          new_word.append(ch)
-        else:
-          modded = True
-    if not modded:
+        new_word.append(ch)
+        
+    if modded == 0:
       new_word = new_word[:-1]
-      modded = True
+      modded = 1
     if len(new_word) < 4:
       new_word += ['1'] * 2
     new_word = "".join(new_word)
     return new_word
   
   def _get_siamese_datasets(self, min_word_size=4, min_nr_words=5,
-                            max_word_min_count=15):
+                            max_word_min_count=15, force_generate=False):
     if self.dic_word2index is None:
       raise ValueError("Vocab not loaded!")
     lst_anchor = []
     lst_duplic = []
     lst_false  = []
     
-    if 'DATAFILE' in self.embgen_model_config.keys():
+    if (not force_generate) and ('DATAFILE' in self.embgen_model_config.keys()):
       fn = self.embgen_model_config['DATAFILE']
       if self.log.GetDataFile(fn) is not None:
         xa, xd, xf = self.log.LoadPickleFromData(fn)
@@ -368,7 +371,8 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     
     
   def train_unk_words_model(self, epochs=2, approximate_embeddings=False,
-                            save_embeds_every=2):
+                            save_embeds_every=2, force_generate=False,
+                            overwrite_pretrained=False):
     """
      trains the unknown words embedding generator based on loaded embeddings
     """
@@ -384,9 +388,9 @@ class EmbeddingApproximator(ALLANTaggerEngine):
       gen = self._get_embgen_model_generator(self.x_data_vocab)
     
     
-    xa,xd,xf = self._get_siamese_datasets()
+    xa,xd,xf = self._get_siamese_datasets(force_generate=force_generate)
     self.P("Siamese data sanity check:")
-    for i in range(5):
+    for i in range(10):
       irnd = np.random.randint(0, xa.shape[0])
       sa = self.char_tokens_to_word(xa[irnd])
       sd = self.char_tokens_to_word(xd[irnd])
@@ -412,16 +416,22 @@ class EmbeddingApproximator(ALLANTaggerEngine):
       avg_loss2.append(loss2)
       self.P("Epoch {} siam training done. loss:{:>7.4f}  avg:{:>7.4f}".format(
           epoch+1, loss2, np.mean(avg_loss2)))
-      if ((save_embeds_every % (epoch+1)) == 0):
+      if (((epoch+1) % save_embeds_every) == 0) and epoch < (epochs-1):
         self.save_model()
         self._get_generated_embeddings()
         self.debug_unk_words_model()      
-        self.P("")                    
+        self.P("")    
+    self.save_model(overwrite_pretrained=overwrite_pretrained)                
+    self._get_generated_embeddings()
     return
   
   
-  def save_model(self):
-    self.log.SaveKerasModel(self.embgen_model, label='embgen_model', use_prefix=True)
+  def save_model(self, overwrite_pretrained=False):
+    if not overwrite_pretrained:
+      self.log.SaveKerasModel(self.embgen_model, label='embgen_model', use_prefix=True)
+    else:
+      label = self.embgen_model_config['PRETRAINED'] if 'PRETRAINED' in self.embgen_model_config.keys() else 'embgen_model'
+      self.log.SaveKerasModel(self.embgen_model, label=label, use_prefix=False)
     return
     
   
@@ -454,16 +464,12 @@ class EmbeddingApproximator(ALLANTaggerEngine):
   
     
       
-  def debug_unk_words_model(self, unk_words=['creieru', 
-                                             'pumnu',
-                                             'capu',
-                                             'amigdala', 
-                                             'stomacel',
+  def debug_unk_words_model(self, unk_words=['oferiti', 
+                                             'timisoara',
+                                             'bucuresti',
+                                             'sediuri', 
                                              'burtica',
-                                             'geunchi',
-                                             'spatic',
                                              'gurita',
-                                             'creieras',
                                              'caputul']):
     self.P("Testing for {} (dist='{}')".format(
                 unk_words, self.dist_func_name))
@@ -525,7 +531,7 @@ if __name__ == '__main__':
 
   
   if True:
-    eng.train_unk_words_model(epochs=4)
+    eng.train_unk_words_model(epochs=4, force_generate=True, overwrite_pretrained=True)
        
     eng.debug_known_words()
   
