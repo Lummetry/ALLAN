@@ -131,6 +131,8 @@ class ELMo(object):
       self.logger.P("Tokenized {} sentences, at word and character level(with a max word length of {}) ...".format(len(self.training_corpus_w_str), self.max_word_length))
       self.logger.P("...Generating a vocabulary size of {}".format(len(self.vocab)))
       
+      assert(len(self.training_corpus_c) == len(self.training_corpus_w_str))
+      assert(len(self.training_corpus_w_str) == len(self.training_corpus_w_idx))
       
       return self.training_corpus_w_str, self.training_corpus_c
     
@@ -178,6 +180,60 @@ class ELMo(object):
 
         back_to_text = back_to_text + '\n'         
       self.logger.P('Id2Char: {}'.format(back_to_text))
+      
+    def build_doc_length_dict(self, doc_list):
+      dict_lengths = {}
+      for i in range(len(doc_list)):
+        try:
+          dict_lengths[len(doc_list[i])].append(i)
+        except:
+          dict_lengths[len(doc_list[i])] = [i]
+          
+      sorted_dict_lengths = {}
+      #sanity check, make sure all documents are here...
+      total_docs = 0
+      for i in sorted(list(dict_lengths.keys())):
+        sorted_dict_lengths[i] = dict_lengths.get(i)
+        total_docs += len(dict_lengths.get(i))
+      
+      del dict_lengths
+      
+      #ensure that length of initial array is equal to the total of all lengths of the arrays in sorted_dict_lengths
+      assert(len(doc_list) == total_docs)
+      return sorted_dict_lengths
+    
+    def _format_Xy(self, batch):
+      X = []
+      y_idx = []
+      y_str = []
+      for idx in batch:
+        #sanity check: assert that the lengths of the rows processed are the same length! 
+        assert(len(self.training_corpus_c[idx]) == len(self.training_corpus_w_idx[idx]) + 1 == len(self.training_corpus_w_str[idx]))
+
+        X.append(self.training_corpus_c[idx])
+        y_str.append(self.training_corpus_w_str[idx])
+        y_idx.append(self.training_corpus_w_idx[idx])
+      
+      X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
+      y_str = np.array(y_str)#shape of y_str(batch_size, seq_len)
+      y_idx = np.array(y_idx)#shape of y_str(batch_size, seq_len - 1)
+      print('batch')
+      print(X.shape)
+      print(y_str.shape)
+      print(y_idx.shape)
+      return X, y_str, y_idx
+    
+    def data_generator(self, batch_size=32):
+      dict_seq_batches = self.build_doc_length_dict(self.training_corpus_c)
+      #iterate through list of indexes of sequences of same lengths
+      for length in list(dict_seq_batches.keys()):
+        idx_array = dict_seq_batches.get(length)
+        #generate batches by grouping indexes in sublists of batch_size
+        batches = [idx_array[x:x+batch_size] for x in range(0, len(idx_array), batch_size)]
+        for batch in batches:
+          #turn list of indexes into training data for ELMo
+          X, y_str, y_idx = self._format_Xy(batch)
+          yield X, y_str, y_idx
       
     def get_conv_column(self, kernel_size, f_s=128):
         #generate convolution column

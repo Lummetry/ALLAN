@@ -18,6 +18,7 @@ if __name__ == '__main__':
   elmo.corpus_tokenization()
 
   elmo.token_sanity_check()
-  
-  elmo_model = elmo.build_model()
+
+  elmo.data_generator(batch_size=4)
+#  elmo_model = elmo.build_model()
 #  elmo_model.fit(x=elmo.training_corpus_c, y=elmo.training_corpus_w_idx, batch_size=32, epochs=10)
