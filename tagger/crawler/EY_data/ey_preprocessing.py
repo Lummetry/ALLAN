@@ -1,4 +1,5 @@
 import random
+import difflib
 import pandas as pd
 
 from collections import Counter
@@ -40,14 +41,47 @@ class EY_Data(object):
                              'lucru',
                              'description',
                              'face', 'lucrez',
-                             'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta']
+                             'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta',
+                             'cine','cum','home','des','from','cate','cat', 'variaza',
+                             'moment','inceput','stat','politica','politicile','politici']
+    
+    
+    self.dict_lbl_simpler = {
+        'angajat': ['angajatii', 'angajez', 'angajare'],
+        'anuntat': ['anuntati'],
+        'audit': ['auditor'],
+        'beneficii' : ['beneficiile'],
+        'biroul': ['birouri'],
+        'certificari': ['certificarilor','certificarile'],
+        'comun': ['comunitati','comunitatile'],
+        'consultant': ['consultanta'],
+        'contactat': ['contactati'],
+        'etape': ['etapele'],
+        'feedback': ['feedback-ul'],
+        'interviu': ['interviul'],
+        'lucra': ['lucreaza'],
+        'mentor': ['mentoring'],
+        'mobilitate': ['mobilitatea'],
+        'ofera': ['oferite', 'oferte'],
+        'platit': ['platite'],
+        'pozitie':['pozitii','pozitiile'],
+        'procesul': ['procesului'],
+        'program':['programului','programul'],
+        'promovare':['promoveaza', 'promovat'],
+        'recrutare':['recrutarea'],
+        'salariu':['salariale','salariul'],
+        'sediu': ['sediul','sediuri'],
+        'transport':['transportul'],
+        'triburi':['triburile'],
+        'zile':['zilele']
+        }
     
     self.generate_raw_labels()
     
     self.process_labels()
  
-    self.build_outputs()
-#    self.write_to_file()
+#    self.build_outputs()
+    self.write_to_file()
     
   def read_files(self):
     self.answers = []
@@ -165,9 +199,29 @@ class EY_Data(object):
       new_labels.append(list(filter(lambda a: a != tag, i)))
       
     self.labels = new_labels
+    
+  def replace_tags(self, replacement_tag, tag_to_replace):
+    new_labels = []
+    for row in self.labels:
+      new_row = []
+      if tag_to_replace in row:
+        for item in row:
+          if item == tag_to_replace:
+            new_row.append(replacement_tag)
+          else:
+            new_row.append(item)
+      else:
+        new_row = row
+        
+      new_row = list(set(new_row))
+      new_labels.append(new_row)
       
+    print(new_labels)  
+    self.labels = new_labels
+    
   def process_labels(self):
     self.flattened_labels = flatten_list(self.labels)
+
     self.dict_label_frequency = Counter(self.flattened_labels)
     self.common_labels = []
     
@@ -202,6 +256,34 @@ class EY_Data(object):
     self.dict_label_occurence = self.generate_dict_label_occ_in_docs(self.labels)
     self.logger.P('dict label occurence: \n {}'.format(self.dict_label_occurence))
     
+    self.flattened_labels = flatten_list(self.labels)
+    #map similar tags to a single one
+#    self.dict_lbl_simplifier = {}
+#    for i in self.flattened_labels:
+#      for j in self.flattened_labels[1:]:
+#        if i != j:
+#          simil =  difflib.SequenceMatcher(None,i,j).ratio()
+#          if(simil > 0.6):
+#            try:
+#              if len(i) < len(j):
+#                self.dict_lbl_simplifier[i].append(j)
+#              else:
+#                self.dict_lbl_simplifier[j].append(i)
+#            except:
+#              if len(i) < len(j):
+#                self.dict_lbl_simplifier[i] = j
+#              else:
+#                self.dict_lbl_simplifier[j] = i
+#                
+#    for i in sorted(self.dict_lbl_simplifier.keys()):
+#      print(i, self.dict_lbl_simplifier[i])
+    for k,v in self.dict_lbl_simpler.items():
+      for value in v:
+        self.replace_tags(k,value)
+#    dict_simpler_labels = {}  
+#    for k,v in self.dict_lbl_simplifier.items():
+#      value = self.dict_lbl_simplifier[key]
+      
     return
   
   def intersect_text_and_labels(self, text, labels):
@@ -212,7 +294,7 @@ class EY_Data(object):
     for i in labels:
       if i in tokenized_text:
         found_labels.append(i)
-    
+
     return found_labels
   
   def build_outputs(self):
@@ -231,6 +313,7 @@ class EY_Data(object):
         #construct list of labels
         label_list = self.intersect_text_and_labels(qs[random_q_idx], self.labels[i])
         label_list.append(self.topic_labels[i])
+        
         print('validation label list: {}'.format(label_list))
         validation_labels.append(label_list)
         #delete question used for validation set from training set
