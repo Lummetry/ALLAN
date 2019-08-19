@@ -128,14 +128,18 @@ class EY_Data(object):
       
   def generate_raw_labels(self):
     self.labels = []
+    self.topic_labels = []
     for i in range(len(self.questions)):
       lbl = []
       qs = self.questions[i].splitlines()
       for j in qs:
         lbl.append(self.line_to_tags(j))
-        
-      lbl.append(self.tokenizer.tokenize(self.topics[i]))
-
+      
+#      lbl.append(self.tokenizer.tokenize(self.topics[i]))
+      
+      unique_topic_label = "topic_" + "_".join([x[:5].replace('-','') for x in self.topics[i].split(' ') if len(x)>1])
+      self.topic_labels.append(unique_topic_label)
+       
       lbl = flatten_list(lbl)
       lbl = list(set(lbl))
       self.labels.append(lbl)
@@ -220,28 +224,37 @@ class EY_Data(object):
     for i in range(len(self.answers)):
       qs = self.questions[i].splitlines()
       self.logger.P('======= INDEX {} ======'.format(i))
-      self.logger.P(str(self.labels[i]))
       #populate validation set with random questions from each topic
       if validation_index < self.validation_set_length:
         random_q_idx = random.randint(0,len(qs) - 1)
         validation_texts.append(qs[random_q_idx])
-        validation_labels.append(self.intersect_text_and_labels(qs[random_q_idx], self.labels[i]))
+        #construct list of labels
+        label_list = self.intersect_text_and_labels(qs[random_q_idx], self.labels[i])
+        label_list.append(self.topic_labels[i])
+        print('validation label list: {}'.format(label_list))
+        validation_labels.append(label_list)
+        #delete question used for validation set from training set
         del qs[random_q_idx]
         validation_index += 1
       #remove empty questions
       while '' in qs:
         qs.remove('')
+      #build each question with its labels
       for j in qs:
         self.logger.P(j)
         output_texts.append(j)
         #only choose relevant labels
         lbl = self.intersect_text_and_labels(j, self.labels[i])
+        lbl.append(self.topic_labels[i])
         self.logger.P(str(lbl))
         output_labels.append(lbl)
+      
+      #build answers with all labels
       output_texts.append(self.answers[i])
       self.logger.P(self.answers[i])
       #only choose relevant labels
       lbl = self.labels[i]
+      lbl.append(self.topic_labels[i])
       self.logger.P(str(lbl))
       output_labels.append(lbl)
       
@@ -256,22 +269,24 @@ class EY_Data(object):
     self.logger.P('================ end information on output labels ================')
     #write training_data
     for i in range(len(texts)):
-      with open(dir_location + '/_data/EY_FAQ/Texts/Text_%s.txt' % i, 'w', encoding='utf-8') as f_doc:
+      fname = 10000 + i
+      fname = str(fname)[1:]
+      with open(dir_location + '/_data/EY_FAQ/Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
         f_doc.write(texts[i])
       f_doc.close()
 
-      with open(dir_location + '/_data/EY_FAQ/Labels/Labels_%s.txt' % i, 'w', encoding='utf-8') as f_label:
+      with open(dir_location + '/_data/EY_FAQ/Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
         for j in labels[i]:
           f_label.write(j + '\n')
       f_label.close()
       
       #write validation_data
       if i < len(valid_texts):
-        with open(dir_location + '/_data/EY_FAQ/Validation_Texts/Text_%s.txt' % i, 'w', encoding='utf-8') as f_doc:
+        with open(dir_location + '/_data/EY_FAQ/Validation_Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
           f_doc.write(valid_texts[i])
         f_doc.close()
   
-        with open(dir_location + '/_data/EY_FAQ/Validation_Labels/Labels_%s.txt' % i, 'w', encoding='utf-8') as f_label:
+        with open(dir_location + '/_data/EY_FAQ/Validation_Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
           for k in valid_labels[i]:
             f_label.write(k + '\n')
         f_label.close()
