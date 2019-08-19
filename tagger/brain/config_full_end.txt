@@ -31,13 +31,10 @@
   
   "MODEL" : {
     "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "20190819_allan_tagger.h5",
+    "PRETRAINED"  : "#####.h5",
     
-    "DOC_SIZE"    : 70,
+    "DOC_SIZE"    : 50,
     "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
-
-    "SEQ_LEN"     : 70,
-    "## SEQ_LEN"  : "0 means automatic, 50 means we must pad, batch, etc",
 
     "###INPUT_TYPES"  : ["direct-embeds", "tokens"],
     "INPUT"       : "direct-embeds",
@@ -45,11 +42,13 @@
     "###OUTPUT_TYPES" : ["single-ranking", "multi-ranking", "tagging"],
     "OUTPUT"      : "tagging",
 
-    "USE_CUDA"    : 0,
+    "USE_CUDA"    : 1,
     
     "EMBED_FILE"  : "full_embeds.npy",
     "####EMBED_SIZE"  : 128,
 
+    "SEQ_LEN"     : 70,
+    "## SEQ_LEN"  : "0 means automatic, 50 means we must pad, batch, etc",
     "COLUMNS" : [
       {
         "KERNEL"  : 2,
@@ -83,7 +82,7 @@
 
     ],
     
-    "DROPOUT_CONCAT" : 0.7,
+    "DROPOUT_CONCAT" : 0.5,
 
     "END_FC" : [
         {
@@ -92,9 +91,16 @@
           "UNITS" : 0,
           "ACTIV" : "relu",
           "BN"    : 0,
-          "DROP"  : 0.7
+          "DROP"  : 0.5
+        },
+        {
+          "NAME"  : "FC2",
+          "TYPE"  : "linear",
+          "UNITS" : 0,
+          "ACTIV" : "relu",
+          "BN"    : 0,
+          "DROP"  : 0.5
         }
-
     ]
     
   },
@@ -105,7 +111,7 @@
     "PRETRAINED"    : "embgen_model.h5",
     "BATCH_SIZE"    : 512,
     "FINAL_DROP"    : 0.5,
-    "USE_CUDA"      : 0, 
+    "USE_CUDA"      : 1, 
     "CHR_EMB_SIZE"  : 16, 
     "COLUMNS" : {      
         "COL_2" : 

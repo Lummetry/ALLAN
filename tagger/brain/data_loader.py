@@ -126,6 +126,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
     min_len = min(lens)
     max_len = max(lens)
     avg_len = np.mean(lens)
+    med_len = np.median(lens)
     
     if dict_labels2idx is None:
       dict_labels2idx = {k:v for v,k in enumerate(np.unique(lst_unique_lab))}
@@ -156,9 +157,11 @@ class ALLANDataLoader(ALLANTaggerEngine):
     self.dic_index2labels = {v:k for k,v in self.dic_labels.items()}
     self.P("Loaded {} docs w. {} total tags, max {} tags/obs".format(
               len(x_docs), self.output_size, np.max(tags)))
-    self.P("  Min doc len: {}".format(min_len))
-    self.P("  Max doc len: {}".format(max_len))
-    self.P("  Avg doc len: {}".format(avg_len))
+    self.P("  Min doc word len: {}".format(min_len))
+    self.P("  Max doc word len: {}".format(max_len))
+    self.P("  Avg doc word len: {}".format(avg_len))
+    self.P("  Med doc word len: {}".format(med_len))
+    self.log.ShowTextHistogram(lens, caption='Doc word len distrib', show_both_ends=True)
     self.P("  Loaded documents vocabulary: {}".format(len(self.lst_loaded_words)))
     self.P("  Words-to-indexes vocabulary: {}".format(len(self.dic_word2index)))
     return x_docs, y_labels

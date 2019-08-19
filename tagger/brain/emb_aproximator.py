@@ -470,7 +470,11 @@ class EmbeddingApproximator(ALLANTaggerEngine):
                                              'sediuri', 
                                              'burtica',
                                              'gurita',
-                                             'caputul']):
+                                             'caputul',
+                                             'tax',
+                                             'job',
+                                             'net',
+                                             ]):
     self.P("Testing for {} (dist='{}')".format(
                 unk_words, self.dist_func_name))
     for uword in unk_words:
