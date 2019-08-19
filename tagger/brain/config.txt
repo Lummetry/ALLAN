@@ -34,7 +34,7 @@
   
   "MODEL" : {
     "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "20190819_195117_allan_tagger_ep58_loss0.049.h5",
+    "PRETRAINED"  : "20190819_220436_allan_tagger.h5",
     
     "DOC_SIZE"    : 75,
     "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
@@ -49,7 +49,7 @@
     "###OUTPUT_TYPES" : ["single-ranking", "multi-ranking", "tagging"],
     "OUTPUT"      : "tagging",
 
-    "USE_CUDA"    : 1,
+    "USE_CUDA"    : 0,
     
     "EMBED_FILE"  : "full_embeds.npy",
     "####EMBED_SIZE"  : 128,
@@ -90,15 +90,7 @@
 
     "END_FC" : [
         {
-          "NAME"  : "FC1",
-          "TYPE"  : "gated",
-          "UNITS" : 0,
-          "ACTIV" : "selu",
-          "BN"    : 1,
-          "DROP"  : 0.7
-        },
-        {
-          "NAME"  : "FC2",
+          "NAME"  : "FC1d",
           "TYPE"  : "gated",
           "UNITS" : 0,
           "ACTIV" : "selu",
@@ -115,7 +107,7 @@
     "PRETRAINED"    : "embgen_model.h5",
     "BATCH_SIZE"    : 512,
     "FINAL_DROP"    : 0.5,
-    "USE_CUDA"      : 1, 
+    "USE_CUDA"      : 0, 
     "CHR_EMB_SIZE"  : 16, 
     "COLUMNS" : {      
         "COL_2" : 
