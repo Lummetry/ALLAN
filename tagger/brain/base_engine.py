@@ -77,6 +77,9 @@ class ALLANTaggerEngine(LummetryObject):
     return
   
   
+  
+  
+  
   def startup(self):
     self.train_config = self.config_data['TRAINING']
     self.token_config = self.config_data['TOKENS']
@@ -105,6 +108,20 @@ class ALLANTaggerEngine(LummetryObject):
     return
         
       
+  def _setup_vocabs_and_dicts(self):
+    self.P("Loading labels file '{}'".format(self.fn_labels2idx))
+    if ".txt" in self.fn_labels2idx:
+      dict_labels2idx = self.log.LoadDictFromModels(self.fn_labels2idx)
+    else:
+      dict_labels2idx = self.log.LoadPickleFromModels(self.fn_labels2idx)      
+    if dict_labels2idx is None:
+      raise ValueError(" No labels2idx dict found")
+    dic_index2label = {v:k for k,v in dict_labels2idx.items()}
+    self.dic_labels = dict_labels2idx
+    self.dic_index2label = dic_index2label
+    self._setup_vocabs(self.fn_word2idx, self.fn_idx2word)
+    return
+    
   
   def _setup_word_embeddings(self, embeds_filename=None):
     self.embeddings = None
@@ -1125,6 +1142,7 @@ class ALLANTaggerEngine(LummetryObject):
   
   def initialize(self):
     self.P("Full initialization started ...")
+    self._setup_vocabs_and_dicts()
     self._init_hyperparams()
     self.setup_embgen_model()
     self.setup_pretrained_model()
@@ -1216,7 +1234,6 @@ class ALLANTaggerEngine(LummetryObject):
   
 if __name__ == '__main__':
   from libraries.logger import Logger
-  from tagger.brain.data_loader import ALLANDataLoader
   
   cfg1 = "tagger/brain/config.txt"
   
@@ -1229,13 +1246,10 @@ if __name__ == '__main__':
   l = Logger(lib_name="ALNT",config_file=cfg1)
   l.SupressTFWarn()
   
-  loader = ALLANDataLoader(log=l, multi_label=True, 
-                           normalize_labels=False)
-  loader.LoadData()
+
   
-  eng = ALLANTaggerEngine(log=l, 
-                          dict_word2index=loader.dic_word2index,
-                          dict_label2index=loader.dic_labels)
+  eng = ALLANTaggerEngine(log=l,)
+  
   eng.initialize()
   
     
@@ -1259,6 +1273,21 @@ if __name__ == '__main__':
   l.P("Result: {}".format(res))
   l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
+
+
+  tags, inputs = eng.predict_text("care este atmosfera de echipa in EY?")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
+
+  tags, inputs = eng.predict_text("in ce zona aveti biroul in Iasi?")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
 
   #####      
   # now load FlaskServer tools and .run()

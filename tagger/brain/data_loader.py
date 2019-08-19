@@ -76,6 +76,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
     """
 
     dict_labels2idx = None
+    self.P("Loading labels file '{}'".format(fn_labels_dict))
     if ".txt" in fn_labels_dict:
       dict_labels2idx = self.log.LoadDictFromModels(fn_labels_dict)
     else:
@@ -161,7 +162,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
     self.P("  Max doc word len: {}".format(max_len))
     self.P("  Avg doc word len: {}".format(avg_len))
     self.P("  Med doc word len: {}".format(med_len))
-    self.log.ShowTextHistogram(lens, caption='Doc word len distrib', show_both_ends=True)
+    self.log.ShowTextHistogram(lens, caption='Doc word len distrib', )
     self.P("  Loaded documents vocabulary: {}".format(len(self.lst_loaded_words)))
     self.P("  Words-to-indexes vocabulary: {}".format(len(self.dic_word2index)))
     return x_docs, y_labels
