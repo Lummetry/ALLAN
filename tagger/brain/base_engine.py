@@ -1310,7 +1310,7 @@ if __name__ == '__main__':
                                          fun_input=input_callback,
                                          fun_output=output_callback,
                                          log=l,
-                                         port=5001)
+                                         host='0.0.0.0')
   simple_server.run()
   
   # now we ca run
