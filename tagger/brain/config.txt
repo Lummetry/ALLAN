@@ -3,7 +3,7 @@
   "APP_FOLDER": "_allan_data/_allan_tagger",
   
   "HOST" : "0.0.0.0",
-  "PORT" : 5001,
+  "PORT" : 5000,
   
   "WORD2IDX" : "#####",
   "IDX2WORD" : "full_index2word.pickle",
