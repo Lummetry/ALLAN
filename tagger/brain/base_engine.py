@@ -1289,8 +1289,6 @@ if __name__ == '__main__':
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
 
-<<<<<<< HEAD
-=======
   #####      
   # now load FlaskServer tools and .run()
   #####
@@ -1317,5 +1315,3 @@ if __name__ == '__main__':
   
   # now we ca run
   # http://127.0.0.1:5001/analyze?input_text=ala+bala+portocala
-    
->>>>>>> tagger
