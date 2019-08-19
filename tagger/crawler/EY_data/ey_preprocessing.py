@@ -43,7 +43,7 @@ class EY_Data(object):
                              'face', 'lucrez',
                              'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta',
                              'cine','cum','home','des','from','cate','cat', 'variaza',
-                             'moment','inceput','stat','politica','politicile','politici']
+                             'moment','inceput','stat','politica','politicile','politici','negativ']
     
     
     self.dict_lbl_simpler = {
