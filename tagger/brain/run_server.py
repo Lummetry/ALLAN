@@ -41,7 +41,7 @@ if __name__ == '__main__':
   def output_callback(data):
     res1 = data[0]
     enc_input = data[1]
-    return {'tags' : res1, 'input_document':enc_input, 'id_document': -1}
+    return {'tags' : res1, 'input_document':enc_input, 'id_topic_document': -1}
   
   
   simple_server = SimpleFlaskModelServer(model=eng,
@@ -54,5 +54,5 @@ if __name__ == '__main__':
   simple_server.run()
   
   # now we ca run
-  # http://127.0.0.1:5001/analyze?current_query=ala+bala+portocala
+  # http://127.0.0.1:5001/current_query?input_text=ala+bala+portocala
     
