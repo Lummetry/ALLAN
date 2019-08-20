@@ -733,7 +733,7 @@ class ALLANTaggerEngine(LummetryObject):
       self.P("  Predicted: {}".format("".join(["'{}':{:.3f} ".format(k,v) 
                                     for k,v in top_10_preds.items()])))
     if return_input_processed:
-      return tags, processed_input 
+      return tags, (text, processed_input)
     else:
       return tags
   
@@ -1005,7 +1005,7 @@ class ALLANTaggerEngine(LummetryObject):
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
                      X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
                      save_best=save, save_end=save, test_every_epochs=test_every_epochs)
-    return
+    return self.train_recall_history
 
 
 
@@ -1154,7 +1154,16 @@ class ALLANTaggerEngine(LummetryObject):
     self.log.ShowTextHistogram(lens)
     return dct_stats
   
-  
+  def check_labels_set(self, val_labels):
+    for obs in val_labels:
+      if type(obs) not in [list, tuple, np.ndarray]:
+        raise ValueError("All observations must be lists of labels")
+      for label in obs:
+        if label not in self.dic_labels.keys():
+          raise ValueError("Label '{}' not found in valid labels dict".format(label))
+    self.P("All {} labels are valid".format(len(val_labels)))
+    return
+    
   def initialize(self):
     self.P("Full initialization started ...")
     self._setup_vocabs_and_dicts()

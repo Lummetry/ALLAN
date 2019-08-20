@@ -43,18 +43,21 @@ if __name__ == '__main__':
   
   def output_callback(data):
     res1 = data[0]
-    enc_input = data[1]
+    inputs = data[1]
+    std_input = inputs[0]
+    enc_input = inputs[1]
     vals = [x for x in res1.values()]
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
-    dic_top = {keys[x]:float(vals[x]) for x in top_idxs[:3]}
-    dic_non_top = {keys[x]:float(vals[x]) for x in top_idxs[3:]}
+    dic_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[:3]}
+    dic_non_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[3:]}
     id_topic_document = -1 if DEBUG_MODE == 0 else data[2]
     
     dct_info = {
         'general_tags' : dic_non_top, 
         'top_tags': dic_top, 
-        'input_document':enc_input, 
+        'input_document_init' : std_input,
+        'input_document_post' : enc_input, 
         'id_topic_document': id_topic_document,
         'comment' : 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
         }

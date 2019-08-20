@@ -7,8 +7,9 @@ Created on Thu Jul 11 14:20:23 2019
 
 from tagger.brain.base_engine import ALLANTaggerEngine 
 import tensorflow as tf
-
+import numpy as np
 from libraries.lummetry_layers.gated import GatedDense
+from collections import OrderedDict
 
 _VER_ = '0.8.1'
 
@@ -216,9 +217,8 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     self.model_prepared = True
     return
   
-  
 
-
+            
           
       
   
@@ -228,14 +228,10 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
 if __name__ == '__main__':
   from libraries.logger import Logger
   from tagger.brain.data_loader import ALLANDataLoader
+  import pandas as pd
   
   cfg1 = "tagger/brain/configs/config.txt"
   
-  use_raw_text = True
-  save_model = True
-  use_model_conversion = True
-  epochs = 60
-  use_loaded = True
   
   l = Logger(lib_name="ALNT",config_file=cfg1)
   l.SupressTFWarn()
@@ -250,77 +246,80 @@ if __name__ == '__main__':
       "cam cum sint persoanele care lucreaza la ey?",
       "si cam cat ar fi salarul pentru un junior??",
       "si cam care sunt nivelele de salarizare in finante sau contabilitate?",
-      "care este salariul la inceput de cariera pentru un auditor financiar?",
+      "care este salariul la inceput de carierq pentru un auditor financiar?",
       "exista posibilitatea de a putea pleca sa lucrez in alta tara?",
-      "oare as putea sa lucrez si de acasa? care este politica in acest sens?",
+      "oare as putea sa lucrez si de acasa? care este politicaa in acest sens?",
+      "in EY concediu este standrd ca peste tot sau se poate si mai mult oare?",
+      "cam cum este programul de lucru in general la EY ca ore si zile?",
+      "cu ce ar trebui sa ma pregtesc pentru interviuu?",
+      "exista posibilitat sa imi furnizati lista cu joburi dispobibil acum?",
+      "la acest moment ce pozitiii aveti deschise si cand pot veni la interviu?",
+      "exista posibilitat sa partiiicp la cursuri de specializar si care sunt acestea?"
       ]
   valid_labels = [
       ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucur'],
-      ['oamenii', 'topic_echip'],
-      ['junior', 'topic_salar'],
+      ['oamenii', 'topic_echip', 'colectivul', 'atmosfera', 'echipa'],
+      ['junior', 'topic_salar', 'grilele', 'recrutare', 'oferta'],
       ['grilele','salariu' ,'topic_salar', 'tax', 'audit'],
       ['junior', 'topic_salar', 'tax', 'audit', 'salariu'],  
-      ['internationala', 'mobilitate', 'tara', 'relocare','topic_mobil'],
+      ['mobilitate', 'relocare','topic_mobil'],
+      ['program', 'flexibil', 'acasa', 'topic_progr_de_lucru'],
+      ['concediu', 'pozitie', 'senioritate', 'zile', 'topic_zile_conce'],
+      ['program', 'flexibil', 'topic_progr_de_lucru', 'work'],
+      ['interviu', 'etape', 'recrutare','teste','topic_proce_recru'],
+      ['informatii', 'pozitii', 'topic_pozit_desch', 'interviu', 'recrutare'],
+      ['informatii', 'pozitii', 'topic_pozit_desch', 'interviu', 'recrutare'],
+      ['beneficii', 'cerificari', 'program', 'topic_benef', 'oferta']
       ]
   
   
-  eng = ALLANTaggerCreator(log=l, 
-                           dict_word2index=loader.dic_word2index,
-                           dict_label2index=loader.dic_labels)
+  assert len(valid_labels) == len(valid_texts)  
   
-  eng.setup_model(dict_model_config=None) # default architecture
   
-  if use_raw_text:
-    eng.train_on_texts(loader.raw_documents,
-                       loader.raw_labels,
-                       n_epochs=epochs,
-                       convert_unknown_words=use_model_conversion,
-                       save=save_model,
-                       skip_if_pretrained=use_loaded)
-  else:
-    eng.train_on_tokens(loader.x_docs, 
-                        loader.y_labels,
-                        n_epochs=epochs,
-                        convert_unknown_words=use_model_conversion,
-                        save=save_model,
-                        skip_if_pretrained=use_loaded)
-    
-  debug_results = False
-  if True:
-      
-    l.P("")
-    dct_tags, inputs = eng.predict_text("as vrea info despre salarizare daca se poate")
-    res = eng.tagdict_to_text(dct_tags)
-    l.P("Result: {}".format(res))
-    if debug_results:
-      l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
-            for x,p in zip(eng.last_labels, eng.last_probas)]))
-    l.P("")
-    dct_tags, inputs = eng.predict_text("unde aveti sediile mai multe in bucuresti ca as vrea sa fie aproape de casa?")
-    res = eng.tagdict_to_text(dct_tags)
-    l.P("Result: {}".format(res))
-    if debug_results:
-      l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
-            for x,p in zip(eng.last_labels, eng.last_probas)]))
-    
-    l.P("")
-    dct_tags, inputs = eng.predict_text("in ce departamente aveti pozitii deschise la acest moment in bucuresti?")
-    res = eng.tagdict_to_text(dct_tags)
-    l.P("Result: {}".format(res))
-    if debug_results:
-      l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
-            for x,p in zip(eng.last_labels, eng.last_probas)]))
+  grid_models = l.LoadDataJSON('grid.txt')
   
+  results = OrderedDict({'MODEL': [], 'SCORE': [], 'HISTORY': []})
+
+  epochs = 60
+  grid_size = len(grid_models)
+  
+  for i, model_name in enumerate(grid_models):
+    l.P("*" * 80)
+    l.P("*" * 80)
+    l.P("Running iteration {}/{}".format(i+1, grid_size))
+    l.P("*" * 80)
+    l.P("*" * 80)
+    model_def = grid_models[model_name]
+    
+  
+    eng = ALLANTaggerCreator(log=l, 
+                             dict_word2index=loader.dic_word2index,
+                             dict_label2index=loader.dic_labels)
+    
+    eng.check_labels_set(valid_labels)
+    
+    eng.setup_model(dict_model_config=model_def) # default architecture
+    
+    hist = eng.train_on_texts(loader.raw_documents,
+                              loader.raw_labels,
+                              n_epochs=epochs,
+                              convert_unknown_words=True,
+                              save=True,
+                              X_texts_valid=valid_texts,
+                              y_labels_valid=valid_labels,
+                              skip_if_pretrained=False,
+                              DEBUG=False)
+    score = eng.test_model_on_texts(valid_texts, valid_labels)
+    results['MODEL'] = model_name
+    results['SCORE'] = score
+    results['HISTORY'] = hist
+    df = pd.DataFrame(results).sort_values('SCORE')
     l.P("")
-    dct_tags, inputs = eng.predict_text("ce calificare este necesara pentru un post de junior contabil?")
-    res = eng.tagdict_to_text(dct_tags)
-    l.P("Result: {}".format(res))
-    if debug_results:
-      l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
-            for x,p in zip(eng.last_labels, eng.last_probas)]))
+    l.P("Results so far:\n{}".format(df))
+    l.P("")
     
     
-    #TODO: test various scenarios !!! 
+
   
         
     
