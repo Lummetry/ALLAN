@@ -10,10 +10,11 @@ from libraries.model_server.simple_model_server import SimpleFlaskModelServer
 
 from tagger.brain.base_engine import ALLANTaggerEngine
 
+import numpy as np
 
 if __name__ == '__main__':
   
-  cfg1 = "tagger/brain/config.txt"
+  cfg1 = "tagger/brain/configs/config.txt"
   
   use_raw_text = True
   force_batch = True
@@ -21,12 +22,14 @@ if __name__ == '__main__':
   epochs = 30
   use_loaded = True
   
-  l = Logger(lib_name="ALNT",config_file=cfg1)
+  l = Logger(lib_name="ALNT",config_file=cfg1, HTML=True)
   l.SupressTFWarn()
   
   eng = ALLANTaggerEngine(log=l,)
   
   eng.initialize()
+  
+  DEBUG_MODE = 0
   
 
   #####      
@@ -41,7 +44,22 @@ if __name__ == '__main__':
   def output_callback(data):
     res1 = data[0]
     enc_input = data[1]
-    return {'tags' : res1, 'input_document':enc_input, 'id_topic_document': -1}
+    vals = [x for x in res1.values()]
+    keys = [x for x in res1.keys()]    
+    top_idxs = np.argsort(vals)[::-1]
+    dic_top = {keys[x]:float(vals[x]) for x in top_idxs[:3]}
+    dic_non_top = {keys[x]:float(vals[x]) for x in top_idxs[3:]}
+    id_topic_document = -1 if DEBUG_MODE == 0 else data[2]
+    
+    dct_info = {
+        'general_tags' : dic_non_top, 
+        'top_tags': dic_top, 
+        'input_document':enc_input, 
+        'id_topic_document': id_topic_document,
+        'comment' : 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
+        }
+    dct_res = {'result' : dct_info}
+    return dct_res
   
   
   simple_server = SimpleFlaskModelServer(model=eng,

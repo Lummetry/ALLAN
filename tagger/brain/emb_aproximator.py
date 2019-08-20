@@ -517,7 +517,7 @@ class EmbeddingApproximator(ALLANTaggerEngine):
 if __name__ == '__main__':
   from libraries.logger import Logger
   
-  cfg1 = "tagger/brain/config.txt"
+  cfg1 = "tagger/brain/configs/config.txt"
   l = Logger(lib_name="EGEN",config_file=cfg1)
   
   

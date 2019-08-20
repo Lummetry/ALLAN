@@ -229,7 +229,7 @@ if __name__ == '__main__':
   from libraries.logger import Logger
   from tagger.brain.data_loader import ALLANDataLoader
   
-  cfg1 = "tagger/brain/config.txt"
+  cfg1 = "tagger/brain/configs/config.txt"
   
   use_raw_text = True
   save_model = True
@@ -243,6 +243,26 @@ if __name__ == '__main__':
   loader = ALLANDataLoader(log=l, multi_label=True, 
                            normalize_labels=False)
   loader.LoadData()
+  
+  
+  valid_texts = [
+      "in ce cartier aveti biro prin bucurest?",
+      "cam cum sint persoanele care lucreaza la ey?",
+      "si cam cat ar fi salarul pentru un junior??",
+      "si cam care sunt nivelele de salarizare in finante sau contabilitate?",
+      "care este salariul la inceput de cariera pentru un auditor financiar?",
+      "exista posibilitatea de a putea pleca sa lucrez in alta tara?",
+      "oare as putea sa lucrez si de acasa? care este politica in acest sens?",
+      ]
+  valid_labels = [
+      ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucur'],
+      ['oamenii', 'topic_echip'],
+      ['junior', 'topic_salar'],
+      ['grilele','salariu' ,'topic_salar', 'tax', 'audit'],
+      ['junior', 'topic_salar', 'tax', 'audit', 'salariu'],  
+      ['internationala', 'mobilitate', 'tara', 'relocare','topic_mobil'],
+      ]
+  
   
   eng = ALLANTaggerCreator(log=l, 
                            dict_word2index=loader.dic_word2index,

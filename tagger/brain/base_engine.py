@@ -34,18 +34,12 @@ class ALLANTaggerEngine(LummetryObject):
                output_size=None,
                vocab_size=None,
                embed_size=None,
-               DEBUG=False, MAX_CHR=100000):
-    super().__init__(log=log, DEBUG=DEBUG)
-    self.__name__ = 'AT_TE'
-    self.P("Init ALLANEngine...")
-    self.version = __VER__
-    self.log.SetNicePrints()
+               DEBUG=False, MAX_CHR=100000,
+               TOP_TAGS=None):
     if log is None or (type(log).__name__ != 'Logger'):
       raise ValueError("Loggger object is invalid: {}".format(log))
-    self.log = log
-    self.config_data = self.log.config_data
     #"".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
-    self.char_full_voc = "".join([chr(x) for x in range(MAX_CHR)])
+    self.MAX_CHR = MAX_CHR
     self.DEBUG = DEBUG
     self.min_seq_len = 20
     self.sess = None
@@ -54,6 +48,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.pre_inputs = None
     self.pre_outputs = None
     self.pre_columns_end = None
+    self.TOP_TAGS = TOP_TAGS
     self.prev_saved_model = []
     self.first_run = {}
     self.frames_data = None
@@ -66,14 +61,10 @@ class ALLANTaggerEngine(LummetryObject):
     self.output_size = len(dict_label2index) if dict_label2index is not None else output_size
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
     self.dic_word2index = dict_word2index
-    if dict_word2index is not None:
-      self._get_reverse_word_dict()
-      self._get_vocab_stats()
     self.dic_labels = dict_label2index
-    self._generate_idx2labels()
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
-    self.startup()
+    super().__init__(log=log, DEBUG=DEBUG)
     return
   
   
@@ -81,6 +72,11 @@ class ALLANTaggerEngine(LummetryObject):
   
   
   def startup(self):
+    super().startup()
+    self.__name__ = 'AT_TE'
+    self.version = __VER__
+    self.P("Init ALLANEngine v{}...".format(self.version))
+    self.char_full_voc = "".join([chr(x) for x in range(self.MAX_CHR)])
     self.train_config = self.config_data['TRAINING']
     self.token_config = self.config_data['TOKENS']
     self.UNK_ID = self.token_config['UNK']
@@ -98,13 +94,18 @@ class ALLANTaggerEngine(LummetryObject):
     self.model_config = self.config_data['MODEL']
     self.doc_ext = self.train_config['DOCUMENT']
     self.label_ext = self.train_config['LABEL']
+    if self.TOP_TAGS is None:
+      self.TOP_TAGS = self.config_data['TOP_TAGS'] if 'TOP_TAGS' in self.config_data.keys() else 10
     self.fn_word2idx = self.config_data['WORD2IDX'] if 'WORD2IDX' in self.config_data.keys() else None
     self.fn_idx2word = self.config_data['IDX2WORD'] if 'IDX2WORD' in self.config_data.keys() else None
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
     self.doc_size = self.model_config['DOC_SIZE']
     self.model_name = self.model_config['NAME']
     self.dist_func_name = self.config_data['DIST_FUNC']
-    super().startup()
+    if self.dic_word2index is not None:
+      self._get_reverse_word_dict()
+      self._get_vocab_stats()    
+    self._generate_idx2labels()
     return
         
       
@@ -680,7 +681,7 @@ class ALLANTaggerEngine(LummetryObject):
                    text, 
                    convert_unknown_words=True,
                    convert_tags=True,
-                   top=10,
+                   top=None,
                    return_input_processed=True,
                    force_below_threshold=True,
                    DEBUG=False,
@@ -696,6 +697,8 @@ class ALLANTaggerEngine(LummetryObject):
       Returns:
         the found tags dict in {tag: proba ...} format
     """
+    if top is None:
+      top = self.TOP_TAGS
     assert self.trained and self.model is not None
     self.maybe_generate_idx2labels()
     if DEBUG: 
@@ -714,7 +717,7 @@ class ALLANTaggerEngine(LummetryObject):
                          DEBUG=DEBUG)
     processed_input = self.decode(tokens=tokens, tokens_as_embeddings=direct_embeddings)[0]
     if verbose >= 1:
-      self.P("Inferring ENC: {}".format(processed_input))
+      self.P("Inferring (decoded): '{}'".format(processed_input))
     np_tokens = np.array(tokens)
     np_tags_probas = self._predict_single(np_tokens)
     tags = self.array_to_tags(np_tags_probas, 
@@ -1079,6 +1082,18 @@ class ALLANTaggerEngine(LummetryObject):
     _res = False
     if "PRETRAINED" in self.model_config.keys():
       fn = self.model_config['PRETRAINED']
+      _ver = ''
+      _f = 0
+      for x in fn:
+        if x.isdigit():
+          _ver += x
+        if x == '_':
+          if _f == 0:
+            _ver += "."
+            _f += 1
+          else:
+            break
+      self.version += '.' + _ver
       if self.log.GetModelsFile(fn) is not None:
         self.P("Loading pretrained model {}".format(fn))
         self.model = self.log.LoadKerasModel(
@@ -1169,7 +1184,7 @@ class ALLANTaggerEngine(LummetryObject):
     return txt
 
   
-  def test_model_on_texts(self, lst_docs, lst_labels, top=10, show=True, DEBUG=False):
+  def test_model_on_texts(self, lst_docs, lst_labels, top=5, show=True, DEBUG=False):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1235,7 +1250,7 @@ class ALLANTaggerEngine(LummetryObject):
 if __name__ == '__main__':
   from libraries.logger import Logger
   
-  cfg1 = "tagger/brain/config.txt"
+  cfg1 = "tagger/brain/configs/config.txt"
   
   use_raw_text = True
   force_batch = True
