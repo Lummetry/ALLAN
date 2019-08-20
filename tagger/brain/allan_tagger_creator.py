@@ -130,12 +130,15 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     
     
   
-  def setup_model(self, dict_model_config=None):   
+  def setup_model(self, dict_model_config=None, model_name=None):  
     self.P("Initializing hyperparameters...")
     self._init_hyperparams(dict_model_config=dict_model_config)
     if self.embeddings is None:
       self._setup_word_embeddings()
-    self.P("Defining model...")
+    if model_name is not None:
+      self.model_name = model_name
+
+    self.P("Defining model '{}'...".format(self.model_name))
     if 'embeds' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len, self.emb_size), 
                                        name='tagger_input')
@@ -194,7 +197,8 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                          activation='softmax',
                                          name='readout_softmax')(tf_x)
       model = tf.keras.models.Model(inputs=tf_input,
-                                    outputs=tf_readout)
+                                    outputs=tf_readout,
+                                    name=self.model_name)
       model.compile(optimizer='adam', loss='categorical_crossentropy', 
                     metrics=['acc', self.log.K_rec]
                     )
@@ -206,15 +210,18 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                          activation='sigmoid',
                                          name='readout_sigmoid')(tf_x)
       model = tf.keras.models.Model(inputs=tf_input,
-                                    outputs=tf_readout)
+                                    outputs=tf_readout,
+                                    name=self.model_name)
       model.compile(optimizer='adam', loss='binary_crossentropy', 
                     metrics=['acc', self.log.K_rec]
                     )
     else:
       raise ValueError("Unknown model output '{}'".format(self.model_output))
     self.model = model
-    self.P("Final model:\n{}".format(self.log.GetKerasModelSummary(self.model)))
+    self.P("Final model '{}':\n{}".format(self.model.name,
+                                          self.log.GetKerasModelSummary(self.model)))
     self.model_prepared = True
+    
     return
   
 
@@ -257,19 +264,19 @@ if __name__ == '__main__':
       "exista posibilitat sa partiiicp la cursuri de specializar si care sunt acestea?"
       ]
   valid_labels = [
-      ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucur'],
-      ['oamenii', 'topic_echip', 'colectivul', 'atmosfera', 'echipa'],
-      ['junior', 'topic_salar', 'grilele', 'recrutare', 'oferta'],
-      ['grilele','salariu' ,'topic_salar', 'tax', 'audit'],
-      ['junior', 'topic_salar', 'tax', 'audit', 'salariu'],  
-      ['mobilitate', 'relocare','topic_mobil'],
-      ['program', 'flexibil', 'acasa', 'topic_progr_de_lucru'],
-      ['concediu', 'pozitie', 'senioritate', 'zile', 'topic_zile_conce'],
-      ['program', 'flexibil', 'topic_progr_de_lucru', 'work'],
-      ['interviu', 'etape', 'recrutare','teste','topic_proce_recru'],
-      ['informatii', 'pozitii', 'topic_pozit_desch', 'interviu', 'recrutare'],
-      ['informatii', 'pozitii', 'topic_pozit_desch', 'interviu', 'recrutare'],
-      ['beneficii', 'cerificari', 'program', 'topic_benef', 'oferta']
+      ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucurest'],
+      ['oamenii', 'topic_echipa', 'atmosfera', 'echipa'],
+      ['junior', 'topic_salarii', 'salariu', 'recrutare', 'oferta'],
+      ['salariu','salariu' ,'topic_salarii', 'taxe', 'audit'],
+      ['junior', 'topic_salarii', 'tax', 'audit', 'salariu'],  
+      ['mobilitate', 'relocare','topic_mobilita'],
+      ['program', 'flexibil', 'acasa', 'topic_program_de_lucru'],
+      ['concediu', 'pozitie', 'senioritate', 'zile', 'topic_zile_concediu'],
+      ['program', 'flexibil', 'topic_program_de_lucru', 'work'],
+      ['interviu', 'etape', 'recrutare','teste','topic_proces_recrutar'],
+      ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
+      ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
+      ['beneficii', 'cerificari', 'program', 'topic_benefici', 'oferta']
       ]
   
   
@@ -281,15 +288,18 @@ if __name__ == '__main__':
   results = OrderedDict({'MODEL': [], 'SCORE': [], 'HISTORY': []})
 
   epochs = 60
-  grid_size = len(grid_models)
   
-  for i, model_name in enumerate(grid_models):
+  grid_size = len(grid_models)
+  score = 0
+  hist = []  
+  for i, model_data in enumerate(grid_models):
     l.P("*" * 80)
-    l.P("*" * 80)
+    l.P("")
     l.P("Running iteration {}/{}".format(i+1, grid_size))
+    l.P("")
     l.P("*" * 80)
-    l.P("*" * 80)
-    model_def = grid_models[model_name]
+    model_name = model_data['NAME']
+    model_def = model_data['MODEL']
     
   
     eng = ALLANTaggerCreator(log=l, 
@@ -298,8 +308,9 @@ if __name__ == '__main__':
     
     eng.check_labels_set(valid_labels)
     
-    eng.setup_model(dict_model_config=model_def) # default architecture
+    eng.setup_model(dict_model_config=model_def, model_name=model_name) # default architecture
     
+    """
     hist = eng.train_on_texts(loader.raw_documents,
                               loader.raw_labels,
                               n_epochs=epochs,
@@ -310,9 +321,10 @@ if __name__ == '__main__':
                               skip_if_pretrained=False,
                               DEBUG=False)
     score = eng.test_model_on_texts(valid_texts, valid_labels)
-    results['MODEL'] = model_name
-    results['SCORE'] = score
-    results['HISTORY'] = hist
+    """
+    results['MODEL'].append(model_name)
+    results['SCORE'].append(score)
+    results['HISTORY'].append(hist)
     df = pd.DataFrame(results).sort_values('SCORE')
     l.P("")
     l.P("Results so far:\n{}".format(df))

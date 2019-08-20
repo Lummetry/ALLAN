@@ -1157,11 +1157,11 @@ class ALLANTaggerEngine(LummetryObject):
   def check_labels_set(self, val_labels):
     for obs in val_labels:
       if type(obs) not in [list, tuple, np.ndarray]:
-        raise ValueError("All observations must be lists of labels")
+        raise ValueError("LabelSetCheck: All observations must be lists of labels")
       for label in obs:
         if label not in self.dic_labels.keys():
-          raise ValueError("Label '{}' not found in valid labels dict".format(label))
-    self.P("All {} labels are valid".format(len(val_labels)))
+          raise ValueError("LabelSetCheck: Label '{}' not found in valid labels dict".format(label))
+    self.P("LabelSetCheck: All {} labels are valid.".format(len(val_labels)))
     return
     
   def initialize(self):
