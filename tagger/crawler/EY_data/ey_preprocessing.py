@@ -23,7 +23,7 @@ class EY_Data(object):
     self.data_dir = logger.GetDropboxDrive() + '/' + logger.config_data['APP_FOLDER'] + self.folder_name
     
     self.read_files()
-    
+
     self.undesirable_list = ['acest', 'pot', 'legate', 'gasesc', 'prezent',
                              'consta', 'dau', 'cadrul', 'parcurg', 'dureaza', 'trebuie',
                              'primesc', 'aflu', 'trec', 'dupa', 'chiar', 'mail', 'fiu', 'indifierent',
@@ -34,44 +34,49 @@ class EY_Data(object):
                              'trebui', 'face',
                              'inseamna', 'noi', 'de',
                              'desfasoara',
-                             'functie', 'are', 'voi',
+                             'functie', 'are', 'voi','peste',
                              'unui',
                              'oferiti',
                              'abordarea','privind','alt','posibilitatea',
-                             'lucru',
+                             'lucru','activeaza',
                              'description',
                              'face', 'lucrez',
                              'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta',
                              'cine','cum','home','des','from','cate','cat', 'variaza',
-                             'moment','inceput','stat','politica','politicile','politici','negativ']
+                             'moment','inceput','stat','politica','politicile','politici','negativ','maine','']
     
     
     self.dict_lbl_simpler = {
         'angajat': ['angajatii', 'angajez', 'angajare'],
-        'anuntat': ['anuntati'],
+        'asigurare': ['asigurat'],
+        'anuntat': ['anuntati', 'anunt'],
         'audit': ['auditor'],
-        'beneficii' : ['beneficiile'],
+        'avansez': ['cariera'],
+        'beneficii' : ['beneficiile','bonuri', 'sala', 'masa', 'costurile', 'discounturi', 'abonamentele', 'costurile', 'reduceri','organizati','organizeaza'],
         'biroul': ['birouri'],
-        'certificari': ['certificarilor','certificarile'],
-        'comun': ['comunitati','comunitatile'],
+        'certificari': ['certificarilor','certificarile', 'cerificarilor'],
+        'comun': ['comunitati','comunitatile','comunitate'],
         'consultant': ['consultanta'],
         'contactat': ['contactati'],
         'etape': ['etapele'],
+        'echipa': ['colegii', 'colectivul','oamenii'],
         'feedback': ['feedback-ul'],
-        'interviu': ['interviul'],
-        'lucra': ['lucreaza'],
-        'mentor': ['mentoring'],
+        'interviu': ['interviul','interviului','rezultat','raspuns'],
+        'mentorship': ['mentoring', 'ajute', 'ghideze', 'mentor'],
         'mobilitate': ['mobilitatea'],
-        'ofera': ['oferite', 'oferte'],
+        'oferta': ['oferite', 'oferte', 'ofera'],
+        'oportunitati': ['cresc'],
         'platit': ['platite'],
-        'pozitie':['pozitii','pozitiile'],
+        'pozitii':['pozitie','pozitiile', 'deschise'],
         'procesul': ['procesului'],
-        'program':['programului','programul'],
+        'program':['programului','programul','flexibil','libere','fix','lucra','lucreaza', 'acasa', 'raman'],
         'promovare':['promoveaza', 'promovat'],
-        'recrutare':['recrutarea'],
-        'salariu':['salariale','salariul'],
+        'recrutare':['recrutarea', 'contactat'],
+        'relocare':['tara', 'internationala', 'mut'],
+        'salariu':['salariale','salariul','grilele', 'castiga', 'brut', 'net', 'bani'],
         'sediu': ['sediul','sediuri'],
-        'transport':['transportul'],
+        'taxe': ['tax'],
+        'transport':['transportul','mijloace'],
         'triburi':['triburile'],
         'zile':['zilele']
         }
@@ -168,10 +173,8 @@ class EY_Data(object):
       qs = self.questions[i].splitlines()
       for j in qs:
         lbl.append(self.line_to_tags(j))
-      
-#      lbl.append(self.tokenizer.tokenize(self.topics[i]))
-      
-      unique_topic_label = "topic_" + "_".join([x[:5].replace('-','') for x in self.topics[i].split(' ') if len(x)>1])
+            
+      unique_topic_label = "topic_" + "_".join([x[:8].replace('-','') for x in self.topics[i].split(' ') if len(x)>1])
       self.topic_labels.append(unique_topic_label)
        
       lbl = flatten_list(lbl)
@@ -216,8 +219,17 @@ class EY_Data(object):
       new_row = list(set(new_row))
       new_labels.append(new_row)
       
-    print(new_labels)  
     self.labels = new_labels
+    
+  def replace_tags_in_row(self, row, replacement, tag_to_replace):
+    new_row = []
+    for item in row:
+      if item == tag_to_replace:
+        new_row.append(replacement)
+      else:
+        new_row.append(item)
+    
+    return new_row
     
   def process_labels(self):
     self.flattened_labels = flatten_list(self.labels)
@@ -228,9 +240,7 @@ class EY_Data(object):
     self.dict_label_occurence = self.generate_dict_label_occ_in_docs(self.labels)
     self.logger.P('dict label occurence: \n {}'.format(self.dict_label_occurence))
     
-    print('----------------- labels before processing -----------------')
     self.label_information(self.labels)
-    print('----------------- end labels before processing -----------------')
 
     #REMOVE COMMON WORDS
     for i in self.dict_label_occurence.keys():
@@ -257,44 +267,29 @@ class EY_Data(object):
     self.logger.P('dict label occurence: \n {}'.format(self.dict_label_occurence))
     
     self.flattened_labels = flatten_list(self.labels)
-    #map similar tags to a single one
-#    self.dict_lbl_simplifier = {}
-#    for i in self.flattened_labels:
-#      for j in self.flattened_labels[1:]:
-#        if i != j:
-#          simil =  difflib.SequenceMatcher(None,i,j).ratio()
-#          if(simil > 0.6):
-#            try:
-#              if len(i) < len(j):
-#                self.dict_lbl_simplifier[i].append(j)
-#              else:
-#                self.dict_lbl_simplifier[j].append(i)
-#            except:
-#              if len(i) < len(j):
-#                self.dict_lbl_simplifier[i] = j
-#              else:
-#                self.dict_lbl_simplifier[j] = i
-#                
-#    for i in sorted(self.dict_lbl_simplifier.keys()):
-#      print(i, self.dict_lbl_simplifier[i])
-    for k,v in self.dict_lbl_simpler.items():
-      for value in v:
-        self.replace_tags(k,value)
-#    dict_simpler_labels = {}  
-#    for k,v in self.dict_lbl_simplifier.items():
-#      value = self.dict_lbl_simplifier[key]
       
     return
   
   def intersect_text_and_labels(self, text, labels):
     found_labels = []
+    found = 0
+    flattened_values = flatten_list(list(self.dict_lbl_simpler.values()))
     tokenized_text = self.tokenizer.tokenize(text)
     while '' in tokenized_text:
       tokenized_text.remove('')
     for i in labels:
       if i in tokenized_text:
-        found_labels.append(i)
+        if i in flattened_values:
+          found = 0
+          while not found:
+            for k,v in self.dict_lbl_simpler.items():
+              if i in v:
+                found_labels.append(k)
+                found = 1
+        else:
+          found_labels.append(i)
 
+    found_labels = list(set(found_labels))
     return found_labels
   
   def build_outputs(self):
@@ -313,8 +308,8 @@ class EY_Data(object):
         #construct list of labels
         label_list = self.intersect_text_and_labels(qs[random_q_idx], self.labels[i])
         label_list.append(self.topic_labels[i])
+        label_list = list(set(label_list))
         
-        print('validation label list: {}'.format(label_list))
         validation_labels.append(label_list)
         #delete question used for validation set from training set
         del qs[random_q_idx]
@@ -329,6 +324,7 @@ class EY_Data(object):
         #only choose relevant labels
         lbl = self.intersect_text_and_labels(j, self.labels[i])
         lbl.append(self.topic_labels[i])
+        lbl = list(set(lbl))
         self.logger.P(str(lbl))
         output_labels.append(lbl)
       
@@ -337,7 +333,13 @@ class EY_Data(object):
       self.logger.P(self.answers[i])
       #only choose relevant labels
       lbl = self.labels[i]
+      for k,v in self.dict_lbl_simpler.items():
+        for tag in lbl:
+          if tag in v:
+            lbl = self.replace_tags_in_row(lbl, k, tag)
+            
       lbl.append(self.topic_labels[i])
+      lbl = list(set(lbl))
       self.logger.P(str(lbl))
       output_labels.append(lbl)
       
