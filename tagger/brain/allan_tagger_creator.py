@@ -265,18 +265,18 @@ if __name__ == '__main__':
       ]
   valid_labels = [
       ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucurest'],
-      ['oamenii', 'topic_echipa', 'atmosfera', 'echipa'],
+      ['topic_echipa', 'atmosfera', 'echipa'],
       ['junior', 'topic_salarii', 'salariu', 'recrutare', 'oferta'],
       ['salariu','salariu' ,'topic_salarii', 'taxe', 'audit'],
-      ['junior', 'topic_salarii', 'tax', 'audit', 'salariu'],  
+      ['junior', 'topic_salarii', 'taxe', 'audit', 'salariu'],  
       ['mobilitate', 'relocare','topic_mobilita'],
-      ['program', 'flexibil', 'acasa', 'topic_program_de_lucru'],
-      ['concediu', 'pozitie', 'senioritate', 'zile', 'topic_zile_concediu'],
-      ['program', 'flexibil', 'topic_program_de_lucru', 'work'],
+      ['program', 'work', 'topic_program_de_lucru'],
+      ['concediu', 'pozitii', 'senioritate', 'zile', 'topic_zile_concediu'],
+      ['program', 'topic_program_de_lucru', 'work'],
       ['interviu', 'etape', 'recrutare','teste','topic_proces_recrutar'],
       ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
       ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
-      ['beneficii', 'cerificari', 'program', 'topic_benefici', 'oferta']
+      ['beneficii', 'certificari', 'program', 'topic_benefici', 'oferta']
       ]
   
   
@@ -310,7 +310,6 @@ if __name__ == '__main__':
     
     eng.setup_model(dict_model_config=model_def, model_name=model_name) # default architecture
     
-    """
     hist = eng.train_on_texts(loader.raw_documents,
                               loader.raw_labels,
                               n_epochs=epochs,
@@ -321,7 +320,7 @@ if __name__ == '__main__':
                               skip_if_pretrained=False,
                               DEBUG=False)
     score = eng.test_model_on_texts(valid_texts, valid_labels)
-    """
+
     results['MODEL'].append(model_name)
     results['SCORE'].append(score)
     results['HISTORY'].append(hist)
