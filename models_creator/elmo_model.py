@@ -42,21 +42,32 @@ class ELMo(object):
         
         #load word2idx mapping
         logger.P("Loading text from [{}] ...".format(word2idx_file))
+        
+        start_token = '<S>'
+        end_token = '<\S>'
+        unknown_token = '<UNK>'
+        pad_token = '<PAD>'
 
         self.word2idx = pd.read_csv(logger.GetDataFile(word2idx_file), header=None)
         #reduce size for development
-        self.word2idx = self.word2idx.iloc[:50000]
+        self.word2idx = self.word2idx.iloc[:5000]
+
         
         self.idx2word = self.word2idx.set_index(1).to_dict()[0]
         self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
+        self.word2idx['<S>']=5001
+        self.word2idx['<\S>']= 5002
+        self.word2idx[unknown_token]=5003
+        self.word2idx[pad_token]=5004
+        
+        self.idx2word[5001] = '<S>'
+        self.idx2word[5002] = '<\S>'
           
         logger.P("{} number of unique words loaded memory...".format(len(self.word2idx)))
         
         #create char2idx and idx2char dictionaries
         CHAR_DICT = 'aăâbcdefghiîjklmnopqrșsțtuvwxyzAĂÂBCDEFGHÎIJKLMNOPQRSȘTȚUVWXYZ0123456789 .!?:,\'%-\(\)/$|&;[]"'
-        start_token = '<S>'
-        unknown_token = '<UNK>'
-        pad_token = '<PAD>'
+
       
         chars = []
         for c in CHAR_DICT:
@@ -98,7 +109,7 @@ class ELMo(object):
         word_tokenized_sentence = []
         split_sentence = word_tokenize(sentence)
         
-        #START TOKEN for each sentence in character-wise tokenization
+        #START TOKEN for each sentence
         char_tokenized_sentence.append(np.array(start_token_array))
         
         #update vocabulary
@@ -118,7 +129,9 @@ class ELMo(object):
             
           char_tokenized_sentence.append(np.array(char_tokenized_word))
         
+        #append END tokens
         split_sentence.append('<\S>')
+        word_tokenized_sentence.append(self.word2idx.get('<\S>'))
         
         self.training_corpus_w_str.append(np.array(split_sentence))
         self.training_corpus_w_idx.append(np.array(word_tokenized_sentence))
@@ -192,7 +205,7 @@ class ELMo(object):
       sorted_dict_lengths = {}
       #sanity check, make sure all documents are here...
       total_docs = 0
-      for i in sorted(list(dict_lengths.keys())):
+      for i in sorted(list(dict_lengths.keys()), reverse=True):
         sorted_dict_lengths[i] = dict_lengths.get(i)
         total_docs += len(dict_lengths.get(i))
       
@@ -208,20 +221,18 @@ class ELMo(object):
       y_str = []
       for idx in batch:
         #sanity check: assert that the lengths of the rows processed are the same length! 
-        assert(len(self.training_corpus_c[idx]) == len(self.training_corpus_w_idx[idx]) + 1 == len(self.training_corpus_w_str[idx]))
+        assert(len(self.training_corpus_c[idx]) == len(self.training_corpus_w_idx[idx]) == len(self.training_corpus_w_str[idx]))
 
         X.append(self.training_corpus_c[idx])
         y_str.append(self.training_corpus_w_str[idx])
         y_idx.append(self.training_corpus_w_idx[idx])
       
       X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
-      y_str = np.array(y_str)#shape of y_str(batch_size, seq_len)
-      y_idx = np.array(y_idx)#shape of y_str(batch_size, seq_len - 1)
-      print('batch')
-      print(X.shape)
-      print(y_str.shape)
-      print(y_idx.shape)
-      return X, y_str, y_idx
+      y_str = np.array(y_str) #shape of y_str(batch_size, seq_len)
+      y_idx = np.array(y_idx) #shape of y_str(batch_size, seq_len)
+      self.logger.P('Batch data of seq len: {}'.format(y_str.shape[1]), noprefix=True)
+
+      return X, y_idx
     
     def data_generator(self, batch_size=32):
       dict_seq_batches = self.build_doc_length_dict(self.training_corpus_c)
@@ -232,8 +243,8 @@ class ELMo(object):
         batches = [idx_array[x:x+batch_size] for x in range(0, len(idx_array), batch_size)]
         for batch in batches:
           #turn list of indexes into training data for ELMo
-          X, y_str, y_idx = self._format_Xy(batch)
-          yield X, y_str, y_idx
+          X, y_idx = self._format_Xy(batch)
+          yield X, tf.expand_dims(y_idx, axis=-1)
       
     def get_conv_column(self, kernel_size, f_s=128):
         #generate convolution column
@@ -292,22 +303,22 @@ class ELMo(object):
         tf_elmo_input = tf.keras.layers.concatenate([tf_c1_sq, tf_c2_sq, tf_c3_sq, tf_c4_sq], name='concat_input')
         
         #bilstm layer 1
-        lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences= True), name='bidi_lyr_1')
+        lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
         tf_elmo_bidi1 = lyr_bidi1(tf_elmo_input) #(batch_size, seq_len, 512* 2)
         
         #bilstm layer 2
-        lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences= True), name='bidi_lyr_2')
+        lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_2')
         tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
         
         #dense layer - size of vocabulary
-        lyr_vocab = tf.keras.layers.Dense(units = len(self.word2idx), activation = "softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
+        lyr_vocab = tf.keras.layers.Dense(units = len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
         
         tf_readout = lyr_vocab(tf_elmo_bidi2)
         model = tf.keras.Model(inputs=tf_input,
                                outputs= tf_readout)
         
         self.logger.LogKerasModel(model)
-        model.compile(optimizer = "adam", loss='sparse_categorical_crossentropy')
+        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
         return model
 
