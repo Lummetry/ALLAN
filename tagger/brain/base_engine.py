@@ -42,6 +42,8 @@ class ALLANTaggerEngine(LummetryObject):
     self.MAX_CHR = MAX_CHR
     self.DEBUG = DEBUG
     self.min_seq_len = 20
+    self.train_epoch = 0
+    self.train_recall_non_zero_epoch = None
     self.sess = None
     self.session = None
     self.trained = False
@@ -835,9 +837,13 @@ class ALLANTaggerEngine(LummetryObject):
     n_batches = n_obs // batch_size + 1
     self.train_losses = []
     self.log.SupressTFWarn()
-    best_loss = np.inf
+    best_recall = 0
     self.train_recall_history = []
+    self.train_recall_history_epochs = []
+    self.train_recall_non_zero_epoch = None
+    self.train_epoch = 0
     for epoch in range(n_epochs):
+      self.train_epoch += 1
       epoch_losses = []
       for i_batch in range(n_batches):
         batch_start = (i_batch * batch_size) % n_obs
@@ -859,12 +865,13 @@ class ALLANTaggerEngine(LummetryObject):
           epoch+1, epoch_loss,np.mean(self.train_losses), s_bout))
       if (epoch > 0) and (test_every_epochs > 0) and (X_text_valid is not None) and ((epoch+1) % test_every_epochs == 0):
         self.P("Testing on epoch {}".format(epoch+1))
-        self.test_model_on_texts(lst_docs=X_text_valid, lst_labels=y_text_valid,
-                                 DEBUG=True)
-      if epoch_loss < best_loss:
-        s_name = 'ep{}_loss{:.3f}'.format(epoch+1, epoch_loss)
-        self.save_model(s_name, delete_prev_named=True)
-        best_loss = epoch_loss
+        rec = self.test_model_on_texts(lst_docs=X_text_valid, lst_labels=y_text_valid,
+                                       DEBUG=True)
+        if best_recall < rec:
+          s_name = 'ep{}_R{:.0f}'.format(epoch+1, rec)
+          self.save_model(s_name, delete_prev_named=True)
+          best_recall = rec
+          
     self.P("Model training done.")
     self.P("Train recall history: {}".format(self.train_recall_history))
     self._reload_embeds_from_model()
@@ -1084,11 +1091,11 @@ class ALLANTaggerEngine(LummetryObject):
       fn = self.model_config['PRETRAINED']
       _ver = ''
       _f = 0
-      for x in fn:
+      for i,x in enumerate(fn):
         if x.isdigit():
           _ver += x
         if x == '_':
-          if _f == 0:
+          if _f == 0 and i != 0:
             _ver += "."
             _f += 1
           else:
@@ -1193,7 +1200,8 @@ class ALLANTaggerEngine(LummetryObject):
     return txt
 
   
-  def test_model_on_texts(self, lst_docs, lst_labels, top=5, show=True, DEBUG=False):
+  def test_model_on_texts(self, lst_docs, lst_labels, top=5, 
+                          show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1220,7 +1228,9 @@ class ALLANTaggerEngine(LummetryObject):
     tags_per_doc = []
     if show:
       self.P("")
-      self.P("Starting model testing on {} documents".format(len(lst_docs)))
+      self.P("Starting model testing on {} documents with zero-doc-penalty: {:.1f}".format(
+          len(lst_docs), zero_penalty))
+    zero_preds = False
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
       dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
@@ -1243,17 +1253,25 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("")
       doc_prc = doc_acc / len(gt_tags)      
       tags_per_doc.append(len(gt_tags))
+      if doc_prc == 0:
+        zero_preds = True
+        doc_prc = zero_penalty
       docs_acc.append(doc_prc)
     overall_acc = np.mean(docs_acc)
-    self.train_recall_history.append(round(overall_acc, 2))
+    if not zero_preds:
+      self.train_recall_non_zero_epoch = self.train_epoch
+    if record_trace:
+      self.train_recall_history.append(round(overall_acc * 100, 1))
+      self.train_recall_history_epochs.append(self.train_epoch)
     if show:
       self.P("Tagger benchmark on {} documents with {:.1f} avg tags/doc".format(
           len(lst_docs), np.mean(tags_per_doc)))
-      self.P("  Overall recall: {:.1f}%".format(overall_acc * 100))
-      self.P("  Max doc recall: {:.1f}%".format(np.max(docs_acc) * 100))
-      self.P("  Min doc recall: {:.1f}%".format(np.min(docs_acc) * 100))
-      self.P("  Med doc recall: {:.1f}%".format(np.median(docs_acc) * 100))
-    return overall_acc    
+      self.P("  {}".format("ZERO PREDS :( !!!" if zero_preds else "Hurray! All preds non-zero! :)))"))
+      self.P("  Overall recall: {:5.1f}%".format(overall_acc * 100))
+      self.P("  Max doc recall: {:5.1f}%".format(np.max(docs_acc) * 100))
+      self.P("  Min doc recall: {:5.1f}%".format(np.min(docs_acc) * 100))
+      self.P("  Med doc recall: {:5.1f}%".format(np.median(docs_acc) * 100))
+    return max(0, round(overall_acc * 100, 2))
 
   
 if __name__ == '__main__':
@@ -1278,6 +1296,7 @@ if __name__ == '__main__':
   
     
   l.P("")
+  l.P("")
   tags, inputs = eng.predict_text("as vrea info despre salarizare daca se poate")
   res = eng.tagdict_to_text(tags)
   l.P("Result: {}".format(res))
@@ -1285,13 +1304,16 @@ if __name__ == '__main__':
         for x,p in zip(eng.last_labels, eng.last_probas)]))
       
 
+  l.P("")
+  l.P("")
   tags, inputs = eng.predict_text("Aveti cumva sediu si in cluj?")
   res = eng.tagdict_to_text(tags)
   l.P("Result: {}".format(res))
   l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
-
+  l.P("")
+  l.P("")
   tags, inputs = eng.predict_text("unde aveti birourile in bucuresti?")
   res = eng.tagdict_to_text(tags)
   l.P("Result: {}".format(res))
@@ -1299,6 +1321,8 @@ if __name__ == '__main__':
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
 
+  l.P("")
+  l.P("")
   tags, inputs = eng.predict_text("care este atmosfera de echipa in EY?")
   res = eng.tagdict_to_text(tags)
   l.P("Result: {}".format(res))
@@ -1306,6 +1330,8 @@ if __name__ == '__main__':
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
 
+  l.P("")
+  l.P("")
   tags, inputs = eng.predict_text("in ce zona aveti biroul in Iasi?")
   res = eng.tagdict_to_text(tags)
   l.P("Result: {}".format(res))

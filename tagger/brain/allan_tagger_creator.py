@@ -257,7 +257,7 @@ if __name__ == '__main__':
       "exista posibilitatea de a putea pleca sa lucrez in alta tara?",
       "oare as putea sa lucrez si de acasa? care este politicaa in acest sens?",
       "in EY concediu este standrd ca peste tot sau se poate si mai mult oare?",
-      "cam cum este programul de lucru in general la EY ca ore si zile?",
+      "cam cum este programmul de lucru in genere la EY ca ore si zile?",
       "cu ce ar trebui sa ma pregtesc pentru interviuu?",
       "exista posibilitat sa imi furnizati lista cu joburi dispobibil acum?",
       "la acest moment ce pozitiii aveti deschise si cand pot veni la interviu?",
@@ -267,12 +267,12 @@ if __name__ == '__main__':
       ['biroul', 'bucuresti', 'zona', 'topic_sediu_bucurest'],
       ['topic_echipa', 'atmosfera', 'echipa'],
       ['junior', 'topic_salarii', 'salariu', 'recrutare', 'oferta'],
-      ['salariu','salariu' ,'topic_salarii', 'taxe', 'audit'],
+      ['beneficii','salariu' ,'topic_salarii', 'taxe', 'audit'],
       ['junior', 'topic_salarii', 'taxe', 'audit', 'salariu'],  
-      ['mobilitate', 'relocare','topic_mobilita'],
-      ['program', 'work', 'topic_program_de_lucru'],
+      ['mobilitate', 'relocare','topic_mobilita', 'beneficii'],
+      ['program', 'work', 'topic_program_de_lucru', 'beneficii'],
       ['concediu', 'pozitii', 'senioritate', 'zile', 'topic_zile_concediu'],
-      ['program', 'topic_program_de_lucru', 'work'],
+      ['program', 'topic_program_de_lucru', 'work', 'beneficii'],
       ['interviu', 'etape', 'recrutare','teste','topic_proces_recrutar'],
       ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
       ['informatii', 'pozitii', 'topic_pozitii_deschise', 'interviu', 'recrutare'],
@@ -285,9 +285,9 @@ if __name__ == '__main__':
   
   grid_models = l.LoadDataJSON('grid.txt')
   
-  results = OrderedDict({'MODEL': [], 'SCORE': [], 'HISTORY': []})
+  results = OrderedDict({'MODEL': [], "MAX": [], "EP":[], 'EP_NZ': [] ,'END_SC': [], 'HISTORY': [] })
 
-  epochs = 60
+  epochs = 70
   
   grid_size = len(grid_models)
   score = 0
@@ -319,15 +319,25 @@ if __name__ == '__main__':
                               y_labels_valid=valid_labels,
                               skip_if_pretrained=False,
                               DEBUG=False)
-    score = eng.test_model_on_texts(valid_texts, valid_labels)
+    
+    score = eng.test_model_on_texts(valid_texts, valid_labels, record_trace=False)
+    
+    max_idx = np.argmax(hist)
+    max_epoch = eng.train_recall_history_epochs[max_idx]
+    max_score = hist[max_idx]
+    nz_epoch = eng.train_recall_non_zero_epoch
 
     results['MODEL'].append(model_name)
-    results['SCORE'].append(score)
+    results['END_SC'].append(score)
     results['HISTORY'].append(hist)
-    df = pd.DataFrame(results).sort_values('SCORE')
+    results['MAX'].append(max_score)
+    results['EP'].append(max_epoch)
+    results['EP_NZ'].append(nz_epoch)
+    df = pd.DataFrame(results).sort_values('MAX')    
     l.P("")
     l.P("Results so far:\n{}".format(df))
     l.P("")
+    l.SaveDataFrame(df, fn='20190821_results2')
     
     
 

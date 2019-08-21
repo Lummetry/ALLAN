@@ -35,7 +35,7 @@
   
   "MODEL" : {
     "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "20190819_220436_allan_tagger.h5",
+    "PRETRAINED"  : "_20190821_091051_uX3_112233_x_g2_512_d07_ep55_R53.h5",
     
     "DOC_SIZE"    : 75,
     "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
