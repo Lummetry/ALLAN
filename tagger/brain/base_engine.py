@@ -1094,8 +1094,8 @@ class ALLANTaggerEngine(LummetryObject):
       for i,x in enumerate(fn):
         if x.isdigit():
           _ver += x
-        if x == '_':
-          if _f == 0 and i != 0:
+        if x == '_' and i != 0 :
+          if _f == 0:
             _ver += "."
             _f += 1
           else:
@@ -1176,7 +1176,7 @@ class ALLANTaggerEngine(LummetryObject):
     self._setup_vocabs_and_dicts()
     self._init_hyperparams()
     self.setup_embgen_model()
-    self.setup_pretrained_model()
+    self.setup_pretrained_model()    
     if self.embeddings is None:
       raise ValueError("Embeddings loading failed!")
     if self.model is None:
@@ -1185,7 +1185,8 @@ class ALLANTaggerEngine(LummetryObject):
       raise ValueError("EmbGen model loading failed!")
     if self.generated_embeddings is None:
       raise ValueError("Generated similarity siamese embeddings loading failed!")
-    self.P("Full initialization done.")
+    self.P("Full initialization done {} v{}.".format(
+        self.__class__.__name__, self.version))
     
     
   def tagdict_to_text(self, tags, max_tags=None):
