@@ -23,15 +23,15 @@ if __name__ == '__main__':
   elmo_model = elmo.build_model()
   
   logger.P('Start training...')
-  epochs = 5
-#  elmo._train(epochs)
-#  for epoch in range(epochs):
-#    logger.P('EPOCH {}'.format(epoch))
-#    for i in tqdm(elmo.data_generator(batch_size=32)): 
-#      loss, acc, rec, prec = elmo_model.train_on_batch(x=i[0], y=i[1])
-#      logger.P('Loss: {} Accuracy: {} Recall: {} Precision: {}'.format(loss, acc, rec, prec), noprefix=True)
-  batch_size = 3 
+  epochs = 10
+  batch_size = 4
+  
   elmo.build_batch_list(batch_size)
-  steps = elmo.number_of_batches 
-  elmo_model.fit_generator(elmo.data_generator(epochs), steps_per_epoch=steps, epochs=epochs)
-#  elmo_model.fit_generator(elmo.data_generator(batch_size=4), steps_per_epoch=5, epochs=10)
+  training_steps = elmo.number_of_training_batches
+  validation_steps = elmo.number_of_validation_batches
+  
+  elmo_model.fit_generator(elmo.train_generator(), 
+                           steps_per_epoch=training_steps, 
+                           epochs=epochs,
+                           validation_data=elmo.validation_generator(),
+                           validation_steps=validation_steps)

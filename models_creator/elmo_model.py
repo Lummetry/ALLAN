@@ -40,7 +40,7 @@ class ELMo(object):
             
         logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
         #reduce size for development
-        del self.raw_text[1000:]
+        del self.raw_text[2500:]
         
         
         #load word2idx mapping
@@ -95,6 +95,8 @@ class ELMo(object):
     def index_to_word(self, index):
       return self.idx2word.get(index)
     
+    # TOKENIZATION FUNCTIONS
+
     def corpus_tokenization(self):
       #tokenize input into characters
       self.training_corpus_w_str = []
@@ -170,12 +172,18 @@ class ELMo(object):
       df.to_csv('./rowiki_dialogues_merged_v2_wordindex_df.csv', index=False)
 
 
-    def token_sanity_check(self):
-      random_item = random.randint(0, len(self.raw_text))
+    def token_sanity_check(self, sentence_idx=-1):
       
-      self.logger.P("Sanity check on random sentence: {}".format(self.raw_text[random_item]))
-      tokenized_w = self.training_corpus_w_str[random_item]
-      tokenized_c = self.training_corpus_c[random_item]
+      if sentence_idx == -1:
+        random_item = random.randint(0, len(self.raw_text))
+        self.logger.P("Sanity check on random sentence: {}".format(self.raw_text[random_item]))
+        tokenized_w = self.training_corpus_w_str[random_item]
+        tokenized_c = self.training_corpus_c[random_item]
+        
+      else:
+        tokenized_w = self.training_corpus_w_str[sentence_idx]
+        tokenized_c = self.training_corpus_c[sentence_idx]
+        
       self.logger.P("Word tokenization: {}".format(tokenized_w))
       
       id_tokenized_w = []
@@ -200,6 +208,8 @@ class ELMo(object):
         back_to_text = back_to_text + '\n'         
       self.logger.P('Id2Char: {}'.format(back_to_text))
       
+    # DATA GENERATOR FUNCTIONS
+    
     def build_doc_length_dict(self, doc_list):
       dict_lengths = {}
       for i in range(len(doc_list)):
@@ -221,7 +231,7 @@ class ELMo(object):
       assert(len(doc_list) == total_docs)
       return sorted_dict_lengths
     
-    def build_batch_list(self, batch_size):
+    def build_batch_list(self, batch_size, validation_set_ratio=0.1):
       #iterate through list of indexes of sequences of same lengths
       self.training_batches = []
       for length in list(self.dict_seq_batches.keys()):
@@ -231,7 +241,14 @@ class ELMo(object):
         self.training_batches.append(batches)
         
       self.training_batches = flatten_list(self.training_batches)
-      self.number_of_batches = len(self.training_batches)
+      
+      split_index = int(len(self.training_batches) * validation_set_ratio)
+      #split at index
+      self.validation_batches = self.training_batches[split_index:]
+      self.number_of_validation_batches = len(self.validation_batches) 
+      
+      self.training_batches = self.training_batches[:split_index] 
+      self.number_of_training_batches = len(self.training_batches)
       
       return self.training_batches
     
@@ -246,24 +263,33 @@ class ELMo(object):
         X.append(self.training_corpus_c[idx])
         y_str.append(self.training_corpus_w_str[idx])
         y_idx.append(self.training_corpus_w_idx[idx])
+#        self.token_sanity_check(idx)
+
       
       X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
       y_str = np.array(y_str) #shape of y_str(batch_size, seq_len)
       y_idx = np.array(y_idx) #shape of y_str(batch_size, seq_len)
-      self.logger.P('Batch data of seq len: {} '.format(y_str.shape[1]), noprefix=True)
 
       return X, y_idx
     
-    def data_generator(self, epochs):
+    def train_generator(self):
       while True:
-        for epoch_idx in range(epochs):
-          for batch_idx in range(len(self.training_batches)):
+        for batch_idx in range(len(self.training_batches)):
+          #turn list of indexes into training data for ELMo
+          X, y_idx = self._format_Xy(self.training_batches[batch_idx])
+          y_idx = np.expand_dims(y_idx, axis=-1)
+          yield X, y_idx
+        
+    def validation_generator(self):
+      while True:
+          for batch_idx in range(len(self.validation_batches)):
             #turn list of indexes into training data for ELMo
-            X, y_idx = self._format_Xy(self.training_batches[batch_idx])
+            X, y_idx = self._format_Xy(self.validation_batches[batch_idx])
             y_idx = np.expand_dims(y_idx, axis=-1)
             yield X, y_idx
             
-      
+    # MODEL FUNCTIONS
+
     def get_conv_column(self, kernel_size, f_s=128):
         #generate convolution column
         nr_collapsed = 1
@@ -329,17 +355,14 @@ class ELMo(object):
         tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
         
         #dense layer - size of vocabulary
-        lyr_vocab = tf.keras.layers.Dense(units = len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
+        lyr_vocab = tf.keras.layers.Dense(units=len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
         
         tf_readout = lyr_vocab(tf_elmo_bidi2)
         model = tf.keras.Model(inputs=tf_input,
                                outputs= tf_readout)
         
         self.logger.LogKerasModel(model)
-        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
+
+        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy', self.logger.K_rec])
 
         return model
-
-    def _train(self, epochs):
-      elmo_model = self.build_model()
-      elmo_model.fit_generator(self.data_generator(), steps_per_epoch=5, epochs=epochs, verbose=1)
