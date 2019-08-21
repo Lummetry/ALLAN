@@ -1,10 +1,9 @@
-import tensorflow as tf
-
 from tqdm import tqdm
 from libraries.logger import Logger
 from models_creator.elmo_model import ELMo
 
-#NEED TO MENTION: dictionaru word2index are entryuri si pentru 'Ce' si pentru 'ce'  -- vrem asta? probabil-  din moment ce char level cele doua sunt clar diferite.
+def flatten_list(a):
+  return [item for sublist in a for item in sublist]
 
 if __name__ == '__main__':
   logger = Logger(lib_name='RO-ELMo', 
@@ -25,9 +24,14 @@ if __name__ == '__main__':
   
   logger.P('Start training...')
   epochs = 5
-#  elmo_model.fit_generator(elmo.data_generator(), steps_per_epoch=1000, epochs=5, verbose=1)
-  for epoch in range(epochs):
-    logger.P('EPOCH {}'.format(epoch))
-    for i in tqdm(elmo.data_generator(batch_size=32)): 
-      loss, acc = elmo_model.train_on_batch(x=i[0], y=i[1])
-      logger.P('Loss: {} Accuracy: {}'.format(loss, acc), noprefix=True)
+#  elmo._train(epochs)
+#  for epoch in range(epochs):
+#    logger.P('EPOCH {}'.format(epoch))
+#    for i in tqdm(elmo.data_generator(batch_size=32)): 
+#      loss, acc, rec, prec = elmo_model.train_on_batch(x=i[0], y=i[1])
+#      logger.P('Loss: {} Accuracy: {} Recall: {} Precision: {}'.format(loss, acc, rec, prec), noprefix=True)
+  batch_size = 3 
+  elmo.build_batch_list(batch_size)
+  steps = elmo.number_of_batches 
+  elmo_model.fit_generator(elmo.data_generator(epochs), steps_per_epoch=steps, epochs=epochs)
+#  elmo_model.fit_generator(elmo.data_generator(batch_size=4), steps_per_epoch=5, epochs=10)

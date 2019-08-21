@@ -18,6 +18,9 @@ def strip_html_tags(string):
 def string_cleanup(string):
   return re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', string)
 
+def flatten_list(a):
+  return [item for sublist in a for item in sublist]
+
 class ELMo(object):
     def __init__(self, logger, data_file_name, word2idx_file, max_word_length):
         
@@ -84,8 +87,8 @@ class ELMo(object):
         self.idx2char = dict((i, c) for i, c in enumerate(chars))
         
         self.alphabet_size = len(chars)
-    
-    
+        
+            
     def word_to_index(self, word):
       return self.word2idx.get(word)
     
@@ -146,6 +149,9 @@ class ELMo(object):
       
       assert(len(self.training_corpus_c) == len(self.training_corpus_w_str))
       assert(len(self.training_corpus_w_str) == len(self.training_corpus_w_idx))
+      
+      self.dict_seq_batches = self.build_doc_length_dict(self.training_corpus_c)
+      self.total_seq_lengths = len(list(self.dict_seq_batches.keys()))
       
       return self.training_corpus_w_str, self.training_corpus_c
     
@@ -215,6 +221,20 @@ class ELMo(object):
       assert(len(doc_list) == total_docs)
       return sorted_dict_lengths
     
+    def build_batch_list(self, batch_size):
+      #iterate through list of indexes of sequences of same lengths
+      self.training_batches = []
+      for length in list(self.dict_seq_batches.keys()):
+        idx_array = self.dict_seq_batches.get(length)
+        #generate batches by grouping indexes in sublists of batch_size
+        batches = [idx_array[x:x+batch_size] for x in range(0, len(idx_array), batch_size)]
+        self.training_batches.append(batches)
+        
+      self.training_batches = flatten_list(self.training_batches)
+      self.number_of_batches = len(self.training_batches)
+      
+      return self.training_batches
+    
     def _format_Xy(self, batch):
       X = []
       y_idx = []
@@ -230,21 +250,19 @@ class ELMo(object):
       X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
       y_str = np.array(y_str) #shape of y_str(batch_size, seq_len)
       y_idx = np.array(y_idx) #shape of y_str(batch_size, seq_len)
-      self.logger.P('Batch data of seq len: {}'.format(y_str.shape[1]), noprefix=True)
+      self.logger.P('Batch data of seq len: {} '.format(y_str.shape[1]), noprefix=True)
 
       return X, y_idx
     
-    def data_generator(self, batch_size=32):
-      dict_seq_batches = self.build_doc_length_dict(self.training_corpus_c)
-      #iterate through list of indexes of sequences of same lengths
-      for length in list(dict_seq_batches.keys()):
-        idx_array = dict_seq_batches.get(length)
-        #generate batches by grouping indexes in sublists of batch_size
-        batches = [idx_array[x:x+batch_size] for x in range(0, len(idx_array), batch_size)]
-        for batch in batches:
-          #turn list of indexes into training data for ELMo
-          X, y_idx = self._format_Xy(batch)
-          yield X, tf.expand_dims(y_idx, axis=-1)
+    def data_generator(self, epochs):
+      while True:
+        for epoch_idx in range(epochs):
+          for batch_idx in range(len(self.training_batches)):
+            #turn list of indexes into training data for ELMo
+            X, y_idx = self._format_Xy(self.training_batches[batch_idx])
+            y_idx = np.expand_dims(y_idx, axis=-1)
+            yield X, y_idx
+            
       
     def get_conv_column(self, kernel_size, f_s=128):
         #generate convolution column
@@ -322,3 +340,6 @@ class ELMo(object):
 
         return model
 
+    def _train(self, epochs):
+      elmo_model = self.build_model()
+      elmo_model.fit_generator(self.data_generator(), steps_per_epoch=5, epochs=epochs, verbose=1)
