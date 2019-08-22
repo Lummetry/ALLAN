@@ -42,8 +42,6 @@ class ALLANTaggerEngine(LummetryObject):
     self.MAX_CHR = MAX_CHR
     self.DEBUG = DEBUG
     self.min_seq_len = 20
-    self.train_epoch = 0
-    self.train_recall_non_zero_epoch = None
     self.sess = None
     self.session = None
     self.trained = False
@@ -840,10 +838,10 @@ class ALLANTaggerEngine(LummetryObject):
     best_recall = 0
     self.train_recall_history = []
     self.train_recall_history_epochs = []
-    self.train_recall_non_zero_epoch = None
+    self.train_recall_non_zero_epochs = []
     self.train_epoch = 0
     for epoch in range(n_epochs):
-      self.train_epoch += 1
+      self.train_epoch = epoch + 1
       epoch_losses = []
       for i_batch in range(n_batches):
         batch_start = (i_batch * batch_size) % n_obs
@@ -867,10 +865,12 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("Testing on epoch {}".format(epoch+1))
         rec = self.test_model_on_texts(lst_docs=X_text_valid, lst_labels=y_text_valid,
                                        DEBUG=True)
-        if best_recall < rec:
-          s_name = 'ep{}_R{:.0f}'.format(epoch+1, rec)
+        if self.last_test_non_zero and (best_recall < rec):
+          self.train_recall_non_zero_epochs.append(epoch+1)
+          s_name = 'ep{}_R{:.0f}_ANZ'.format(epoch+1, rec)
           self.save_model(s_name, delete_prev_named=True)
           best_recall = rec
+     
           
     self.P("Model training done.")
     self.P("Train recall history: {}".format(self.train_recall_history))
@@ -1012,6 +1012,7 @@ class ALLANTaggerEngine(LummetryObject):
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
                      X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
                      save_best=save, save_end=save, test_every_epochs=test_every_epochs)
+    
     return self.train_recall_history
 
 
@@ -1232,6 +1233,7 @@ class ALLANTaggerEngine(LummetryObject):
       self.P("Starting model testing on {} documents with zero-doc-penalty: {:.1f}".format(
           len(lst_docs), zero_penalty))
     zero_preds = False
+    self.last_test_non_zero = False
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
       dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
@@ -1259,8 +1261,7 @@ class ALLANTaggerEngine(LummetryObject):
         doc_prc = zero_penalty
       docs_acc.append(doc_prc)
     overall_acc = np.mean(docs_acc)
-    if not zero_preds:
-      self.train_recall_non_zero_epoch = self.train_epoch
+    self.last_test_non_zero = not zero_preds
     if record_trace:
       self.train_recall_history.append(round(overall_acc * 100, 1))
       self.train_recall_history_epochs.append(self.train_epoch)

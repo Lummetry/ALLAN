@@ -287,7 +287,7 @@ if __name__ == '__main__':
   
   results = OrderedDict({'MODEL': [], "MAX": [], "EP":[], 'EP_NZ': [] ,'END_SC': [], 'HISTORY': [] })
 
-  epochs = 70
+  epochs = 150
   
   grid_size = len(grid_models)
   score = 0
@@ -325,19 +325,19 @@ if __name__ == '__main__':
     max_idx = np.argmax(hist)
     max_epoch = eng.train_recall_history_epochs[max_idx]
     max_score = hist[max_idx]
-    nz_epoch = eng.train_recall_non_zero_epoch
+    nz_epochs = eng.train_recall_non_zero_epochs
 
     results['MODEL'].append(model_name)
     results['END_SC'].append(score)
-    results['HISTORY'].append(hist)
+    results['HISTORY'].append(hist[-10:])
     results['MAX'].append(max_score)
     results['EP'].append(max_epoch)
-    results['EP_NZ'].append(nz_epoch)
+    results['EP_NZ'].append(nz_epochs)
     df = pd.DataFrame(results).sort_values('MAX')    
     l.P("")
     l.P("Results so far:\n{}".format(df))
     l.P("")
-    l.SaveDataFrame(df, fn='20190821_results3')
+    l.SaveDataFrame(df, fn='20190821_results7')
     
     
 

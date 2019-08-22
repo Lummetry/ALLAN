@@ -381,11 +381,13 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     if self.siamese_model is None:
       self._define_siamese_model()
 
-    if approximate_embeddings:
+    # OBSOLETE (almost)
+    if approximate_embeddings: 
       min_size = 4
       # get generators
       self.get_vocab_training_data(min_size)
       gen = self._get_embgen_model_generator(self.x_data_vocab)
+    # END OBSOLETE (almost)
     
     
     xa,xd,xf = self._get_siamese_datasets(force_generate=force_generate)
