@@ -31,6 +31,8 @@ if __name__ == '__main__':
   
   DEBUG_MODE = 0
   
+  TOP = 5
+  
 
   #####      
   # now load FlaskServer tools and .run()
@@ -49,13 +51,13 @@ if __name__ == '__main__':
     vals = [x for x in res1.values()]
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
-    dic_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[:3]}
-    dic_non_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[3:]}
+    dic_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[:TOP]}
+    dic_non_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs[TOP:]}
     id_topic_document = -1 if DEBUG_MODE == 0 else data[2]
     
     dct_info = {
-        'general_tags' : dic_non_top, 
-        'top_tags': dic_top, 
+        'runner_tags' : dic_non_top, 
+        'best_tags': dic_top, 
         'input_document_init' : std_input,
         'input_document_post' : enc_input, 
         'id_topic_document': id_topic_document,
