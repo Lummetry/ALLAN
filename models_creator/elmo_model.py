@@ -3,7 +3,6 @@ import random
 import numpy as np
 import pandas as pd
 
-
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
@@ -47,20 +46,18 @@ class ELMo(object):
         logger.P("Loading text from [{}] ...".format(word2idx_file))
         
         start_token = '<S>'
-        end_token = '<\S>'
         unknown_token = '<UNK>'
         pad_token = '<PAD>'
 
         self.word2idx = pd.read_csv(logger.GetDataFile(word2idx_file), header=None)
         #reduce size for development
         self.word2idx = self.word2idx.iloc[:5000]
-
         
         self.idx2word = self.word2idx.set_index(1).to_dict()[0]
         self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
         self.word2idx['<S>']=5001
         self.word2idx['<\S>']= 5002
-        self.word2idx[unknown_token]=5003
+        self.word2idx['<UNK>']=5003
         self.word2idx[pad_token]=5004
         
         self.idx2word[5001] = '<S>'
@@ -363,6 +360,6 @@ class ELMo(object):
         
         self.logger.LogKerasModel(model)
 
-        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy', self.logger.K_rec])
+        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
         return model
