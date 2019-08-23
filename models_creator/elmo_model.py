@@ -10,6 +10,9 @@ import tensorflow.keras.backend as K
 from tqdm import tqdm
 from collections import Counter
 from nltk.tokenize import word_tokenize
+from sklearn.metrics import classification_report 
+from tensorflow.keras.callbacks import Callback
+
 
 def strip_html_tags(string):
   return re.sub(r'<.*?>', '', string)
@@ -19,6 +22,58 @@ def string_cleanup(string):
 
 def flatten_list(a):
   return [item for sublist in a for item in sublist]
+
+class Metrics(Callback):
+  def __init__(self, logger, validation_generator, validation_steps, batch_size, idx2word):
+    super().__init__()
+    self.logger = logger
+    self.validation_generator = validation_generator
+    self.validation_steps = validation_steps
+    self.batch_size = batch_size
+    self.idx2word = idx2word
+    
+    self.train_preds = []
+    self.train_true = []
+    self.var_y_true = tf.Variable(0., validate_shape=False)
+    self.var_y_pred = tf.Variable(0., validate_shape=False)
+
+  def on_train_begin(self, logs):
+    self.val_f1_micros = []
+    self.val_f1_macros = []
+
+    self.val_recalls = []
+    self.val_precisions = []
+
+  def _get_validation_preds(self):
+    val_true = []
+    val_pred = []
+    
+    val_true = np.array(val_true)
+    val_pred = np.array(val_pred)
+    
+    for batch in range(self.validation_steps):
+      xVal, yVal = next(self.validation_generator)
+
+      val_true = np.hstack((val_true, np.squeeze(np.asarray(yVal), axis=-1).ravel()))
+      val_pred = np.hstack((val_pred, np.argmax(np.asarray(self.model.predict(xVal)).round(), axis=-1).ravel()))
+
+    val_true = np.asarray(val_true, dtype=np.int32)
+    val_pred = np.asarray(val_pred, dtype=np.int32)
+    
+    return val_true, val_pred
+    
+  def on_epoch_end(self, epoch, logs):
+          
+    val_true, val_pred = self._get_validation_preds()
+    
+    target_ids = np.unique(val_true)
+    target_names = []
+    for i in target_ids:
+      target_names.append(self.idx2word[i])
+      
+    self.logger.P(classification_report(val_true, val_pred, labels=target_ids, target_names=target_names), noprefix=True)
+    
+    return
 
 class ELMo(object):
     def __init__(self, logger, data_file_name, word2idx_file, max_word_length):
@@ -32,7 +87,7 @@ class ELMo(object):
         logger.P("Loading text from [{}] ...".format(data_file_name))
         self.raw_text = []
 
-        with open(logger.GetDataFile(data_file_name), encoding="utf-8") as f:
+        with open(self.logger.GetDataFile(data_file_name), encoding="utf-8") as f:
           for line in f:
             line = line.rstrip()
             self.raw_text.append(strip_html_tags(line))
@@ -363,3 +418,26 @@ class ELMo(object):
         model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
         return model
+      
+    def _train(self, batch_size, epochs):
+      
+      self.logger.P('Start training...')
+      self.corpus_tokenization()
+
+      self.token_sanity_check()
+      
+      self.elmo_model = self.build_model()
+      
+      self.build_batch_list(batch_size)
+      
+      training_steps = self.number_of_training_batches
+      validation_steps = self.number_of_validation_batches
+      
+      valid_metrics = Metrics(self.logger, self.validation_generator(), validation_steps, batch_size, self.idx2word)
+      
+      self.elmo_model.fit_generator(self.train_generator(), 
+                               steps_per_epoch=training_steps, 
+                               epochs=epochs,
+                               validation_data=self.validation_generator(),
+                               validation_steps=validation_steps,
+                               callbacks=[valid_metrics])
