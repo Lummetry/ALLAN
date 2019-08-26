@@ -24,4 +24,4 @@ if __name__ == '__main__':
               fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv',
               max_word_length=26)
 
-  elmo._train(epochs=10, batch_size=4)
+  elmo.train(epochs=10, batch_size=4)

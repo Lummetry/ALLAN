@@ -2,7 +2,6 @@ import re
 import random
 import numpy as np
 import pandas as pd
-
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
@@ -10,8 +9,8 @@ import tensorflow.keras.backend as K
 from tqdm import tqdm
 from collections import Counter
 from nltk.tokenize import word_tokenize
-from models_creator.elmo_custom import Metrics
 
+from models_creator.elmo_custom import Metrics, TimestepDropout
 
 def strip_html_tags(string):
   return re.sub(r'<.*?>', '', string)
@@ -36,6 +35,7 @@ class ELMo(object):
       self._init_idx_mappings()
       
       self.dropout_rate = 0.3
+      self.word_dropout_rate = 0.2
     
     def _load_data(self):
       #load training data
@@ -294,9 +294,11 @@ class ELMo(object):
             yield X, y_idx
             
     # MODEL FUNCTIONS
-
     def get_conv_column(self, kernel_size, f_s=128):
-      #generate convolution column
+      """Generate a convolution column
+         Convolutional column takes onehot representation of characters and reduces the dimensionality
+         with kernel_size until (batch_size, seq_len, 1, alphabet_size)
+      """
       nr_collapsed = 1
       nr_convolutions = 0
       last_kernel_size = kernel_size
@@ -323,13 +325,13 @@ class ELMo(object):
       return lyr_td
 
     def build_charcnn_model(self, kernel_sizes):
-      """
+      """ Character Level CNN
       Builds a character level CNN, takes a list of kernel sizes that define the architecture of the CNN, 
       where each kernel size translates into a conv_column of kernel size i 
       """
       
-      #character level cnn
       tf_input = tf.keras.layers.Input(shape=(None, self.max_word_length), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
+      
       #onehot encoding of characters
       lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), name='one_hot_chars')
 
@@ -367,9 +369,9 @@ class ELMo(object):
       tf_inputs = tf.keras.layers.Input(shape=(None, self.max_word_length,), dtype='int32', name='char_indices')
       tf_token_representations = self.build_charcnn_model([2,3,5,7])(tf_inputs)
       
-      #dropout layer
+      #dropout layers
       tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.dropout_rate)(tf_token_representations)
-      
+      tf_token_dropout = TimestepDropout(self.word_dropout_rate)(tf_token_dropout)
       
       #bilstm layer 1
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
@@ -390,11 +392,11 @@ class ELMo(object):
       
       self.logger.LogKerasModel(model)
 
-      model.compile(optimizer='adagrad', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
+      model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy', self.logger.K_rec])
 
       return model
       
-    def _train(self, batch_size, epochs):
+    def train(self, batch_size, epochs):
       
       self.logger.P('Start training...')
       self.corpus_tokenization()
