@@ -24,4 +24,8 @@ if __name__ == '__main__':
               fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv',
               max_word_length=26)
 
-  elmo.train(epochs=10, batch_size=4)
+  elmo.train(epochs=10, batch_size=32)
+  
+  elmo.get_elmo('Testez modelul.')
+  
+  elmo.get_elmo('Incerc sa stric modelul. Trebuie testat. Neaparat.')

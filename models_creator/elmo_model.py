@@ -103,6 +103,44 @@ class ELMo(object):
       return self.idx2word.get(index)
     
     # TOKENIZATION FUNCTIONS
+    def atomic_tokenization(self, sentence):
+      """Atomic tokenization function
+         Takes a string and returns: char_tokenization, word_idx_tokenization and word_tokenization
+      """
+      char_tokenized_sentence = []
+      word_tokenized_sentence = []
+      split_sentence = word_tokenize(sentence)
+      
+      #first line of every sentence tokeinzed for chars
+      start_token_array = np.ones(self.max_word_length)
+      start_token_array[0] = self.char2idx.get('<S>')
+      
+      #start token for each sentence
+      char_tokenized_sentence.append(np.array(start_token_array))
+      
+      #update vocabulary
+      self.vocab.update(split_sentence)
+
+      for word in split_sentence:
+        word_tokenized_sentence.append(self.word_to_index(word))
+        char_tokenized_word = []
+        for char_index in range(self.max_word_length):
+          if char_index < len(word):
+            if word[char_index] not in self.char2idx:
+              char_tokenized_word.append(self.char2idx.get('<UNK>'))
+            else:
+              char_tokenized_word.append(self.char2idx.get(word[char_index]))
+          else:
+            char_tokenized_word.append(self.char2idx.get('<PAD>'))
+
+        char_tokenized_sentence.append(np.array(char_tokenized_word))
+
+      #append END tokens
+      split_sentence.append('<\S>')
+      word_tokenized_sentence.append(self.word2idx.get('<\S>'))
+
+      return char_tokenized_sentence, word_tokenized_sentence, split_sentence
+    
     def corpus_tokenization(self):
       #tokenize input into characters
       self.training_corpus_w_str = []
@@ -115,34 +153,7 @@ class ELMo(object):
       start_token_array = np.ones(self.max_word_length)
       start_token_array[0] = self.char2idx.get('<S>')
       for sentence in tqdm(self.raw_text):
-        
-        char_tokenized_sentence = []
-        word_tokenized_sentence = []
-        split_sentence = word_tokenize(sentence)
-        
-        #START TOKEN for each sentence
-        char_tokenized_sentence.append(np.array(start_token_array))
-        
-        #update vocabulary
-        self.vocab.update(split_sentence)
-        
-        for word in split_sentence:
-          word_tokenized_sentence.append(self.word_to_index(word))
-          char_tokenized_word = []
-          for char_index in range(self.max_word_length):
-            if char_index < len(word):
-              if word[char_index] not in self.char2idx:
-                char_tokenized_word.append(self.char2idx.get('<UNK>'))
-              else:
-                char_tokenized_word.append(self.char2idx.get(word[char_index]))
-            else:
-              char_tokenized_word.append(self.char2idx.get('<PAD>'))
-            
-          char_tokenized_sentence.append(np.array(char_tokenized_word))
-        
-        #append END tokens
-        split_sentence.append('<\S>')
-        word_tokenized_sentence.append(self.word2idx.get('<\S>'))
+        char_tokenized_sentence, word_tokenized_sentence, split_sentence = self.atomic_tokenization(sentence)
         
         self.training_corpus_w_str.append(np.array(split_sentence))
         self.training_corpus_w_idx.append(np.array(word_tokenized_sentence))
@@ -164,7 +175,6 @@ class ELMo(object):
       return self.training_corpus_w_str, self.training_corpus_c
     
     def create_word2idx_map(self):
-      
       self.word2idx = {'<\S>': 0}
       count = 1
       
@@ -178,9 +188,12 @@ class ELMo(object):
       df.to_csv('./rowiki_dialogues_merged_v2_wordindex_df.csv', index=False)
 
 
-    def token_sanity_check(self, sentence_idx=-1):
-      
-      if sentence_idx == -1:
+    def token_sanity_check(self, sentence_idx=None):
+      """ Sanity check for word-level and char-level tokenization
+          Displays: for a sentence - word2idx, idx2word, char2idx, idxchar
+          if the sentence_idx is None then the sentence is randomly chosen.
+      """
+      if sentence_idx is None:
         random_item = random.randint(0, len(self.raw_text))
         self.logger.P("Sanity check on random sentence: {}".format(self.raw_text[random_item]))
         tokenized_w = self.training_corpus_w_str[random_item]
@@ -215,7 +228,6 @@ class ELMo(object):
       self.logger.P('Id2Char: {}'.format(back_to_text))
       
     # DATA GENERATOR FUNCTIONS
-    
     def build_doc_length_dict(self, doc_list):
       dict_lengths = {}
       for i in range(len(doc_list)):
@@ -392,7 +404,7 @@ class ELMo(object):
       
       self.logger.LogKerasModel(model)
 
-      model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy', self.logger.K_rec])
+      model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
       return model
       
@@ -402,9 +414,10 @@ class ELMo(object):
       self.corpus_tokenization()
 
       self.token_sanity_check()
+      self.token_sanity_check()
       
       self.elmo_model = self.build_elmo_model()
-      
+
       self.build_batch_list(batch_size)
       
       training_steps = self.number_of_training_batches
@@ -413,8 +426,50 @@ class ELMo(object):
       valid_metrics = Metrics(self.logger, self.validation_generator(), validation_steps, batch_size, self.idx2word)
       
       self.elmo_model.fit_generator(self.train_generator(), 
-                               steps_per_epoch=training_steps, 
-                               epochs=epochs,
-                               validation_data=self.validation_generator(),
-                               validation_steps=validation_steps,
-                               callbacks=[valid_metrics])
+                                    steps_per_epoch=training_steps, 
+                                    epochs=epochs,
+                                    validation_data=self.validation_generator(),
+                                    validation_steps=validation_steps,
+                                    callbacks=[valid_metrics])
+    
+    def get_elmo(self, sentence):
+      """Returns ELMo embeddings for a given sentence 
+         The three outputs represent the embeddings at each layer of the model
+      """
+      char_tokenzized_sentence, _, _ = self.atomic_tokenization(sentence)
+      X = np.expand_dims(char_tokenzized_sentence, axis=0)
+      self.logger.P('Generating ELMo embeddings for sentence: {}'.format(sentence))
+      
+      #get elmo layer 0
+      get_charcnn_output = K.function([self.elmo_model.layers[0].input],
+                                      [self.elmo_model.layers[-4].output])
+      
+      layer0_output = get_charcnn_output([X])[0]
+      layer0_output = np.asarray(layer0_output)
+      layer0_output = layer0_output[0][1:]
+      self.logger.P('shape of layer {}'.format(layer0_output.shape))
+      self.logger.P('layer 2:\n {}'.format(layer0_output))
+      
+      #get elmo layer 1
+      get_bilstm1_output = K.function([self.elmo_model.layers[0].input],
+                                      [self.elmo_model.layers[-3].output])
+      
+      layer1_output = get_bilstm1_output([X])[0]
+      layer1_output = np.asarray(layer1_output)
+      layer1_output = layer1_output[0][1:]
+      self.logger.P('shape of layer {}'.format(layer1_output.shape))
+      self.logger.P('layer 2:\n {}'.format(layer1_output))
+      
+      #get elmo layer 2 
+      get_bilstm2_output = K.function([self.elmo_model.layers[0].input],
+                                      [self.elmo_model.layers[-2].output])
+      
+      layer2_output = get_bilstm2_output([X])[0]
+      layer2_output = np.asarray(layer2_output)
+      layer2_output = layer2_output[0][1:]
+      self.logger.P('shape of layer {}'.format(layer2_output.shape))
+      self.logger.P('layer 2:\n {}'.format(layer2_output))
+      
+      return [layer0_output, layer1_output, layer2_output]
+      
+
