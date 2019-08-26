@@ -365,7 +365,12 @@ class ELMo(object):
       lyr_td = tf.keras.layers.TimeDistributed(model, name='c{}_td'.format(kernel_size))
       return lyr_td
 
-    def build_charcnn_model(self):
+    def build_charcnn_model(self, kernel_sizes):
+      """
+      compliles a character level CNN, takes a list of kernel sizes that define the architecture of the CNN, 
+      where each kernel size translates into a conv_column of kernel size i 
+      """
+      
       #character level cnn
       tf_input = tf.keras.layers.Input(shape=(None, self.max_word_length), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
       #onehot encoding of characters
@@ -374,25 +379,22 @@ class ELMo(object):
       tf_onehot_chars = lyr_onehot(tf_input) # (batch_size, seq_len, nr_chars, total_chars)
       
       #convolution columns of different kernel sizes
-      lyr_td_c1 = self.get_conv_column(kernel_size = 2)
-      lyr_td_c2 = self.get_conv_column(kernel_size = 3)
-      lyr_td_c3 = self.get_conv_column(kernel_size = 5)
-      lyr_td_c4 = self.get_conv_column(kernel_size = 7)
+      lyr_td_c = []
+      for i in kernel_sizes:
+        lyr_td_c.append(self.get_conv_column(i)) # (batch_size, seq_len, 1, filters_c[i])
 
-      tf_c1 = lyr_td_c1(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c1)
-      tf_c2 = lyr_td_c2(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c2)
-      tf_c3 = lyr_td_c3(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c3)
-      tf_c4 = lyr_td_c4(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c4)
+      tf_c = []
+      for i in range(len(kernel_sizes)):
+        tf_c.append(lyr_td_c[i](tf_onehot_chars))
 
       lyr_squeeze = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=2), name='squeeze')
-      tf_c1_sq = lyr_squeeze(tf_c1) # (batch_size, seq_len, filters_c1)
-      tf_c2_sq = lyr_squeeze(tf_c2) # (batch_size, seq_len, filters_c2)
-      tf_c3_sq = lyr_squeeze(tf_c3) # (batch_size, seq_len, filters_c3)
-      tf_c4_sq = lyr_squeeze(tf_c4) # (batch_size, seq_len, filters_c4)
+      tf_c_sq = []
+      for i in tf_c:
+        tf_c_sq.append(lyr_squeeze(i)) #(batch_size, seq_len, filters_c1)
       
       #all columns concatenated into one - output of character level cnn, input of elmo
       # (batch_size, seq_len, filters_c1 + filters_c2 + filters_c2 + filters_c4)
-      tf_elmo_input = tf.keras.layers.concatenate([tf_c1_sq, tf_c2_sq, tf_c3_sq, tf_c4_sq], name='concat_input')
+      tf_elmo_input = tf.keras.layers.concatenate(tf_c_sq, name='concat_input')
       
       model = tf.keras.Model(inputs=tf_input,
                              outputs= tf_elmo_input)
@@ -406,7 +408,7 @@ class ELMo(object):
       
       #get input for elmo from char-level cnn
       tf_inputs = tf.keras.layers.Input(shape=(None, self.max_word_length,), dtype='int32', name='char_indices')
-      tf_token_representations = self.build_charcnn_model()(tf_inputs)
+      tf_token_representations = self.build_charcnn_model([2,3,5,7])(tf_inputs)
       
       #bilstm layer 1
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
