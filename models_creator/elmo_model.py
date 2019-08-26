@@ -122,7 +122,6 @@ class ELMo(object):
         
         #create char2idx and idx2char dictionaries
         CHAR_DICT = 'aăâbcdefghiîjklmnopqrșsțtuvwxyzAĂÂBCDEFGHÎIJKLMNOPQRSȘTȚUVWXYZ0123456789 .!?:,\'%-\(\)/$|&;[]"'
-
       
         chars = []
         for c in CHAR_DICT:
@@ -140,7 +139,6 @@ class ELMo(object):
         
         self.alphabet_size = len(chars)
         
-            
     def word_to_index(self, word):
       return self.word2idx.get(word)
     
@@ -148,7 +146,6 @@ class ELMo(object):
       return self.idx2word.get(index)
     
     # TOKENIZATION FUNCTIONS
-
     def corpus_tokenization(self):
       #tokenize input into characters
       self.training_corpus_w_str = []
@@ -315,7 +312,6 @@ class ELMo(object):
         X.append(self.training_corpus_c[idx])
         y_str.append(self.training_corpus_w_str[idx])
         y_idx.append(self.training_corpus_w_idx[idx])
-#        self.token_sanity_check(idx)
 
       
       X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
@@ -343,81 +339,97 @@ class ELMo(object):
     # MODEL FUNCTIONS
 
     def get_conv_column(self, kernel_size, f_s=128):
-        #generate convolution column
-        nr_collapsed = 1
-        nr_convolutions = 0
-        last_kernel_size = kernel_size
-        while self.max_word_length // nr_collapsed != 1:
-            nr_collapsed *= kernel_size
-            nr_convolutions += 1
-            if nr_collapsed > self.max_word_length:
-                nr_collapsed = nr_collapsed // kernel_size
-                last_kernel_size = self.max_word_length // nr_collapsed
-                break
+      #generate convolution column
+      nr_collapsed = 1
+      nr_convolutions = 0
+      last_kernel_size = kernel_size
+      while self.max_word_length // nr_collapsed != 1:
+          nr_collapsed *= kernel_size
+          nr_convolutions += 1
+          if nr_collapsed > self.max_word_length:
+              nr_collapsed = nr_collapsed // kernel_size
+              last_kernel_size = self.max_word_length // nr_collapsed
+              break
 
-        tf_inp_model_column = tf.keras.layers.Input(shape=(self.max_word_length, self.alphabet_size), name='inp_model_column_{}'.format(kernel_size))
-        tf_x = tf_inp_model_column
-        for i in range(nr_convolutions):
-            k_s = kernel_size
-            if i == nr_convolutions-1:
-                k_s = last_kernel_size
-            lyr_conv = tf.keras.layers.Conv1D(filters=f_s, kernel_size=k_s, strides=kernel_size, name="c{}_conv{}".format(kernel_size, i+1))
-            lyr_bn = tf.keras.layers.BatchNormalization(name="c{}_bn{}".format(kernel_size, i+1))
-            lyr_relu = tf.keras.layers.ReLU(name="c{}_relu{}".format(kernel_size,i+1))
-            tf_x = lyr_relu(lyr_bn(lyr_conv(tf_x)))
-        model = tf.keras.Model(inputs=tf_inp_model_column, outputs=tf_x)
-        lyr_td = tf.keras.layers.TimeDistributed(model, name='c{}_td'.format(kernel_size))
-        return lyr_td
+      tf_inp_model_column = tf.keras.layers.Input(shape=(self.max_word_length, self.alphabet_size), name='inp_model_column_{}'.format(kernel_size))
+      tf_x = tf_inp_model_column
+      for i in range(nr_convolutions):
+          k_s = kernel_size
+          if i == nr_convolutions-1:
+              k_s = last_kernel_size
+          lyr_conv = tf.keras.layers.Conv1D(filters=f_s, kernel_size=k_s, strides=kernel_size, name="c{}_conv{}".format(kernel_size, i+1))
+          lyr_bn = tf.keras.layers.BatchNormalization(name="c{}_bn{}".format(kernel_size, i+1))
+          lyr_relu = tf.keras.layers.ReLU(name="c{}_relu{}".format(kernel_size,i+1))
+          tf_x = lyr_relu(lyr_bn(lyr_conv(tf_x)))
+      model = tf.keras.Model(inputs=tf_inp_model_column, outputs=tf_x)
+      lyr_td = tf.keras.layers.TimeDistributed(model, name='c{}_td'.format(kernel_size))
+      return lyr_td
 
-    def build_model(self):
-        #character level cnn
-        tf_input = tf.keras.layers.Input(shape=(None, self.max_word_length), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
-        #onehot encoding of characters
-        lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), name='one_hot_chars')
+    def build_charcnn_model(self):
+      #character level cnn
+      tf_input = tf.keras.layers.Input(shape=(None, self.max_word_length), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
+      #onehot encoding of characters
+      lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), name='one_hot_chars')
 
-        tf_onehot_chars = lyr_onehot(tf_input) # (batch_size, seq_len, nr_chars, total_chars)
-        
-        #convolution columns of different kernel sizes
-        lyr_td_c1 = self.get_conv_column(kernel_size = 2)
-        lyr_td_c2 = self.get_conv_column(kernel_size = 3)
-        lyr_td_c3 = self.get_conv_column(kernel_size = 5)
-        lyr_td_c4 = self.get_conv_column(kernel_size = 7)
+      tf_onehot_chars = lyr_onehot(tf_input) # (batch_size, seq_len, nr_chars, total_chars)
+      
+      #convolution columns of different kernel sizes
+      lyr_td_c1 = self.get_conv_column(kernel_size = 2)
+      lyr_td_c2 = self.get_conv_column(kernel_size = 3)
+      lyr_td_c3 = self.get_conv_column(kernel_size = 5)
+      lyr_td_c4 = self.get_conv_column(kernel_size = 7)
 
-        tf_c1 = lyr_td_c1(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c1)
-        tf_c2 = lyr_td_c2(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c2)
-        tf_c3 = lyr_td_c3(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c3)
-        tf_c4 = lyr_td_c4(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c4)
+      tf_c1 = lyr_td_c1(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c1)
+      tf_c2 = lyr_td_c2(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c2)
+      tf_c3 = lyr_td_c3(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c3)
+      tf_c4 = lyr_td_c4(tf_onehot_chars) # (batch_size, seq_len, 1, filters_c4)
 
-        lyr_squeeze = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=2), name='squeeze')
-        tf_c1_sq = lyr_squeeze(tf_c1) # (batch_size, seq_len, filters_c1)
-        tf_c2_sq = lyr_squeeze(tf_c2) # (batch_size, seq_len, filters_c2)
-        tf_c3_sq = lyr_squeeze(tf_c3) # (batch_size, seq_len, filters_c3)
-        tf_c4_sq = lyr_squeeze(tf_c4) # (batch_size, seq_len, filters_c4)
-        
-        #all columns concatenated into one - output of character level cnn, input of elmo
-        # (batch_size, seq_len, filters_c1 + filters_c2 + filters_c2 + filters_c4)
-        tf_elmo_input = tf.keras.layers.concatenate([tf_c1_sq, tf_c2_sq, tf_c3_sq, tf_c4_sq], name='concat_input')
-        
-        #bilstm layer 1
-        lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
-        tf_elmo_bidi1 = lyr_bidi1(tf_elmo_input) #(batch_size, seq_len, 512* 2)
-        
-        #bilstm layer 2
-        lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_2')
-        tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
-        
-        #dense layer - size of vocabulary
-        lyr_vocab = tf.keras.layers.Dense(units=len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
-        
-        tf_readout = lyr_vocab(tf_elmo_bidi2)
-        model = tf.keras.Model(inputs=tf_input,
-                               outputs= tf_readout)
-        
-        self.logger.LogKerasModel(model)
+      lyr_squeeze = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=2), name='squeeze')
+      tf_c1_sq = lyr_squeeze(tf_c1) # (batch_size, seq_len, filters_c1)
+      tf_c2_sq = lyr_squeeze(tf_c2) # (batch_size, seq_len, filters_c2)
+      tf_c3_sq = lyr_squeeze(tf_c3) # (batch_size, seq_len, filters_c3)
+      tf_c4_sq = lyr_squeeze(tf_c4) # (batch_size, seq_len, filters_c4)
+      
+      #all columns concatenated into one - output of character level cnn, input of elmo
+      # (batch_size, seq_len, filters_c1 + filters_c2 + filters_c2 + filters_c4)
+      tf_elmo_input = tf.keras.layers.concatenate([tf_c1_sq, tf_c2_sq, tf_c3_sq, tf_c4_sq], name='concat_input')
+      
+      model = tf.keras.Model(inputs=tf_input,
+                             outputs= tf_elmo_input)
+      
+      self.logger.LogKerasModel(model)
+      
+      return model
+   
+    def build_elmo_model(self):
+      #2 layer bilstm language model
+      
+      #get input for elmo from char-level cnn
+      tf_inputs = tf.keras.layers.Input(shape=(None, self.max_word_length,), dtype='int32', name='char_indices')
+      tf_token_representations = self.build_charcnn_model()(tf_inputs)
+      
+      #bilstm layer 1
+      lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
+      
+      tf_elmo_bidi1 = lyr_bidi1(tf_token_representations) #(batch_size, seq_len, 512* 2)
+      
+      #bilstm layer 2
+      lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_2')
+      tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
+      
+      #dense layer - size of vocabulary
+      lyr_vocab = tf.keras.layers.Dense(units=len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
+      
+      tf_readout = lyr_vocab(tf_elmo_bidi2)
+      
+      model = tf.keras.Model(inputs=tf_inputs,
+                             outputs= tf_readout)
+      
+      self.logger.LogKerasModel(model)
 
-        model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
+      model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
-        return model
+      return model
       
     def _train(self, batch_size, epochs):
       
@@ -426,7 +438,7 @@ class ELMo(object):
 
       self.token_sanity_check()
       
-      self.elmo_model = self.build_model()
+      self.elmo_model = self.build_elmo_model()
       
       self.build_batch_list(batch_size)
       
