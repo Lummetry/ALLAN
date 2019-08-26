@@ -10,8 +10,7 @@ import tensorflow.keras.backend as K
 from tqdm import tqdm
 from collections import Counter
 from nltk.tokenize import word_tokenize
-from sklearn.metrics import classification_report 
-from tensorflow.keras.callbacks import Callback
+from models_creator.elmo_custom import Metrics
 
 
 def strip_html_tags(string):
@@ -22,123 +21,81 @@ def string_cleanup(string):
 
 def flatten_list(a):
   return [item for sublist in a for item in sublist]
-
-class Metrics(Callback):
-  def __init__(self, logger, validation_generator, validation_steps, batch_size, idx2word):
-    super().__init__()
-    self.logger = logger
-    self.validation_generator = validation_generator
-    self.validation_steps = validation_steps
-    self.batch_size = batch_size
-    self.idx2word = idx2word
-    
-    self.train_preds = []
-    self.train_true = []
-    self.var_y_true = tf.Variable(0., validate_shape=False)
-    self.var_y_pred = tf.Variable(0., validate_shape=False)
-
-  def on_train_begin(self, logs):
-    self.val_f1_micros = []
-    self.val_f1_macros = []
-
-    self.val_recalls = []
-    self.val_precisions = []
-
-  def _get_validation_preds(self):
-    val_true = []
-    val_pred = []
-    
-    val_true = np.array(val_true)
-    val_pred = np.array(val_pred)
-    
-    for batch in range(self.validation_steps):
-      xVal, yVal = next(self.validation_generator)
-
-      val_true = np.hstack((val_true, np.squeeze(np.asarray(yVal), axis=-1).ravel()))
-      val_pred = np.hstack((val_pred, np.argmax(np.asarray(self.model.predict(xVal)).round(), axis=-1).ravel()))
-
-    val_true = np.asarray(val_true, dtype=np.int32)
-    val_pred = np.asarray(val_pred, dtype=np.int32)
-    
-    return val_true, val_pred
-    
-  def on_epoch_end(self, epoch, logs):
-          
-    val_true, val_pred = self._get_validation_preds()
-    
-    target_ids = np.unique(val_true)
-    target_names = []
-    for i in target_ids:
-      target_names.append(self.idx2word[i])
-      
-    self.logger.P(classification_report(val_true, val_pred, labels=target_ids, target_names=target_names), noprefix=True)
-    
-    return
-
+ 
 class ELMo(object):
-    def __init__(self, logger, data_file_name, word2idx_file, max_word_length):
-        
-        self.logger = logger
-        self.word2idx_file = word2idx_file
-        self.max_word_length = int(max_word_length)
-        self.vocab = Counter()
-        
-        #load training data
-        logger.P("Loading text from [{}] ...".format(data_file_name))
-        self.raw_text = []
-
-        with open(self.logger.GetDataFile(data_file_name), encoding="utf-8") as f:
-          for line in f:
-            line = line.rstrip()
-            self.raw_text.append(strip_html_tags(line))
-            
-        logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
-        #reduce size for development
-        del self.raw_text[2500:]
-        
-        
-        #load word2idx mapping
-        logger.P("Loading text from [{}] ...".format(word2idx_file))
-        
-        start_token = '<S>'
-        unknown_token = '<UNK>'
-        pad_token = '<PAD>'
-
-        self.word2idx = pd.read_csv(logger.GetDataFile(word2idx_file), header=None)
-        #reduce size for development
-        self.word2idx = self.word2idx.iloc[:5000]
-        
-        self.idx2word = self.word2idx.set_index(1).to_dict()[0]
-        self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
-        self.word2idx['<S>']=5001
-        self.word2idx['<\S>']= 5002
-        self.word2idx['<UNK>']=5003
-        self.word2idx[pad_token]=5004
-        
-        self.idx2word[5001] = '<S>'
-        self.idx2word[5002] = '<\S>'
-          
-        logger.P("{} number of unique words loaded memory...".format(len(self.word2idx)))
-        
-        #create char2idx and idx2char dictionaries
-        CHAR_DICT = 'aăâbcdefghiîjklmnopqrșsțtuvwxyzAĂÂBCDEFGHÎIJKLMNOPQRSȘTȚUVWXYZ0123456789 .!?:,\'%-\(\)/$|&;[]"'
+    def __init__(self, logger, fn_data, fn_word2idx, max_word_length):
       
-        chars = []
-        for c in CHAR_DICT:
-            chars.append(c)
+      self.logger = logger
+      self.fn_word2idx = fn_word2idx
+      self.fn_data = fn_data
+
+      self.max_word_length = int(max_word_length)
+      self.vocab = Counter()
+      
+      self._load_data()
+      self._init_idx_mappings()
+      
+      self.dropout_rate = 0.3
     
-        chars = list(set(chars))
-        
-        #add special tokens
-        chars.insert(0, start_token)
-        chars.insert(1, pad_token)
-        chars.insert(2, unknown_token)
+    def _load_data(self):
+      #load training data
+      self.logger.P("Loading text from [{}] ...".format(self.fn_data))
+      self.raw_text = []
+
+      with open(self.logger.GetDataFile(self.fn_data), encoding="utf-8") as f:
+        for line in f:
+          line = line.rstrip()
+          self.raw_text.append(strip_html_tags(line))
+          
+      self.logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
+      #reduce size for development
+      del self.raw_text[2500:]
     
-        self.char2idx = dict((c, i) for i, c in enumerate(chars))
-        self.idx2char = dict((i, c) for i, c in enumerate(chars))
+    def _init_idx_mappings(self):
+      start_token = '<S>'
+      end_token = '<\S>'
+      unknown_token = '<UNK>'
+      pad_token = '<PAD>'
+      
+      #load word2idx mapping
+      self.logger.P("Loading text from [{}] ...".format(self.fn_word2idx))
+      self.word2idx = pd.read_csv(self.logger.GetDataFile(self.fn_word2idx), header=None)
+      
+      #reduce size for development
+      self.word2idx = self.word2idx.iloc[:5000]
+      
+      self.idx2word = self.word2idx.set_index(1).to_dict()[0]
+      self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
+      self.word2idx[start_token]=5001
+      self.word2idx[end_token]= 5002
+      self.word2idx[unknown_token]=5003
+      self.word2idx[pad_token]=5004
+      
+      self.idx2word[5001] = start_token
+      self.idx2word[5002] = end_token
+      self.idx2word[5003] = unknown_token
+      self.idx2word[5004] = pad_token
         
-        self.alphabet_size = len(chars)
-        
+      self.logger.P("{} number of unique words loaded memory...".format(len(self.word2idx)))
+      
+      #create char2idx and idx2char dictionaries
+      CHAR_DICT = 'aăâbcdefghiîjklmnopqrșsțtuvwxyzAĂÂBCDEFGHÎIJKLMNOPQRSȘTȚUVWXYZ0123456789 .!?:,\'%-\(\)/$|&;[]"'
+    
+      chars = []
+      for c in CHAR_DICT:
+          chars.append(c)
+  
+      chars = list(set(chars))
+      
+      #add special tokens
+      chars.insert(0, start_token)
+      chars.insert(1, pad_token)
+      chars.insert(2, unknown_token)
+  
+      self.char2idx = dict((c, i) for i, c in enumerate(chars))
+      self.idx2char = dict((i, c) for i, c in enumerate(chars))
+      self.alphabet_size = len(chars)
+
     def word_to_index(self, word):
       return self.word2idx.get(word)
     
@@ -367,7 +324,7 @@ class ELMo(object):
 
     def build_charcnn_model(self, kernel_sizes):
       """
-      compliles a character level CNN, takes a list of kernel sizes that define the architecture of the CNN, 
+      Builds a character level CNN, takes a list of kernel sizes that define the architecture of the CNN, 
       where each kernel size translates into a conv_column of kernel size i 
       """
       
@@ -410,10 +367,14 @@ class ELMo(object):
       tf_inputs = tf.keras.layers.Input(shape=(None, self.max_word_length,), dtype='int32', name='char_indices')
       tf_token_representations = self.build_charcnn_model([2,3,5,7])(tf_inputs)
       
+      #dropout layer
+      tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.dropout_rate)(tf_token_representations)
+      
+      
       #bilstm layer 1
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
       
-      tf_elmo_bidi1 = lyr_bidi1(tf_token_representations) #(batch_size, seq_len, 512* 2)
+      tf_elmo_bidi1 = lyr_bidi1(tf_token_dropout) #(batch_size, seq_len, 512* 2)
       
       #bilstm layer 2
       lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_2')
@@ -429,7 +390,7 @@ class ELMo(object):
       
       self.logger.LogKerasModel(model)
 
-      model.compile(optimizer="adam", loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
+      model.compile(optimizer='adagrad', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
 
       return model
       
