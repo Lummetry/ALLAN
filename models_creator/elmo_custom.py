@@ -66,7 +66,9 @@ class Metrics(Callback):
     for i in target_ids:
       target_names.append(self.idx2word[i])
       
-    self.logger.P(classification_report(val_true, val_pred, labels=target_ids, target_names=target_names), noprefix=True)
+    #display validation metrics every 5 epochs  
+    if (epoch + 1) % 5 == 0:  
+      self.logger.P(classification_report(val_true, val_pred, labels=target_ids, target_names=target_names), noprefix=True)
     
     return
   

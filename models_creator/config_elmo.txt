@@ -3,11 +3,17 @@
     "APP_FOLDER"  : "_allan_data/_elmo_embeddings",
 
     
-    "MAX_WORD_LENGTH"  : 26,
+    "MAX_WORD_LENGTH"    : 26,
     
-    "EPOCHS"           : 10,
-    "BATCH_SIZE"       : 32,
+    "KERNEL_SIZE_COLUMNS": [2,3,5,7],
+    "CHARCNN_FILTER_SIZE": 128,
     
-    "DROPOUT_RATE"     : 0.4,
-    "WORD_DROPOUT_RATE": 0.4
+    "LSTM_HIDDEN_SIZE"   : 512,
+    "DROPOUT_RATE"       : 0.4,
+    "WORD_DROPOUT_RATE"  : 0.4,
+    "CLIP_VALUE"         : 5,
+    
+    "EPOCHS"             : 20,
+    "BATCH_SIZE"         : 32
+
 }

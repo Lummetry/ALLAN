@@ -28,3 +28,6 @@ if __name__ == '__main__':
   elmo.get_elmo('Testez modelul.')
   
   elmo.get_elmo('Incerc sa stric modelul. Trebuie testat. Neaparat.')
+  
+  elmo.heat_map_sentence_similarity('Numele meu este Alex, tu cum te numesti?')
+  elmo.heat_map_sentence_similarity('Clinica asta este dureure. Vreau alt spital.')

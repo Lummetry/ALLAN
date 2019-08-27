@@ -2,13 +2,15 @@ import re
 import random
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
-
 
 from tqdm import tqdm
 from collections import Counter
 from nltk.tokenize import word_tokenize
+from scipy.spatial.distance import cosine
 
 from models_creator.elmo_custom import Metrics, TimestepDropout
 
@@ -40,8 +42,13 @@ class ELMo(object):
       if self.parameters is None:
         self.parameters = {}
         self.parameters['MAX_WORD_LENGTH'] = self.config_data['MAX_WORD_LENGTH']
+        self.parameters['KERNEL_SIZE_COLUMNS'] = self.config_data['KERNEL_SIZE_COLUMNS']
+        self.parameters['CHARCNN_FILTER_SIZE'] = self.config_data['CHARCNN_FILTER_SIZE']
+        
+        self.parameters['LSTM_HIDDEN_SIZE'] = self.config_data['LSTM_HIDDEN_SIZE']
         self.parameters['DROPOUT_RATE'] = self.config_data['DROPOUT_RATE']
         self.parameters['WORD_DROPOUT_RATE'] = self.config_data['WORD_DROPOUT_RATE']    
+        self.parameters['CLIP_VALUE'] = self.config_data['CLIP_VALUE']
         
         self.parameters['EPOCHS'] = self.config_data['EPOCHS']
         self.parameters['BATCH_SIZE'] = self.config_data['BATCH_SIZE']
@@ -349,31 +356,37 @@ class ELMo(object):
       Builds a character level CNN, takes a list of kernel sizes that define the architecture of the CNN, 
       where each kernel size translates into a conv_column of kernel size i 
       """
+      #input size (batch_size, seq_len, nr_chars)
+      tf_input = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH']), 
+                                       dtype=tf.int32, 
+                                       name="Input_seq_chars") 
       
-      tf_input = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH']), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
-      
-      #onehot encoding of characters
-      lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), name='one_hot_chars')
+      #onehot encoding of characters: (batch_size, seq_len, nr_chars, total_chars)
+      lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), 
+                                          name='one_hot_chars')
 
-      tf_onehot_chars = lyr_onehot(tf_input) # (batch_size, seq_len, nr_chars, total_chars)
+      tf_onehot_chars = lyr_onehot(tf_input) 
       
-      #convolution columns of different kernel sizes
+      #convolution columns of different kernel sizes: (batch_size, seq_len, 1, filters_c[i])
       lyr_td_c = []
       for i in kernel_sizes:
-        lyr_td_c.append(self.get_conv_column(i)) # (batch_size, seq_len, 1, filters_c[i])
+        lyr_td_c.append(self.get_conv_column(i, self.parameters['CHARCNN_FILTER_SIZE'])) 
 
       tf_c = []
       for i in range(len(kernel_sizes)):
         tf_c.append(lyr_td_c[i](tf_onehot_chars))
-
-      lyr_squeeze = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=2), name='squeeze')
+      
+      #reducing the dimensionality at the axis with 1: (batch_size, seq_len, filters_c[i])
+      lyr_squeeze = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=2), 
+                                           name='squeeze')
       tf_c_sq = []
       for i in tf_c:
-        tf_c_sq.append(lyr_squeeze(i)) #(batch_size, seq_len, filters_c1)
+        tf_c_sq.append(lyr_squeeze(i)) 
       
       #all columns concatenated into one - output of character level cnn, input of elmo
       # (batch_size, seq_len, filters_c1 + filters_c2 + filters_c2 + filters_c4)
-      tf_elmo_input = tf.keras.layers.concatenate(tf_c_sq, name='concat_input')
+      tf_elmo_input = tf.keras.layers.concatenate(tf_c_sq, 
+                                                  name='concat_input')
       
       model = tf.keras.Model(inputs=tf_input,
                              outputs= tf_elmo_input)
@@ -386,36 +399,47 @@ class ELMo(object):
       #2 layer bilstm language model
       
       #get input for elmo from char-level cnn
-      tf_inputs = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH'],), dtype='int32', name='char_indices')
-      tf_token_representations = self.build_charcnn_model([2,3,5,7])(tf_inputs)
+      tf_inputs = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH'],), 
+                                        dtype='int32', 
+                                        name='char_indices')
+      
+      tf_token_representations = self.build_charcnn_model(self.parameters['KERNEL_SIZE_COLUMNS'])(tf_inputs)
       
       #dropout layers
       tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.parameters['DROPOUT_RATE'])(tf_token_representations)
       tf_token_dropout = TimestepDropout(self.parameters['WORD_DROPOUT_RATE'])(tf_token_dropout)
       
-      #bilstm layer 1
-      lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
+      #bilstm layer 1 of shape (batch_size, seq_len, lstm hidden units* 2)
+      lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(self.parameters['LSTM_HIDDEN_SIZE'],
+                                                                          recurrent_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
+                                                                                                                               self.parameters['CLIP_VALUE']),
+                                                                          return_sequences=True), 
+                                                                          name='bidi_lyr_1')
+      tf_elmo_bidi1 = lyr_bidi1(tf_token_dropout)
       
-      tf_elmo_bidi1 = lyr_bidi1(tf_token_dropout) #(batch_size, seq_len, 512* 2)
+      #bilstm layer 2 of shape (batch_size, seq_len, lstm hidden units* 2)
+      lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(self.parameters['LSTM_HIDDEN_SIZE'],
+                                                                          recurrent_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
+                                                                                                                               self.parameters['CLIP_VALUE']),
+                                                                          return_sequences=True), 
+                                                                          name='bidi_lyr_2')
+      tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1)
       
-      #bilstm layer 2
-      lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_2')
-      tf_elmo_bidi2 = lyr_bidi2(tf_elmo_bidi1) #(batch_size, seq_len, 512* 2)
-      
-      #dense layer - size of vocabulary
-      lyr_vocab = tf.keras.layers.Dense(units=len(self.word2idx), activation="softmax", name="dense_to_vocab") #(batch_size, seq_len, vocab_size)
-      
+      #dense layer of shape (batch_size, seq_len, vocab_size)
+      lyr_vocab = tf.keras.layers.Dense(units=len(self.word2idx), 
+                                        activation="softmax", 
+                                        name="dense_to_vocab") 
       tf_readout = lyr_vocab(tf_elmo_bidi2)
       
       model = tf.keras.Model(inputs=tf_inputs,
                              outputs= tf_readout)
-      
       self.logger.LogKerasModel(model)
-
-      model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['sparse_categorical_accuracy'])
-
-      return model
       
+      model.compile(optimizer='adam', 
+                    loss='sparse_categorical_crossentropy', 
+                    metrics=['sparse_categorical_accuracy'])
+      return model
+    
     def train(self):
       
       epochs = self.parameters['EPOCHS']
@@ -482,5 +506,19 @@ class ELMo(object):
       self.logger.P('layer 2:\n {}'.format(layer2_output))
       
       return [layer0_output, layer1_output, layer2_output]
-      
+    
+    def heat_map_sentence_similarity(self, sentence):
+      _, _, tokens = self.atomic_tokenization(sentence)
+      _, layer_1, layer_2 = self.get_elmo(sentence)
+      #fill similarity matrix
+      data = np.empty(shape=(layer_1.shape[0],layer_1.shape[0]))
+      for x in range(layer_1.shape[0]):
+        for y in range(layer_1.shape[0]):
+          data[x][y] = cosine(layer_1[x], layer_1[y])
+#          print('similarity between {} and {} is {}'.format(tokens[x], tokens[y], data[x][y]))
 
+#      print(data)
+      heat_map = sns.heatmap(data,
+                             xticklabels=tokens[:-1],
+                             yticklabels=tokens[:-1])
+      plt.show()
