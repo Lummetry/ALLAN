@@ -21,10 +21,9 @@ if __name__ == '__main__':
   
   elmo = ELMo(logger,
               fn_data='rowiki_dialogues_merged_v2',
-              fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv',
-              max_word_length=26)
+              fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv')
 
-  elmo.train(epochs=10, batch_size=32)
+  elmo.train()
   
   elmo.get_elmo('Testez modelul.')
   

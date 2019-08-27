@@ -22,21 +22,32 @@ def flatten_list(a):
   return [item for sublist in a for item in sublist]
  
 class ELMo(object):
-    def __init__(self, logger, fn_data, fn_word2idx, max_word_length):
+    def __init__(self, logger, fn_data, fn_word2idx, parameters=None):
       
       self.logger = logger
       self.fn_word2idx = fn_word2idx
       self.fn_data = fn_data
+      self.parameters = parameters
+      self.config_data = self.logger.config_data
 
-      self.max_word_length = int(max_word_length)
       self.vocab = Counter()
       
+      self._parse_config_data()
       self._load_data()
       self._init_idx_mappings()
-      
-      self.dropout_rate = 0.3
-      self.word_dropout_rate = 0.2
     
+    def _parse_config_data(self):
+      if self.parameters is None:
+        self.parameters = {}
+        self.parameters['MAX_WORD_LENGTH'] = self.config_data['MAX_WORD_LENGTH']
+        self.parameters['DROPOUT_RATE'] = self.config_data['DROPOUT_RATE']
+        self.parameters['WORD_DROPOUT_RATE'] = self.config_data['WORD_DROPOUT_RATE']    
+        
+        self.parameters['EPOCHS'] = self.config_data['EPOCHS']
+        self.parameters['BATCH_SIZE'] = self.config_data['BATCH_SIZE']
+    
+      return
+  
     def _load_data(self):
       #load training data
       self.logger.P("Loading text from [{}] ...".format(self.fn_data))
@@ -112,7 +123,7 @@ class ELMo(object):
       split_sentence = word_tokenize(sentence)
       
       #first line of every sentence tokeinzed for chars
-      start_token_array = np.ones(self.max_word_length)
+      start_token_array = np.ones(self.parameters['MAX_WORD_LENGTH'])
       start_token_array[0] = self.char2idx.get('<S>')
       
       #start token for each sentence
@@ -124,7 +135,7 @@ class ELMo(object):
       for word in split_sentence:
         word_tokenized_sentence.append(self.word_to_index(word))
         char_tokenized_word = []
-        for char_index in range(self.max_word_length):
+        for char_index in range(self.parameters['MAX_WORD_LENGTH']):
           if char_index < len(word):
             if word[char_index] not in self.char2idx:
               char_tokenized_word.append(self.char2idx.get('<UNK>'))
@@ -150,8 +161,6 @@ class ELMo(object):
       self.logger.P("Tokenization underway...")
       self.logger.P("Processing {} sentences".format(len(self.raw_text)))
      
-      start_token_array = np.ones(self.max_word_length)
-      start_token_array[0] = self.char2idx.get('<S>')
       for sentence in tqdm(self.raw_text):
         char_tokenized_sentence, word_tokenized_sentence, split_sentence = self.atomic_tokenization(sentence)
         
@@ -163,7 +172,7 @@ class ELMo(object):
       self.training_corpus_w_idx = np.array(self.training_corpus_w_idx)
       self.training_corpus_c = np.array(self.training_corpus_c) 
       
-      self.logger.P("Tokenized {} sentences, at word and character level(with a max word length of {}) ...".format(len(self.training_corpus_w_str), self.max_word_length))
+      self.logger.P("Tokenized {} sentences, at word and character level(with a max word length of {}) ...".format(len(self.training_corpus_w_str), self.parameters['MAX_WORD_LENGTH']))
       self.logger.P("...Generating a vocabulary size of {}".format(len(self.vocab)))
       
       assert(len(self.training_corpus_c) == len(self.training_corpus_w_str))
@@ -282,7 +291,6 @@ class ELMo(object):
         y_str.append(self.training_corpus_w_str[idx])
         y_idx.append(self.training_corpus_w_idx[idx])
 
-      
       X = np.array(X) #shape of X(batch_size, seq_len, alphabet_size)
       y_str = np.array(y_str) #shape of y_str(batch_size, seq_len)
       y_idx = np.array(y_idx) #shape of y_str(batch_size, seq_len)
@@ -314,15 +322,15 @@ class ELMo(object):
       nr_collapsed = 1
       nr_convolutions = 0
       last_kernel_size = kernel_size
-      while self.max_word_length // nr_collapsed != 1:
+      while self.parameters['MAX_WORD_LENGTH'] // nr_collapsed != 1:
           nr_collapsed *= kernel_size
           nr_convolutions += 1
-          if nr_collapsed > self.max_word_length:
+          if nr_collapsed > self.parameters['MAX_WORD_LENGTH']:
               nr_collapsed = nr_collapsed // kernel_size
-              last_kernel_size = self.max_word_length // nr_collapsed
+              last_kernel_size = self.parameters['MAX_WORD_LENGTH'] // nr_collapsed
               break
 
-      tf_inp_model_column = tf.keras.layers.Input(shape=(self.max_word_length, self.alphabet_size), name='inp_model_column_{}'.format(kernel_size))
+      tf_inp_model_column = tf.keras.layers.Input(shape=(self.parameters['MAX_WORD_LENGTH'], self.alphabet_size), name='inp_model_column_{}'.format(kernel_size))
       tf_x = tf_inp_model_column
       for i in range(nr_convolutions):
           k_s = kernel_size
@@ -342,7 +350,7 @@ class ELMo(object):
       where each kernel size translates into a conv_column of kernel size i 
       """
       
-      tf_input = tf.keras.layers.Input(shape=(None, self.max_word_length), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
+      tf_input = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH']), dtype=tf.int32, name="Input_seq_chars") # (batch_size, seq_len, nr_chars)
       
       #onehot encoding of characters
       lyr_onehot = tf.keras.layers.Lambda(lambda x: K.one_hot(x, num_classes=self.alphabet_size), name='one_hot_chars')
@@ -378,12 +386,12 @@ class ELMo(object):
       #2 layer bilstm language model
       
       #get input for elmo from char-level cnn
-      tf_inputs = tf.keras.layers.Input(shape=(None, self.max_word_length,), dtype='int32', name='char_indices')
+      tf_inputs = tf.keras.layers.Input(shape=(None, self.parameters['MAX_WORD_LENGTH'],), dtype='int32', name='char_indices')
       tf_token_representations = self.build_charcnn_model([2,3,5,7])(tf_inputs)
       
       #dropout layers
-      tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.dropout_rate)(tf_token_representations)
-      tf_token_dropout = TimestepDropout(self.word_dropout_rate)(tf_token_dropout)
+      tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.parameters['DROPOUT_RATE'])(tf_token_representations)
+      tf_token_dropout = TimestepDropout(self.parameters['WORD_DROPOUT_RATE'])(tf_token_dropout)
       
       #bilstm layer 1
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(512, return_sequences=True), name='bidi_lyr_1')
@@ -408,7 +416,10 @@ class ELMo(object):
 
       return model
       
-    def train(self, batch_size, epochs):
+    def train(self):
+      
+      epochs = self.parameters['EPOCHS']
+      batch_size = self.parameters['BATCH_SIZE']
       
       self.logger.P('Start training...')
       self.corpus_tokenization()
