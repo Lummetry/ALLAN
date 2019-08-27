@@ -22,7 +22,7 @@ if __name__ == '__main__':
   elmo = ELMo(logger,
               fn_data='rowiki_dialogues_merged_v2',
               fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv')
-
+  elmo.corpus_tokenization()
   elmo.train()
   
   elmo.get_elmo('Testez modelul.')

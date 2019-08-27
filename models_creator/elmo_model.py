@@ -22,6 +22,11 @@ def string_cleanup(string):
 
 def flatten_list(a):
   return [item for sublist in a for item in sublist]
+
+def perplexity(y_true, y_pred):
+    cross_entropy = K.sparse_categorical_crossentropy(y_true, y_pred)
+    perplexity = K.pow(2.0, cross_entropy)
+    return perplexity
  
 class ELMo(object):
     def __init__(self, logger, fn_data, fn_word2idx, parameters=None):
@@ -65,16 +70,14 @@ class ELMo(object):
           line = line.rstrip()
           self.raw_text.append(strip_html_tags(line))
           
-      self.logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
       #reduce size for development
-      del self.raw_text[2500:]
-    
-    def _init_idx_mappings(self):
-      start_token = '<S>'
-      end_token = '<\S>'
-      unknown_token = '<UNK>'
-      pad_token = '<PAD>'
+#      del self.raw_text[2500:]
+  
+      self.logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
+
       
+    def _init_idx_mappings(self):
+
       #load word2idx mapping
       self.logger.P("Loading text from [{}] ...".format(self.fn_word2idx))
       self.word2idx = pd.read_csv(self.logger.GetDataFile(self.fn_word2idx), header=None)
@@ -84,15 +87,6 @@ class ELMo(object):
       
       self.idx2word = self.word2idx.set_index(1).to_dict()[0]
       self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
-      self.word2idx[start_token]=5001
-      self.word2idx[end_token]= 5002
-      self.word2idx[unknown_token]=5003
-      self.word2idx[pad_token]=5004
-      
-      self.idx2word[5001] = start_token
-      self.idx2word[5002] = end_token
-      self.idx2word[5003] = unknown_token
-      self.idx2word[5004] = pad_token
         
       self.logger.P("{} number of unique words loaded memory...".format(len(self.word2idx)))
       
@@ -104,6 +98,9 @@ class ELMo(object):
           chars.append(c)
   
       chars = list(set(chars))
+      start_token = '<S>'
+      pad_token = '<PAD>'
+      unknown_token = '<UNK>'
       
       #add special tokens
       chars.insert(0, start_token)
@@ -154,16 +151,18 @@ class ELMo(object):
         char_tokenized_sentence.append(np.array(char_tokenized_word))
 
       #append END tokens
-      split_sentence.append('<\S>')
-      word_tokenized_sentence.append(self.word2idx.get('<\S>'))
+      split_sentence.append('<\\S>')
+      word_tokenized_sentence.append(self.word2idx.get('<\\S>'))
 
       return char_tokenized_sentence, word_tokenized_sentence, split_sentence
     
     def corpus_tokenization(self):
+      """Tokenization on entire dataset.
+      """
       #tokenize input into characters
       self.training_corpus_w_str = []
       self.training_corpus_w_idx = []
-
+      
       self.training_corpus_c = []
       self.logger.P("Tokenization underway...")
       self.logger.P("Processing {} sentences".format(len(self.raw_text)))
@@ -191,7 +190,12 @@ class ELMo(object):
       return self.training_corpus_w_str, self.training_corpus_c
     
     def create_word2idx_map(self):
-      self.word2idx = {'<\S>': 0}
+      """Create word to index mapping
+      """
+      self.word2idx = {'<S>': 0,
+                       '<\\S>': 1,
+                       '<PAD>': 2,
+                       '<UNK>': 3}
       count = 1
       
       for line in tqdm(self.training_corpus_w_str):
@@ -203,7 +207,17 @@ class ELMo(object):
       df = pd.DataFrame(self.word2idx.items(), columns=['Word', 'Index'])
       df.to_csv('./rowiki_dialogues_merged_v2_wordindex_df.csv', index=False)
 
-
+#    def word_length_distrib(self):
+#      w_lens = list(self.vocab.keys())
+#      w_lens = map(len,w_lens)
+#      w_lens = list(w_lens)
+#      
+#      df_word_len = pd.DataFrame(columns=['len'])
+#      df_word_len.len = w_lens
+#      df_word_len_distrib = df_word_len.describe()
+#      
+#      print(df_word_len_distrib)
+#      
     def token_sanity_check(self, sentence_idx=None):
       """ Sanity check for word-level and char-level tokenization
           Displays: for a sentence - word2idx, idx2word, char2idx, idxchar
@@ -413,13 +427,17 @@ class ELMo(object):
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(self.parameters['LSTM_HIDDEN_SIZE'],
                                                                           recurrent_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
                                                                                                                                self.parameters['CLIP_VALUE']),
-                                                                          return_sequences=True), 
+                                                                          kernel_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
+                                                                                                                               self.parameters['CLIP_VALUE']),
+                                                                          return_sequences=True),
                                                                           name='bidi_lyr_1')
       tf_elmo_bidi1 = lyr_bidi1(tf_token_dropout)
       
       #bilstm layer 2 of shape (batch_size, seq_len, lstm hidden units* 2)
       lyr_bidi2 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(self.parameters['LSTM_HIDDEN_SIZE'],
                                                                           recurrent_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
+                                                                                                                               self.parameters['CLIP_VALUE']),
+                                                                          kernel_constraint=tf.keras.constraints.MinMaxNorm(-1*self.parameters['CLIP_VALUE'],
                                                                                                                                self.parameters['CLIP_VALUE']),
                                                                           return_sequences=True), 
                                                                           name='bidi_lyr_2')
@@ -437,7 +455,7 @@ class ELMo(object):
       
       model.compile(optimizer='adam', 
                     loss='sparse_categorical_crossentropy', 
-                    metrics=['sparse_categorical_accuracy'])
+                    metrics=['sparse_categorical_accuracy',perplexity])
       return model
     
     def train(self):
@@ -515,9 +533,7 @@ class ELMo(object):
       for x in range(layer_1.shape[0]):
         for y in range(layer_1.shape[0]):
           data[x][y] = cosine(layer_1[x], layer_1[y])
-#          print('similarity between {} and {} is {}'.format(tokens[x], tokens[y], data[x][y]))
 
-#      print(data)
       heat_map = sns.heatmap(data,
                              xticklabels=tokens[:-1],
                              yticklabels=tokens[:-1])
