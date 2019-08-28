@@ -13,7 +13,7 @@
     "WORD_DROPOUT_RATE"  : 0.4,
     "CLIP_VALUE"         : 5,
     
-    "EPOCHS"             : 20,
+    "EPOCHS"             : 5,
     "BATCH_SIZE"         : 32
 
 }

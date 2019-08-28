@@ -83,7 +83,7 @@ class ELMo(object):
       self.word2idx = pd.read_csv(self.logger.GetDataFile(self.fn_word2idx), header=None)
       
       #reduce size for development
-      self.word2idx = self.word2idx.iloc[:5000]
+#      self.word2idx = self.word2idx.iloc[:5000]
       
       self.idx2word = self.word2idx.set_index(1).to_dict()[0]
       self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
@@ -190,16 +190,15 @@ class ELMo(object):
       return self.training_corpus_w_str, self.training_corpus_c
     
     def create_word2idx_map(self):
-      """Create word to index mapping
+      """Create word to index mapping from data corpus.
       """
       self.word2idx = {'<S>': 0,
                        '<\\S>': 1,
                        '<PAD>': 2,
                        '<UNK>': 3}
       count = 1
-      
-      for line in tqdm(self.training_corpus_w_str):
-        for word in line:
+      for line in tqdm(self.raw_text):
+        for word in word_tokenize(line):
           if word not in self.word2idx.keys():
             self.word2idx[word] = count
             count += 1
@@ -207,17 +206,27 @@ class ELMo(object):
       df = pd.DataFrame(self.word2idx.items(), columns=['Word', 'Index'])
       df.to_csv('./rowiki_dialogues_merged_v2_wordindex_df.csv', index=False)
 
-#    def word_length_distrib(self):
-#      w_lens = list(self.vocab.keys())
-#      w_lens = map(len,w_lens)
-#      w_lens = list(w_lens)
-#      
-#      df_word_len = pd.DataFrame(columns=['len'])
-#      df_word_len.len = w_lens
-#      df_word_len_distrib = df_word_len.describe()
-#      
-#      print(df_word_len_distrib)
-#      
+    def word_length_distrib(self):
+      """Print the distribution of word lengths in word2idx file.
+      """
+      #create list of word lengths from keys of word2idx dictionary
+      w_lens = list(self.word2idx.keys())
+      w_lengths = []
+      for i in w_lens:
+        if type(i) is str:
+          w_lengths.append(float(len(i)))
+      
+      #option to supress scientific notation in pandas
+      pd.set_option('display.float_format', lambda x: '%.3f' % x)
+      
+      #create dataframe with wordlengths
+      df_word_len = pd.DataFrame(columns=['len'])
+      df_word_len.len = w_lengths
+      df_words = df_word_len.astype('float32')
+      
+      #print word length distribution
+      self.logger.P("The distribution of word lengths is:\n {}".format(df_words.describe()))
+      
     def token_sanity_check(self, sentence_idx=None):
       """ Sanity check for word-level and char-level tokenization
           Displays: for a sentence - word2idx, idx2word, char2idx, idxchar
@@ -265,7 +274,7 @@ class ELMo(object):
           dict_lengths[len(doc_list[i])].append(i)
         except:
           dict_lengths[len(doc_list[i])] = [i]
-          
+      
       sorted_dict_lengths = {}
       #sanity check, make sure all documents are here...
       total_docs = 0
@@ -273,7 +282,14 @@ class ELMo(object):
         sorted_dict_lengths[i] = dict_lengths.get(i)
         total_docs += len(dict_lengths.get(i))
       
+      sentence_lengths = list(dict_lengths.keys())
+      df_sentence_distrib = pd.DataFrame(columns=["len"])
+      df_sentence_distrib.len = sentence_lengths
+      self.logger.P("The distribution of sentence lengths is: \n {}".format(df_sentence_distrib.describe()))
+      
       del dict_lengths
+      del sentence_lengths
+      del df_sentence_distrib
       
       #ensure that length of initial array is equal to the total of all lengths of the arrays in sorted_dict_lengths
       assert(len(doc_list) == total_docs)
