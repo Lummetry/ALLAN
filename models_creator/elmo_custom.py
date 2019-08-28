@@ -58,14 +58,16 @@ class Metrics(Callback):
     return val_true, val_pred
     
   def on_epoch_end(self, epoch, logs):
-          
     val_true, val_pred = self._get_validation_preds()
     
     target_ids = np.unique(val_true)
     target_names = []
     for i in target_ids:
-      target_names.append(self.idx2word[i])
-      
+      if self.idx2word[i] is not None:
+        target_names.append(self.idx2word[i])
+      else:
+        #IF id not in dict, use <UNK> token
+        target_names.append(self.idx2word[3])
     #display validation metrics every 5 epochs  
     if (epoch + 1) % 5 == 0:  
       self.logger.P(classification_report(val_true, val_pred, labels=target_ids, target_names=target_names), noprefix=True)

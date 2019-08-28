@@ -71,7 +71,7 @@ class ELMo(object):
           self.raw_text.append(strip_html_tags(line))
           
       #reduce size for development
-#      del self.raw_text[2500:]
+      del self.raw_text[2500:]
   
       self.logger.P("Dataset of length {} is loaded into memory...".format(len(self.raw_text)))
 
@@ -83,9 +83,11 @@ class ELMo(object):
       self.word2idx = pd.read_csv(self.logger.GetDataFile(self.fn_word2idx), header=None)
       
       #reduce size for development
-#      self.word2idx = self.word2idx.iloc[:5000]
+      self.word2idx = self.word2idx.iloc[:5000]
       
       self.idx2word = self.word2idx.set_index(1).to_dict()[0]
+      del self.idx2word['Index']
+      self.idx2word = {int(k):v for k,v in self.idx2word.items()}
       self.word2idx = dict(zip(self.idx2word.values(), self.idx2word.keys()))
         
       self.logger.P("{} number of unique words loaded memory...".format(len(self.word2idx)))
@@ -112,10 +114,16 @@ class ELMo(object):
       self.alphabet_size = len(chars)
 
     def word_to_index(self, word):
-      return self.word2idx.get(word)
+      if word not in self.word2idx.keys():
+        return self.word2idx.get('<UNK>')
+      else:
+        return self.word2idx.get(word)
     
     def index_to_word(self, index):
-      return self.idx2word.get(index)
+      if index not in self.idx2word.keys():
+        return self.idx2word.get(3)
+      else:
+        return self.idx2word.get(index)
     
     # TOKENIZATION FUNCTIONS
     def atomic_tokenization(self, sentence):
@@ -151,8 +159,8 @@ class ELMo(object):
         char_tokenized_sentence.append(np.array(char_tokenized_word))
 
       #append END tokens
-      split_sentence.append('<\\S>')
-      word_tokenized_sentence.append(self.word2idx.get('<\\S>'))
+      split_sentence.append('<EOS>')
+      word_tokenized_sentence.append(self.word2idx.get('<EOS>'))
 
       return char_tokenized_sentence, word_tokenized_sentence, split_sentence
     
@@ -193,10 +201,10 @@ class ELMo(object):
       """Create word to index mapping from data corpus.
       """
       self.word2idx = {'<S>': 0,
-                       '<\\S>': 1,
+                       '<EOS>': 1,
                        '<PAD>': 2,
                        '<UNK>': 3}
-      count = 1
+      count = 4
       for line in tqdm(self.raw_text):
         for word in word_tokenize(line):
           if word not in self.word2idx.keys():
