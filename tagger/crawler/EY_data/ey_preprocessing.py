@@ -85,8 +85,8 @@ class EY_Data(object):
     
     self.process_labels()
  
-#    self.build_outputs()
-    self.write_to_file()
+    self.build_outputs()
+#    self.write_to_file()
     
   def read_files(self):
     self.answers = []
@@ -117,8 +117,12 @@ class EY_Data(object):
     flattened_labels = flatten_list(labels)
     #update label occurence counter
     dict_label_occurence = Counter(flattened_labels)
-    
     self.logger.P('Word frequency in labels:\n {}'.format(dict_label_occurence))
+    self.logger.P('Number of topic labels:')
+    for k,v in dict_label_occurence.items():
+      if len(k) > 5:
+        if k[:5] == 'topic':
+          self.logger.P('{}:{}'.format(k,v))
 
     inv_dict_label_occurence = {}
     for k, count in dict_label_occurence.items():
@@ -133,7 +137,7 @@ class EY_Data(object):
       length = len(v)
       dict_label_count[k] = [length]
       total_count += k * length
-
+            
     lengths_of_labels = []
     for i in range(len(labels)):
       lengths_of_labels.append(len(labels[i]))
