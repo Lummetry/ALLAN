@@ -83,7 +83,7 @@ class ELMo(object):
       self.word2idx = pd.read_csv(self.logger.GetDataFile(self.fn_word2idx), header=None)
       
       #reduce size for development
-      self.word2idx = self.word2idx.iloc[:5000]
+      self.word2idx = self.word2idx.iloc[:10000]
       
       self.idx2word = self.word2idx.set_index(1).to_dict()[0]
       del self.idx2word['Index']
@@ -427,7 +427,8 @@ class ELMo(object):
                                                   name='concat_input')
       
       model = tf.keras.Model(inputs=tf_input,
-                             outputs= tf_elmo_input)
+                             outputs= tf_elmo_input,
+                             name = 'char_cnn')
       
       self.logger.LogKerasModel(model)
       
@@ -444,8 +445,8 @@ class ELMo(object):
       tf_token_representations = self.build_charcnn_model(self.parameters['KERNEL_SIZE_COLUMNS'])(tf_inputs)
       
       #dropout layers
-      tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.parameters['DROPOUT_RATE'])(tf_token_representations)
-      tf_token_dropout = TimestepDropout(self.parameters['WORD_DROPOUT_RATE'])(tf_token_dropout)
+      tf_token_dropout = tf.keras.layers.SpatialDropout1D(self.parameters['DROPOUT_RATE'], name='spatial_dropout')(tf_token_representations)
+      tf_token_dropout = TimestepDropout(self.parameters['WORD_DROPOUT_RATE'], name='timestep_dropout')(tf_token_dropout)
       
       #bilstm layer 1 of shape (batch_size, seq_len, lstm hidden units* 2)
       lyr_bidi1 = tf.keras.layers.Bidirectional(tf.keras.layers.CuDNNLSTM(self.parameters['LSTM_HIDDEN_SIZE'],
@@ -506,9 +507,21 @@ class ELMo(object):
                                     steps_per_epoch=training_steps, 
                                     epochs=epochs,
                                     validation_data=self.validation_generator(),
-                                    validation_steps=validation_steps,
-                                    callbacks=[valid_metrics])
+                                    validation_steps=validation_steps)
     
+    def save_elmo_weights(self, filename):
+      #model for saving elmo weights to pkl
+      elmo_layers = [layer.name for layer in self.elmo_model.layers]
+      self.logger.P('Saving the model weights...')
+      self.logger.SaveKerasModelWeights(filename, self.elmo_model, elmo_layers)
+    
+    def load_pretrained_elmo(self, filename):
+      #load pretrained model from saved model weights
+      self.elmo_model = self.build_elmo_model()
+      elmo_layers = [layer.name for layer in self.elmo_model.layers]
+      self.logger.P('Loading ELMo from weights file...')
+      self.logger.LoadKerasModelWeights(filename, self.elmo_model, elmo_layers)
+      
     def get_elmo(self, sentence):
       """Returns ELMo embeddings for a given sentence 
          The three outputs represent the embeddings at each layer of the model

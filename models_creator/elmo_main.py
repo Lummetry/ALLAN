@@ -23,14 +23,14 @@ if __name__ == '__main__':
               fn_data='rowiki_dialogues_merged_v2',
               fn_word2idx='rowiki_dialogues_merged_v2_wordindex_df.csv')
   
-#  elmo.create_word2idx_map()
-  
   elmo.train()
-  
+  elmo.save_elmo_weights('elmo_weights_25ksent_50ktokens')
+
   elmo.get_elmo('Testez modelul.')
   
   elmo.get_elmo('Incerc sa stric modelul. Trebuie testat. Neaparat.')
-  
+
   elmo.heat_map_sentence_similarity('Numele meu este Alex, tu cum te numesti?')
   elmo.heat_map_sentence_similarity('Clinica asta este dureure. Vreau alt spital.')
+    
   a = 0
