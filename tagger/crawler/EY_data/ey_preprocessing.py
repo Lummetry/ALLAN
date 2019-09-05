@@ -1,5 +1,5 @@
+import ast
 import random
-import difflib
 import pandas as pd
 
 from collections import Counter
@@ -379,7 +379,50 @@ class EY_Data(object):
           for k in valid_labels[i]:
             f_label.write(k + '\n')
         f_label.close()
-        
+
+  def get_entries(self, fn_questions):
+    folder = self.data_dir[:-1].rsplit('/',1)[0]
+    list_of_entries = []
+    entry = []
+    with open(folder + fn_questions) as file:
+      content = file.readlines()
+      for line in content:
+        line = line.strip()
+        if len(line) >0 and line[0] == '"':
+          entry = []
+          entry.append(line[1:])
+        elif len(line) > 0 and line[-3] == '}':
+          entry.append(line[:-2])
+          list_of_entries.append(entry)
+        else:
+          entry.append(line)
+    return list_of_entries
+  
+  def get_tags(self, entry):
+    self.flattened_labels = flatten_list(self.labels)
+    tags = []
+    for line in entry:
+      if line[:4] == 'resu':
+        tag = line.split('{')[2].split('"')[2]
+        score = line.split('{')[2].split('"')[4]
+        score = score[1:6]
+        tag_score = (tag,score)
+        tags.append(tag_score)
+      elif line[:16] == 'input_document_i':
+        query = line[18:].split('"')[2]
+      else:
+        first_word = line.split(':')
+        if first_word[0] in self.flattened_labels or first_word[0] in self.topic_labels or first_word[0] in list(self.dict_lbl_simpler.keys()):
+          tag_score = (first_word[0], first_word[1][:5])
+          tags.append(tag_score)
+        if first_word[0][:3] == 'run':
+          tag_score = (first_word[1].split('"')[2], first_word[2][:5])
+          tags.append(tag_score)
+    return tags, query
+  
+  def find_top_tags(self, entry):
+    tags, _ = self.get_tags(entry)
+    
 if __name__ == '__main__':
   
   logger = Logger(lib_name='EY_DATA',
@@ -387,3 +430,6 @@ if __name__ == '__main__':
                   TF_KERAS=False)
   
   data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=0.25)
+  list_of_entries = data.get_entries('/20190830_ALLEN_Wrong_Questions_1.txt')
+  for entry in list_of_entries:
+    data.get_tags(entry)
