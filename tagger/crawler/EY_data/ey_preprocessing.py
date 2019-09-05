@@ -84,8 +84,9 @@ class EY_Data(object):
     self.generate_raw_labels()
     
     self.process_labels()
- 
-    self.build_outputs()
+    self.build_topic_label_map()
+
+#    _, self.labels, _ , _ = self.build_outputs()
 #    self.write_to_file()
     
   def read_files(self):
@@ -274,6 +275,12 @@ class EY_Data(object):
       
     return
   
+  def build_topic_label_map(self):
+    self.topic_label_map = dict.fromkeys(self.topic_labels, [])
+    for index in range(len(self.topic_labels)):
+      self.topic_label_map[self.topic_labels[index]] = self.labels[index]
+    
+  
   def intersect_text_and_labels(self, text, labels):
     found_labels = []
     found = 0
@@ -297,6 +304,7 @@ class EY_Data(object):
     return found_labels
   
   def build_outputs(self):
+    self.topic_label_map = dict.fromkeys(self.topic_labels, [])
     validation_index = 0
     output_texts = []
     output_labels = []
@@ -403,8 +411,9 @@ class EY_Data(object):
     tags = []
     for line in entry:
       if line[:4] == 'resu':
-        tag = line.split('{')[2].split('"')[2]
-        score = line.split('{')[2].split('"')[4]
+        result_line_split =  line.split('{')[-1].split('"')
+        tag = result_line_split[-3]
+        score = result_line_split[-1]
         score = score[1:6]
         tag_score = (tag,score)
         tags.append(tag_score)
@@ -418,11 +427,15 @@ class EY_Data(object):
         if first_word[0][:3] == 'run':
           tag_score = (first_word[1].split('"')[2], first_word[2][:5])
           tags.append(tag_score)
-    return tags, query
+    return query, tags
   
-  def find_top_tags(self, entry):
+
+  def find_topic(self, entry):
     tags, _ = self.get_tags(entry)
-    
+#    for i in self.labels:
+#      print(i)
+#    print(self.topic_labels)
+
 if __name__ == '__main__':
   
   logger = Logger(lib_name='EY_DATA',
@@ -430,6 +443,10 @@ if __name__ == '__main__':
                   TF_KERAS=False)
   
   data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=0.25)
-  list_of_entries = data.get_entries('/20190830_ALLEN_Wrong_Questions_1.txt')
-  for entry in list_of_entries:
-    data.get_tags(entry)
+#  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
+#  data.topic_label_mapping()
+#
+#  for entry in list_of_entries:
+#    data.find_topic(entry)
+#  
+#  print(data.topic_label_map)
