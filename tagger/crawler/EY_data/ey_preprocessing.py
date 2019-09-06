@@ -85,8 +85,7 @@ class EY_Data(object):
     
     self.process_labels()
     self.build_topic_label_map()
-
-#    _, self.labels, _ , _ = self.build_outputs()
+    _, self.labels, _ , _ = self.build_outputs()
 #    self.write_to_file()
     
   def read_files(self):
@@ -277,8 +276,17 @@ class EY_Data(object):
   
   def build_topic_label_map(self):
     self.topic_label_map = dict.fromkeys(self.topic_labels, [])
+    labels_copy = self.labels
+    topic_label_map_values = []
+    for label_row in labels_copy:
+      for k,v in self.dict_lbl_simpler.items():
+        for tag in label_row:
+          if tag in v:
+            label_row = self.replace_tags_in_row(label_row, k, tag)
+      topic_label_map_values.append(list(set(label_row)))
+      
     for index in range(len(self.topic_labels)):
-      self.topic_label_map[self.topic_labels[index]] = self.labels[index]
+      self.topic_label_map[self.topic_labels[index]] = topic_label_map_values[index]
     
   
   def intersect_text_and_labels(self, text, labels):
@@ -304,7 +312,6 @@ class EY_Data(object):
     return found_labels
   
   def build_outputs(self):
-    self.topic_label_map = dict.fromkeys(self.topic_labels, [])
     validation_index = 0
     output_texts = []
     output_labels = []
@@ -406,6 +413,16 @@ class EY_Data(object):
           entry.append(line)
     return list_of_entries
   
+  def parse_score(self, score):
+      if 'X' in score:
+          score = score.strip('X')
+      if '}' in score:
+        score = score.strip('}')
+      
+      score = float(score)
+      return score
+    
+  
   def get_tags(self, entry):
     self.flattened_labels = flatten_list(self.labels)
     tags = []
@@ -413,29 +430,92 @@ class EY_Data(object):
       if line[:4] == 'resu':
         result_line_split =  line.split('{')[-1].split('"')
         tag = result_line_split[-3]
-        score = result_line_split[-1]
-        score = score[1:6]
-        tag_score = (tag,score)
+        conf = result_line_split[-1]
+        conf = conf[1:6]
+        conf = self.parse_score(conf)
+        tag_score = (tag,conf)
         tags.append(tag_score)
       elif line[:16] == 'input_document_i':
         query = line[18:].split('"')[2]
       else:
         first_word = line.split(':')
         if first_word[0] in self.flattened_labels or first_word[0] in self.topic_labels or first_word[0] in list(self.dict_lbl_simpler.keys()):
-          tag_score = (first_word[0], first_word[1][:5])
+          conf = first_word[1][:5]
+          conf = self.parse_score(conf)
+          tag_score = (first_word[0], conf)
           tags.append(tag_score)
         if first_word[0][:3] == 'run':
-          tag_score = (first_word[1].split('"')[2], first_word[2][:5])
+          conf = first_word[2][:5]
+          conf = self.parse_score(conf)
+          tag_score = (first_word[1].split('"')[2], conf)
           tags.append(tag_score)
     return query, tags
   
+  def find_topic_in_map(self, topic_map):
+    max_len_key = ''
+    max_sum_key = ''
+    topic_identification_len_map = {k: len(v) for k,v in topic_map.items()}
+    topic_identification_sum_map = {k: 0 for k in topic_map.keys()}
+    
+    for key, values in topic_map.items():
+      topic_identification_sum_map[key] += sum([pair[1] for pair in values])
+    
+    max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
+    max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
 
-  def find_topic(self, entry):
-    tags, _ = self.get_tags(entry)
-#    for i in self.labels:
-#      print(i)
-#    print(self.topic_labels)
+    self.logger.P('The identifcation maps:')
+    for k,v in topic_map.items():
+      if len(v) > 0:
+        self.logger.P('{}: length = {} sum = {} -- {}'.format(k, topic_identification_len_map[k], topic_identification_sum_map[k], v))
+    
+    return max_len_key, max_sum_key
 
+
+  def best_topic(self, entry):
+    query, tags = self.get_tags(entry)
+    print()
+    self.logger.P('Processing tagger output of {}'.format(query))
+    topic_identification_map = {k:list() for k in self.topic_labels}
+    #topic identification on best tags:
+    for best_tag in tags:
+      if best_tag[0] in self.topic_labels:
+        for topics in self.topic_labels:
+          if best_tag[0] == topics:
+            topic_identification_map[topics].append(best_tag)
+      found_in_topics = []
+      for keys, tag_lists in self.topic_label_map.items():
+        for tag in tag_lists:
+          if tag == best_tag[0]:
+            found_in_topics.append(keys)
+
+      for topic in found_in_topics:
+        topic_identification_map[topic].append(best_tag)
+    
+    self.logger.P('Found in all tags...')
+    max_len_topic, max_sum_topic = self.find_topic_in_map(topic_identification_map)
+    self.logger.P('Max length topic : {}'.format(max_len_topic))
+    self.logger.P('Max sum topic : {}'.format(max_sum_topic))
+    
+    #find if there is more than one topic with labels
+#    if 
+#      for best_tag in tags[5:]:
+#        if best_tag[0] in self.topic_labels:
+#          for topics in self.topic_labels:
+#            if best_tag[0] == topics:
+#              topic_identification_map[topics].append(best_tag)
+#        found_in_topics = []
+#        for keys, tag_lists in self.topic_label_map.items():
+#          for tag in tag_lists:
+#            if tag == best_tag[0]:
+#              found_in_topics.append(keys)
+#              
+#      self.logger.P('Found in runner tags...')
+#      max_len_topic, max_sum_topic = self.find_topic_in_map(topic_identification_map)
+#      self.logger.P('Max length topic : {}'.format(max_len_topic))
+#      self.logger.P('Max sum topic : {}'.format(max_len_topic))
+    return 
+
+    return
 if __name__ == '__main__':
   
   logger = Logger(lib_name='EY_DATA',
@@ -443,10 +523,7 @@ if __name__ == '__main__':
                   TF_KERAS=False)
   
   data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=0.25)
-#  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
-#  data.topic_label_mapping()
-#
-#  for entry in list_of_entries:
-#    data.find_topic(entry)
-#  
-#  print(data.topic_label_map)
+  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
+
+  for entry in list_of_entries:
+    data.best_topic(entry)
