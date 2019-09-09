@@ -92,9 +92,7 @@ if __name__ == '__main__':
   for k in topic_index_map.keys():
     topic_index_map[k] = idx
     idx += 1
-  
-  print(topic_index_map)
-  
+    
   #####      
   # now load FlaskServer tools and .run()
   #####
@@ -121,7 +119,7 @@ if __name__ == '__main__':
 #        'runner_tags' : dic_non_top, 
 #        'best_tags': dic_top, 
         'input_document_init' : std_input,
-        'input_document_post' : enc_input, 
+#        'input_document_post' : enc_input, 
         'id_topic_document': id_topic_document,
         'topic_document': topic_document,
 #        'comment' : 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
