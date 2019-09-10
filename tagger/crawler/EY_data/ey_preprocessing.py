@@ -437,6 +437,8 @@ class EY_Data(object):
         tags.append(tag_score)
       elif line[:16] == 'input_document_i':
         query = line[18:].split('"')[2]
+      elif line[:16] == 'input_document_p':
+        proc_query = line[18:].split('"')[2]
       else:
         first_word = line.split(':')
         if first_word[0] in self.flattened_labels or first_word[0] in self.topic_labels or first_word[0] in list(self.dict_lbl_simpler.keys()):
@@ -449,7 +451,7 @@ class EY_Data(object):
           conf = self.parse_score(conf)
           tag_score = (first_word[1].split('"')[2], conf)
           tags.append(tag_score)
-    return query, tags
+    return proc_query, query, tags
   
   def find_topic_in_map(self, topic_map):
     max_len_key = ''
@@ -463,18 +465,17 @@ class EY_Data(object):
     max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
     max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
 
-    self.logger.P('The identifcation maps:')
-    for k,v in topic_map.items():
-      if len(v) > 0:
-        self.logger.P('{}: length = {} sum = {} -- {}'.format(k, topic_identification_len_map[k], topic_identification_sum_map[k], v))
-    
+#    self.logger.P('The identifcation maps:')
+#    for k,v in topic_map.items():
+#      if len(v) > 0:
+#        self.logger.P('{}: length = {} sum = {} -- {}'.format(k, topic_identification_len_map[k], topic_identification_sum_map[k], v))
+#    
     return max_len_key, max_sum_key
 
 
   def best_topic(self, entry):
-    query, tags = self.get_tags(entry)
+    proc_query, query, tags = self.get_tags(entry)
     print()
-    self.logger.P('Processing tagger output of {}'.format(query))
     topic_identification_map = {k:list() for k in self.topic_labels}
     #topic identification on best tags:
     for best_tag in tags:
@@ -490,29 +491,16 @@ class EY_Data(object):
 
       for topic in found_in_topics:
         topic_identification_map[topic].append(best_tag)
-    
-    self.logger.P('Found in all tags...')
+
+    self.logger.P('Query: {}'.format(query), noprefix=True)
+    self.logger.P('PostQuery: {}'.format(proc_query), noprefix=True)
     max_len_topic, max_sum_topic = self.find_topic_in_map(topic_identification_map)
-    self.logger.P('Max length topic : {}'.format(max_len_topic))
-    self.logger.P('Max sum topic : {}'.format(max_sum_topic))
+    self.logger.P('Max length topic : {}'.format(max_len_topic), noprefix=True)
+    self.logger.P('Max sum topic : {}'.format(max_sum_topic), noprefix=True)
+    self.logger.P('Correct topic:', noprefix=True)
+    self.logger.P('In training data?:', noprefix=True)
+    self.logger.P('Query quality:', noprefix=True)
     
-    #find if there is more than one topic with labels
-#    if 
-#      for best_tag in tags[5:]:
-#        if best_tag[0] in self.topic_labels:
-#          for topics in self.topic_labels:
-#            if best_tag[0] == topics:
-#              topic_identification_map[topics].append(best_tag)
-#        found_in_topics = []
-#        for keys, tag_lists in self.topic_label_map.items():
-#          for tag in tag_lists:
-#            if tag == best_tag[0]:
-#              found_in_topics.append(keys)
-#              
-#      self.logger.P('Found in runner tags...')
-#      max_len_topic, max_sum_topic = self.find_topic_in_map(topic_identification_map)
-#      self.logger.P('Max length topic : {}'.format(max_len_topic))
-#      self.logger.P('Max sum topic : {}'.format(max_len_topic))
     return 
 
     return
