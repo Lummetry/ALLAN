@@ -13,6 +13,8 @@ from tagger.brain.base_engine import ALLANTaggerEngine
 import numpy as np
 import pickle as pkl
 
+from datetime import datetime
+
 
 
 def find_topic(logger, topic_tag_map, dict_tags, choose_by_length=False):
@@ -114,6 +116,7 @@ if __name__ == '__main__':
 
     topic_document = find_topic(l, topic_tag_map, dic_top, False) #USE True to check by length    
     id_topic_document = topic_index_map[topic_document]
+    str_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:22]
     
     dct_info = {
 #        'runner_tags' : dic_non_top, 
@@ -122,6 +125,7 @@ if __name__ == '__main__':
 #        'input_document_post' : enc_input, 
         'id_topic_document': id_topic_document,
         'topic_document': topic_document,
+        'date_time' : str_now,
 #        'comment' : 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
         }
     dct_res = {'result' : dct_info}
