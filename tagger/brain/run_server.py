@@ -35,18 +35,9 @@ def find_topic(logger, topic_tag_map, dict_tags, choose_by_length=False):
   topic_identification_map = {k:list() for k in topic_labels}
   #topic identification on best tags:
   for tag, conf in dict_tags.items():
-    if tag in topic_labels:
-      for topic in topic_labels:
-        if tag[0] == topic:
-          topic_identification_map[topic].append((tag,conf))
-    found_in_topics = []
-    for keys, tag_lists in topic_tag_map.items():
-      for label in tag_lists:
-        if label == tag:
-          found_in_topics.append(keys)
-
-    for topic in found_in_topics:
-      topic_identification_map[topic].append((tag,conf))
+    for topic in topic_labels:
+      if tag in topic_tag_map[topic]:
+        topic_identification_map[topic].append((tag,conf))
 
   if choose_by_length:
     topic_identification_len_map = {k: len(v) for k,v in topic_identification_map.items()}
