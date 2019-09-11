@@ -114,6 +114,8 @@ if __name__ == '__main__':
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
     dic_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs}
+    dic_top_best ={keys[x]:float(round(vals[x],3)) for x in top_idxs[:TOP]}
+    dic_top_runner ={keys[x]:float(round(vals[x],3)) for x in top_idxs[TOP:]}
 
     topic_document = find_topic(l, topic_tag_map, dic_top, False) #USE True to check by length    
     id_topic_document = topic_index_map[topic_document]
@@ -129,8 +131,8 @@ if __name__ == '__main__':
     
     if DEBUG:
       dct_info['input_document_post'] = enc_input
-      dct_info['runner_tags'] = dic_non_top
-      dct_info['best_tags'] = dic_top
+      dct_info['runner_tags'] = dic_top_runner
+      dct_info['best_tags'] = dic_top_best
       dct_info['comment'] = 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
 
 
