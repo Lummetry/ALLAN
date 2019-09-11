@@ -105,6 +105,7 @@ if __name__ == '__main__':
     return s
   
   def output_callback(data):
+    DEBUG = False
     res1 = data[0]
     inputs = data[1]
     std_input = inputs[0]
@@ -118,16 +119,21 @@ if __name__ == '__main__':
     id_topic_document = topic_index_map[topic_document]
     str_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:22]
     
+    
     dct_info = {
-#        'runner_tags' : dic_non_top, 
-#        'best_tags': dic_top, 
         'input_document_init' : std_input,
-#        'input_document_post' : enc_input, 
         'id_topic_document': id_topic_document,
         'topic_document': topic_document,
         'date_time' : str_now,
-#        'comment' : 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
         }
+    
+    if DEBUG:
+      dct_info['input_document_post'] = enc_input
+      dct_info['runner_tags'] = dic_non_top
+      dct_info['best_tags'] = dic_top
+      dct_info['comment'] = 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
+
+
     dct_res = {'result' : dct_info}
     return dct_res
   
