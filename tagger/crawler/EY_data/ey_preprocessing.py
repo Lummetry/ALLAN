@@ -106,9 +106,9 @@ class EY_Data(object):
     
     self.process_labels()
     self.build_topic_label_map()
-    
+    self.build_tag2idx_map()
 #    _, self.labels, _ , _ = self.build_outputs()
-    self.write_to_file()
+#    self.write_to_file()
     
   def read_files(self):
     self.answers = []
@@ -314,6 +314,17 @@ class EY_Data(object):
     with open('topic_tag_map_v2.pkl','wb') as file:
       pickle.dump(self.topic_label_map, file)
   
+  def build_tag2idx_map(self):
+    dic_lbl2idx = {}
+    index = 0 
+    for tags in self.topic_label_map.values():
+      for tag in tags:
+        if tag not in list(dic_lbl2idx.keys()):
+          dic_lbl2idx[tag] = index
+          index += 1
+        
+    for k,v in dic_lbl2idx.items():
+      print('{} : "{}"'.format(k,v))
   def intersect_text_and_labels(self, text, labels):
     found_labels = []
     found = 0
