@@ -1,4 +1,4 @@
-import ast
+import pickle
 import random
 import pandas as pd
 
@@ -35,7 +35,7 @@ class EY_Data(object):
                              'inseamna', 'noi', 'de',
                              'desfasoara',
                              'functie', 'are', 'voi','peste',
-                             'unui',
+                             'unui','ocupa',
                              'oferiti',
                              'abordarea','privind','alt','posibilitatea',
                              'lucru','activeaza',
@@ -43,41 +43,62 @@ class EY_Data(object):
                              'face', 'lucrez',
                              'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta',
                              'cine','cum','home','des','from','cate','cat', 'variaza',
-                             'moment','inceput','stat','politica','politicile','politici','negativ','maine','']
+                             'moment','inceput','stat','politica','politicile','politici','negativ','maine',
+                             'cazul','informatii', 'vorba', 'despre', 'cand', 'parte', 'jocuri', 'activitati',
+                             'relaxare', 'meu', 'pliaza', 'personal', 'stilul','profesional','suportate',
+                             'prezenta','ideea','practica', 'drumul','companiei', 'procedeaza',
+                             'imi', 'vor', 'mele', 'ajustez', 'procedeaza', 'aduce', 'incepe','ajung','pleca',
+                             'intro', 'inscrie', 'dintr-un', 'poti', 'dintrun','implicat','posibilitatie','impreuna',
+                             'lua','primi', 'mediu', 'astept', 'cati', 'luna', 'gasi', 'existente', 'localizat',
+                             'ale','altul', 'vin', 'sustinere', 'sustinut', 'suportate', 'decontare', 'munca',
+                             'toata', 'munci','petreceri', 'extra', 'inteleg', 'traseul', 'astepta','posibilitatile'
+                             'relaxeaza','suport','posibilitatea', 'posibilitate', 'relaxeaza', 'posibilitatile','organizati','organizeaza'
+                             'bonus','bonusuri','primeste', 'raman', 'castigat', 'bonus'
+                             ]
     
     
     self.dict_lbl_simpler = {
-        'angajat': ['angajatii', 'angajez', 'angajare'],
-        'asigurare': ['asigurat'],
+        'angajat': ['angajatii', 'angajez', 'angajare', 'angajati'],
+        'asigurare': ['asigurat', 'transportului'],
         'anuntat': ['anuntati', 'anunt'],
-        'audit': ['auditor'],
-        'avansez': ['cariera'],
-        'beneficii' : ['beneficiile','bonuri', 'sala', 'masa', 'costurile', 'discounturi', 'abonamentele', 'costurile', 'reduceri','organizati','organizeaza'],
+        'audit': ['auditor', 'auditorii'],
+        'avansez': ['cariera', 'avansa', 'avansarea', 'dezvolta'],
+        'beneficii' : ['beneficiez','beneficiile','bonuri', 'sala', 'masa', 'costurile', 'discounturi', 'abonamentele', 'costurile', 'reduceri'],
         'biroul': ['birouri'],
         'certificari': ['certificarilor','certificarile', 'cerificarilor'],
-        'comun': ['comunitati','comunitatile','comunitate'],
-        'consultant': ['consultanta'],
+        'comunitate': ['comunitati','comunitatile'],
+        'consultant': ['consultanta', 'consultantii','advisor','advisory'],
         'contactat': ['contactati'],
+        'disponibile' : ['disponibila'],
         'etape': ['etapele'],
-        'echipa': ['colegii', 'colectivul','oamenii'],
+        'echipa': ['colegii', 'colectivul','oamenii','echipei'],
         'feedback': ['feedback-ul'],
+        'flexibil': ['fix'],
         'interviu': ['interviul','interviului','rezultat','raspuns'],
-        'mentorship': ['mentoring', 'ajute', 'ghideze', 'mentor'],
-        'mobilitate': ['mobilitatea'],
+        'junior' : ['juniorilor'],
+        'mentorship': ['mentoring', 'ajute', 'ghideze', 'mentor', 'mentori', 'indrumare'],
+        'mobilitate': ['mobilitatea', 'muta', ],
         'oferta': ['oferite', 'oferte', 'ofera'],
         'oportunitati': ['cresc'],
-        'platit': ['platite'],
-        'pozitii':['pozitie','pozitiile', 'deschise'],
+        'overtime' : ['overtime-ul'],
+        'platit': ['platite','plateste','suma'],
+        'pozitii':['pozitie','pozitiile', 'deschise','pozitia'],
         'procesul': ['procesului'],
-        'program':['programului','programul','flexibil','libere','fix','lucra','lucreaza', 'acasa', 'raman'],
-        'promovare':['promoveaza', 'promovat'],
+        'program':['programului','programul','libere', 'lucra','lucreaza'],
+        'promovare':['promoveaza', 'promovat', 'promovarile'],
         'recrutare':['recrutarea', 'contactat'],
         'relocare':['tara', 'internationala', 'mut'],
-        'salariu':['salariale','salariul','grilele', 'castiga', 'brut', 'net', 'bani'],
-        'sediu': ['sediul','sediuri'],
-        'taxe': ['tax'],
-        'transport':['transportul','mijloace'],
-        'triburi':['triburile'],
+        'remote' : ['work', 'acasa'],
+        'responsabil' : ['responsabili', 'responsabilitatile', 'intrebunitarile', 'responabilitatile'],
+        'salariu': ['salariale','salariul','grilele', 'castiga', 'brut', 'net', 'bani'],
+        'sediu': ['sediul', 'sediuri', 'sediile','sedii'],
+        'senior' : ['senioritate', 'manager'],
+        'social' : ['sociale', 'prietenos', 'prietenosi'],
+        'task' : ['taskuri', 'task-urile', 'taskurile', 'task-uri','intrebuintarile'],
+        'taxe': ['tax', 'taxele'],
+        'training' : ['traininguri', 'trainingurile', 'trainigurilor', 'training-urile'],
+        'transport':['transportul','mijloace', 'metrou', 'metroul', 'autobuz', 'biletele', 'transportului'],
+        'trib':['triburile', 'triburi'],
         'zile':['zilele']
         }
     
@@ -85,8 +106,9 @@ class EY_Data(object):
     
     self.process_labels()
     self.build_topic_label_map()
-    _, self.labels, _ , _ = self.build_outputs()
-#    self.write_to_file()
+    
+#    _, self.labels, _ , _ = self.build_outputs()
+    self.write_to_file()
     
   def read_files(self):
     self.answers = []
@@ -285,9 +307,12 @@ class EY_Data(object):
             label_row = self.replace_tags_in_row(label_row, k, tag)
       topic_label_map_values.append(list(set(label_row)))
       
+    self.logger.P('Mapping of tags to topics:')
     for index in range(len(self.topic_labels)):
-      self.topic_label_map[self.topic_labels[index]] = topic_label_map_values[index]
-    
+      self.topic_label_map[index] = [self.topic_labels[index]] + topic_label_map_values[index]
+
+    with open('topic_tag_map_v2.pkl','wb') as file:
+      pickle.dump(self.topic_label_map, file)
   
   def intersect_text_and_labels(self, text, labels):
     found_labels = []
@@ -375,22 +400,22 @@ class EY_Data(object):
     for i in range(len(texts)):
       fname = 10000 + i
       fname = str(fname)[1:]
-      with open(dir_location + '/_data/EY_FAQ/Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
+      with open(dir_location + '/_data/EY_FAQ/v2/Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
         f_doc.write(texts[i])
       f_doc.close()
 
-      with open(dir_location + '/_data/EY_FAQ/Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
+      with open(dir_location + '/_data/EY_FAQ/v2/Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
         for j in labels[i]:
           f_label.write(j + '\n')
       f_label.close()
       
       #write validation_data
       if i < len(valid_texts):
-        with open(dir_location + '/_data/EY_FAQ/Validation_Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
+        with open(dir_location + '/_data/EY_FAQ/v2/Validation_Texts/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_doc:
           f_doc.write(valid_texts[i])
         f_doc.close()
   
-        with open(dir_location + '/_data/EY_FAQ/Validation_Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
+        with open(dir_location + '/_data/EY_FAQ/v2/Validation_Labels/Text_%s.txt' % fname, 'w', encoding='utf-8') as f_label:
           for k in valid_labels[i]:
             f_label.write(k + '\n')
         f_label.close()
@@ -503,15 +528,14 @@ class EY_Data(object):
     
     return 
 
-    return
 if __name__ == '__main__':
   
   logger = Logger(lib_name='EY_DATA',
                   config_file='./tagger/crawler/EY_data/config_eydata.txt',
                   TF_KERAS=False)
   
-  data = EY_Data(logger, '/_data/EY_FAQ_RAW/', occurence_threshold=0.25)
-  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
-
-  for entry in list_of_entries:
-    data.best_topic(entry)
+  data = EY_Data(logger, '/_data/EY_FAQ_RAW2/', occurence_threshold=0.25)
+#  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
+#
+#  for entry in list_of_entries:
+#    data.best_topic(entry)
