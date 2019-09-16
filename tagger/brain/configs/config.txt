@@ -104,6 +104,8 @@
   
   "EMB_GEN_MODEL" : {
     "DATAFILE"      : "ro_embgen_dataset.pkl",
+    "CUSTOM_MISTAKES_FILE" : "20190912_ALLAN_EY_TYPOS.pickle",
+    "SAME_CAPS"     : 1,
     "EMBED_FILE"    : "ro_embgen_full_embeds.npy",
     "PRETRAINED"    : "ro_embgen_model.h5",
     "BATCH_SIZE"    : 512,

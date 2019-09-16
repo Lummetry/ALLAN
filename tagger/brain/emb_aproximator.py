@@ -209,43 +209,80 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     return model
   
   
-  def _word_morph(self, word):
+  def _word_morph(self, word, same_caps=None):
+    assert same_caps in [None, True, False]
+    
     if len(word) <= 4:
       raise ValueError("Not morphing words less than 5")
     mistk_src = []
     mistk_dst = []
-
+    
+    # Manages if the mistakes can be made only from upper to upper / lower to lower or not.
+    if same_caps is None and 'SAME_CAPS' in self.embgen_model_config:
+      same_caps = bool(self.embgen_model_config['SAME_CAPS'])
+    
+    if same_caps is None:
+      same_caps = False
+    
     letter2letter = [chr(x) for x in range(97, 123)]
     
-    for letter in letter2letter:
-      mistk_src.append(letter)
-      mistk_dst.append(letter.upper())
-      mistk_src.append(letter.upper())
-      mistk_dst.append(letter)
+    if not same_caps:
+      for letter in letter2letter:
+        mistk_src.append(letter)
+        mistk_dst.append(letter.upper())
+        mistk_src.append(letter.upper())
+        mistk_dst.append(letter)
     
-    mistk_src += ['i','o','I','o','1','0','O','1','!','6','G','5','S','s','5','r','t']
-    mistk_dst += ['1','0','1','0','I','O','0','!','1','G','6','s','5','5','S','t','r']
+    mistk_src += ['i','o','I','0','1','0','O','1','!','6','G','5','S','s','5','r','t']
+    mistk_dst += ['1','0','1','o','I','O','0','!','1','G','6','s','5','5','S','t','r']
 
-    mistk_src += ['7','G','E','A','1','V','T','1','l','8','B','l','I','*','-']
-    mistk_dst += ['T','E','G','V','i','A','7','l','1','B','8','I','l','-','*']
+    mistk_src += ['7','G','E','A','1','V','T','1','l','8','B','l','I','*','-','0','9']
+    mistk_dst += ['T','E','G','V','i','A','7','l','1','B','8','I','l','-','*','9','0']
 
     mistk_src += ['Î','ț','ă','î','Ă','Ș','ș','Ț']
     mistk_dst += ['I','t','a','i','A','S','s','T']
 
     mistk_src += ['I','t','a','i','A','S','s','T']
     mistk_dst += ['Î','ț','ă','î','Ă','Ș','ș','Ț']
+    
+    
+    typo_src = ['m','s','o','i','i','i','u','r','e','c','v','n','z','z']
+    typo_dst = ['n','d','p','j','o','u','y','t','r','v','b','b','s','x']
+    
+    typo_src += typo_dst
+    typo_dst += typo_src
 
+    for i in range(len(typo_src)):
+      mistk_src.append(typo_src[i])
+      mistk_dst.append(typo_dst[i])
+      mistk_src.append(typo_src[i].upper())
+      mistk_dst.append(typo_dst[i].upper())
+      if not same_caps:
+        mistk_src.append(typo_src[i].upper())
+        mistk_dst.append(typo_dst[i])
+        mistk_src.append(typo_src[i])
+        mistk_dst.append(typo_dst[i].upper())
+      #endif
+    #endfor
 
     new_word = []
     proba = 0.5
     modded = 0
     for i,ch in enumerate(word):
       if np.random.rand() < proba:
-        if ch in mistk_src:
-          new_ch = mistk_dst[mistk_src.index(ch)]
-          new_word.append(new_ch)
-        modded += 1
-        proba -= 0.24
+        if np.random.rand() < 0.5 and i > 0:
+          modded += 1
+          proba -= 0.24
+        else:
+          if ch in mistk_src:
+            all_ch_indexes = [i for i,x in enumerate(mistk_src) if x == ch]
+            idx = np.random.choice(all_ch_indexes)
+            new_ch = mistk_dst[idx]
+            new_word.append(new_ch)
+            modded += 1
+            proba -= 0.24
+          else:
+            new_word.append(ch)
       else:
         new_word.append(ch)
         
@@ -306,7 +343,34 @@ class EmbeddingApproximator(ALLANTaggerEngine):
         np_false = np.array(self.word_to_char_tokens(s_false, pad_up_to=_len))
         lst_anchor.append(np_anchor)
         lst_duplic.append(np_duplic)
-        lst_false.append(np_false)    
+        lst_false.append(np_false)
+
+    
+    #generate also based on predefined list of typos or other kind of mistakes
+    if 'CUSTOM_MISTAKES_FILE' in self.embgen_model_config:
+      fn = self.embgen_model_config['CUSTOM_MISTAKES_FILE']
+      if self.log.GetDataFile(fn) is not None:
+        pairs = self.log.LoadPickleFromData(fn)
+        for s_duplic, s_anchor in pairs:
+          idx = self.dic_word2index[s_anchor]
+          i_false = (idx + np.random.randint(100,1000)) % len(self.dic_index2word)
+          s_false = self.dic_index2word[i_false]
+          _len = max(len(s_anchor), len(s_duplic))
+          s_anchor = s_anchor[:_len]
+          s_duplic = s_duplic[:_len]
+          s_false = s_false[:_len]
+          s_false = s_false[:_len]
+          
+          np_anchor = np.array(self.word_to_char_tokens(s_anchor, pad_up_to=_len))
+          np_duplic = np.array(self.word_to_char_tokens(s_duplic, pad_up_to=_len))
+          np_false = np.array(self.word_to_char_tokens(s_false, pad_up_to=_len))
+          lst_anchor.append(np_anchor)
+          lst_duplic.append(np_duplic)
+          lst_false.append(np_false)
+        #endfor
+      #endif
+    #endif
+    
     t2 = time()
     print("")
     self.P(" Done generating in {:.1f}s".format(t2-t1))    
@@ -371,7 +435,7 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     
     
   def train_unk_words_model(self, epochs=2, approximate_embeddings=False,
-                            save_embeds_every=2, force_generate=False,
+                            save_embeds_every=5, force_generate=False,
                             overwrite_pretrained=False):
     """
      trains the unknown words embedding generator based on loaded embeddings
@@ -470,12 +534,21 @@ class EmbeddingApproximator(ALLANTaggerEngine):
                                              'timisoara',
                                              'bucuresti',
                                              'sediuri', 
-                                             'burtica',
-                                             'gurita',
-                                             'caputul',
-                                             'tax',
-                                             'job',
-                                             'net',
+                                             'sumt',
+                                             'sumnt',
+                                             'salarul',
+                                             'nTimisoara',
+                                             'nChisinau',
+                                             'biruol',
+                                             'zoma',
+                                             'alariul',
+                                             'ecipa',
+                                             'transp',
+                                             'Iqsi',
+                                             'sedyuri',
+                                             'adrs',
+                                             'trbuie',
+                                             'trb'
                                              ]):
     self.P("Testing for {} (dist='{}')".format(
                 unk_words, self.dist_func_name))
@@ -512,7 +585,48 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     return
   
   
-      
+  def compute_performance(self, unk_words, true_words, tops=[1,3,5]):
+    assert type(unk_words) == list
+    assert type(true_words) == list
+    assert len(unk_words) == len(true_words)
+    
+    self.P("Computing EmbeddingApproximator performance on {} examples ..."
+           .format(len(unk_words)))
+    
+    max_top = max(tops)
+    
+    cnt_top = [0 for _ in range(len(tops))]
+    nr_skipped = 0
+    
+    from tqdm import tqdm
+    
+    for i,uword in tqdm(enumerate(unk_words)):
+      tword = true_words[i]
+      if uword in self.dic_word2index:
+#        self.P(" Unk word '{}' found in dict at pos {}".format(
+#                    uword, self.dic_word2index[uword]))
+        nr_skipped += 1
+        continue
+
+      top_words = self.get_unk_word_similar_word(uword, top=max_top)      
+      for j,t in enumerate(tops):
+        if tword in top_words[:t]:
+          cnt_top[j] += 1  
+
+    
+    nr_computed = len(unk_words) - nr_skipped
+
+    str_log = ""
+    for j,t in enumerate(tops):
+      _p = 100 * cnt_top[j] / nr_computed
+      str_log += '\n{}/{} ({:.2f}%) @Top{}'.format(cnt_top[j], nr_computed, _p, tops[j])
+
+    str_log += '\n{} words were skipped because they were found in dict'.format(nr_skipped)
+
+    self.P("Results:{}".format(str_log))
+
+    return cnt_top, nr_skipped
+
     
   
   
@@ -521,24 +635,40 @@ if __name__ == '__main__':
   
   cfg1 = "tagger/brain/configs/config.txt"
   l = Logger(lib_name="EGEN",config_file=cfg1)
-  
-  
+
   eng = EmbeddingApproximator(log=l,)
-  
+
   if False:
     #eng._get_siamese_datasets(min_nr_words=0)
-    xa, xd, xf = eng._get_siamese_datasets()
-    for i in range(5):
+    xa, xd, xf = eng._get_siamese_datasets(force_generate=True)
+    for i in range(50):
       irnd = np.random.randint(0, xa.shape[0])
       sa = eng.char_tokens_to_word(xa[irnd])
       sd = eng.char_tokens_to_word(xd[irnd])
       sf = eng.char_tokens_to_word(xf[irnd])
       l.P(" A:{:>15}  D:{:>15}  F:{:>15}".format(sa,sd,sf))
 
-  
+
   if True:
-    eng.train_unk_words_model(epochs=4, force_generate=True, overwrite_pretrained=True)
-       
+    eng.train_unk_words_model(epochs=100, force_generate=True, overwrite_pretrained=False)
+
     eng.debug_known_words()
+    
+  if True:
+    xa, xd, _ = eng._get_siamese_datasets(force_generate=True)
+    unk_words, true_words = [], []
+    for i in range(xa.shape[0]):
+      sa = eng.char_tokens_to_word(xa[i])
+      sd = eng.char_tokens_to_word(xd[i])
+      
+      unk_words.append(sd)
+      true_words.append(sa)
+
+    
+    unk_words  = np.array(unk_words)
+    true_words = np.array(true_words) 
   
+    indexes = np.random.choice(np.arange(unk_words.shape[0]),
+                               20000, replace=False)
   
+    res = eng.compute_performance(unk_words[indexes], true_words[indexes])
