@@ -6,17 +6,16 @@ Created on Fri Jul 12 08:13:19 2019
 """
 import tensorflow as tf
 import numpy as np
-from tagger.brain.base_engine import ALLANEngine
-import os
+from tagger.brain.base_engine import ALLANTaggerEngine
 
-class ALLANDataLoader(ALLANEngine):
+class ALLANDataLoader(ALLANTaggerEngine):
   
   def __init__(self, 
                multi_label=True, 
                normalize_labels=False, 
                **kwargs):
     super().__init__(**kwargs)
-    self.__name__ = 'ALLAN_DL'
+    self.__name__ = 'AT_DL'
     self.multi_label = multi_label
     self.normalize_labels  = normalize_labels
     self._setup()
@@ -82,7 +81,8 @@ class ALLANDataLoader(ALLANEngine):
     if dict_labels2idx is None:
       self.P(" No labels2idx dict found")
     
-    dict_word2idx, dict_idx2word = self._setup_vocabs(fn_words_dict, fn_idx_dict)   
+    self._setup_vocabs(fn_words_dict, fn_idx_dict)
+    dict_word2idx, dict_idx2word = self.dic_word2index, self.dic_index2word
     
     _res = self.log.LoadDocuments(train_folder,
                                   doc_ext=doc_ext,
@@ -164,11 +164,12 @@ class ALLANDataLoader(ALLANEngine):
     
 
 if __name__ == '__main__':
-  cfg1 = "config_sngl_folder.txt"
-  cfg2 = "config_dbl_folders.txt"
+  cfg1 = "tagger/brain/config.txt"
+  
+  from libraries.logger import Logger
 
 
-  l = LoadLogger("ALNT",cfg2)
+  l = Logger(lib_name="ALNT",config_file=cfg1)
   eng = ALLANDataLoader(log=l, multi_label=True, normalize_labels=True)
   eng.LoadData()
   
