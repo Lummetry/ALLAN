@@ -16,7 +16,7 @@ from datetime import datetime
 
 
 if __name__ == '__main__':
-  cfg1 = "tagger/brain/configs/config.txt"  
+  cfg1 = "tagger/brain/configs/20190918/config_v3_with_v2_emb_noi.txt"  
   l = Logger(lib_name="ALNT",config_file=cfg1, HTML=True)
   l.SupressTFWarn()
   
