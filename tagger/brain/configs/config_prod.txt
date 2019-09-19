@@ -8,7 +8,6 @@
   
   "WORD2IDX" : "#####",
   "IDX2WORD" : "ro_full_index2word.pickle",
-  "TOPIC2TAGS": "EY_topic_tag_map.pkl",
   
   "TOKENS" : {
     "PAD" : 0,
@@ -17,12 +16,11 @@
     "EOS" : 3
   },
   
-  "LABEL2IDX" : "labels2idx.txt",
   "DIST_FUNC" : "l2",
   
   "TRAINING" : {
-    "####FOLDER"     : "test1_one_folder",
-    "FOLDER"    : "EY_FAQ",
+    "####FOLDER": "test1_one_folder",
+    "FOLDER"    : "EY_FAQ/v1",
     "SUBFOLDERS" : 
         {
           "ENABLED" : 1,
@@ -35,8 +33,8 @@
   
   
   "MODEL" : {
-    "NAME"        : "allan_tagger",
-    "PRETRAINED"  : "_20190822_033431_uX3_112233_x_g2_512_256_d07_ep105_R47_ANZ.h5",
+    "NAME"        : "uX3_112233_x_g2_512_256_d07",
+    "PRETRAINED"  : "",
     
     "DOC_SIZE"    : 75,
     "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
@@ -57,57 +55,26 @@
     "####EMBED_SIZE"  : 128,
 
     "COLUMNS" : [
-      {
-        "KERNEL"  : 2,
-        "STEP"    : 1,
-        "FEATURES" : 256,
-        "DEPTH" : 0,
-        "END" : "lstm", 
-        "### END_TYPES" : ["gp", "lstm"]
-      },
-
-      {
-        "KERNEL" : 3,
-        "FEATURES" : 256,
-        "DEPTH" : 0,
-        "END" : "lstm" 
-      },
-
-      {
-        "KERNEL" : 5,
-        "FEATURES" : 256,
-        "DEPTH" : 0,
-        "END" : "lstm" 
-      },
+  			{ "KERNEL": 1, "FEATURES": 1024, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL": 1, "FEATURES": 256, "DEPTH" : 1, "END" : "lstm" },
+  			{ "KERNEL": 2, "FEATURES": 512, "DEPTH" : 1, "END" : "gp" , "STEP": 1},
+  			{ "KERNEL": 2, "FEATURES": 256, "DEPTH" : 1, "END" : "lstm" , "STEP": 1},
+  			{ "KERNEL": 3, "FEATURES": 512, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL": 3, "FEATURES": 256, "DEPTH" : 1, "END" : "lstm" }
+      ],
       
-      {
-        "KERNEL" : 7,
-        "FEATURES" : 256,
-        "DEPTH" : 1,
-        "END" : "lstm" 
-      }
-    ],
-    
-    "DROPOUT_CONCAT" : 0.7,
-
-    "END_FC" : [
-        {
-          "NAME"  : "FC1d",
-          "TYPE"  : "gated",
-          "UNITS" : 0,
-          "ACTIV" : "selu",
-          "BN"    : 1,
-          "DROP"  : 0.7
-        }
-    ]
+     "DROPOUT_CONCAT" : 0.7,
+  
+     "END_FC" : [
+  			{ "NAME": "FC1g", "TYPE": "gated", "UNITS": 512, "ACTIV": "selu", "BN": 1, "DROP"  : 0.7 },
+  			{ "NAME": "FC2g", "TYPE": "gated", "UNITS": 256, "ACTIV": "selu", "BN": 1, "DROP"  : 0.7 }
+      ]
     
   },
   
   "EMB_GEN_MODEL" : {
     "DATAFILE"      : "ro_embgen_dataset.pkl",
-    "CUSTOM_MISTAKES_FILE" : "20190912_ALLAN_EY_TYPOS.pickle",
-    "SAME_CAPS"     : 1,
-    "PRETRAINED"    : "20190822_ro_embgen_model_EY_production.h5",
+    "PRETRAINED"    : "20190822_production/ro_embgen_model.h5",
     "BATCH_SIZE"    : 512,
     "FINAL_DROP"    : 0.5,
     "USE_CUDA"      : 0, 
