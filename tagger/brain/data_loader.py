@@ -77,10 +77,11 @@ class ALLANDataLoader(ALLANTaggerEngine):
 
     dict_labels2idx = None
     self.P("Loading labels file '{}'".format(fn_labels_dict))
-    if ".txt" in fn_labels_dict:
-      dict_labels2idx = self.log.LoadDictFromModels(fn_labels_dict)
-    else:
-      dict_labels2idx = self.log.LoadPickleFromModels(fn_labels_dict)
+    if fn_labels_dict is not None:
+      if ".txt" in fn_labels_dict:
+        dict_labels2idx = self.log.LoadDictFromData(fn_labels_dict)
+      else:
+        dict_labels2idx = self.log.LoadPickleFromData(fn_labels_dict)
     if dict_labels2idx is None:
       self.P(" No labels2idx dict found")
     
