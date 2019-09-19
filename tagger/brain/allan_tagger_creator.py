@@ -310,6 +310,8 @@ if __name__ == '__main__':
     
     eng.setup_model(dict_model_config=model_def, model_name=model_name) # default architecture
     
+    eng._get_generated_embeddings()
+    
     hist = eng.train_on_texts(loader.raw_documents,
                               loader.raw_labels,
                               n_epochs=epochs,
