@@ -9,6 +9,7 @@
   "WORD2IDX" : "#####",
   "IDX2WORD" : "ro_full_index2word.pickle",
   "TOPIC2TAGS": "EY_topic_tag_map.pkl",
+  "LABEL2IDX": "auto_labels2idx.txt",
   
   "TOKENS" : {
     "PAD" : 0,
@@ -35,7 +36,7 @@
   
   "MODEL" : {
     "NAME"        : "uX3_112233_x_g2_512_256_d07_v32_new_embgen",
-    "PRETRAINED"  : "",
+    "PRETRAINED"  : "20190919_181718_uX3_112233_x_g2_512_256_d07_v32_new_embgen.h5",
     
     "DOC_SIZE"    : 75,
     "#DOC_SIZE INFO" : "0 will not pad and will force training obs by obs but carefull at architecture",
