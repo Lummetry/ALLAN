@@ -295,7 +295,7 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     return new_word
   
   def _get_siamese_datasets(self, min_word_size=4, min_nr_words=5,
-                            max_word_min_count=15, force_generate=False):
+                            max_word_min_count=15, force_generate=False, save=False):
     if self.dic_word2index is None:
       raise ValueError("Vocab not loaded!")
     lst_anchor = []
@@ -386,7 +386,7 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     x_false  = np.array(lst_false)
     self.P("Prepared siamese data with {} obs".format(x_anchor.shape[0]))
     data = x_anchor, x_duplic, x_false
-    if 'DATAFILE' in self.embgen_model_config.keys():
+    if save and 'DATAFILE' in self.embgen_model_config.keys():
       fn = self.embgen_model_config['DATAFILE']
       self.log.SavePickleToData(data, fn)
     return data
@@ -432,7 +432,24 @@ class EmbeddingApproximator(ALLANTaggerEngine):
   
   
   
+  def _get_performance_comput_input(self, xa, xd, nr_pairs=None):
+    unk_words, true_words = [], []
+    for i in range(xa.shape[0]):
+      sa = self.char_tokens_to_word(xa[i])
+      sd = self.char_tokens_to_word(xd[i])
+      
+      unk_words.append(sd)
+      true_words.append(sa)
     
+    unk_words  = np.array(unk_words)
+    true_words = np.array(true_words) 
+  
+    indexes = np.arange(unk_words.shape[0])
+    if nr_pairs is not None:
+      indexes = np.random.choice(indexes, nr_pairs, replace=False)
+    
+    return unk_words[indexes], true_words[indexes]
+  
     
   def train_unk_words_model(self, epochs=2, approximate_embeddings=False,
                             save_embeds_every=5, force_generate=False,
@@ -454,7 +471,9 @@ class EmbeddingApproximator(ALLANTaggerEngine):
     # END OBSOLETE (almost)
     
     
-    xa,xd,xf = self._get_siamese_datasets(force_generate=force_generate)
+    xa,xd,xf = self._get_siamese_datasets(force_generate=force_generate, save=False)
+    xa_t, xd_t, _ = self._get_siamese_datasets(force_generate=True, save=True)
+    unk_words, true_words = self._get_performance_comput_input(xa_t, xd_t, nr_pairs=2000)
     self.P("Siamese data sanity check:")
     for i in range(10):
       irnd = np.random.randint(0, xa.shape[0])
@@ -482,22 +501,30 @@ class EmbeddingApproximator(ALLANTaggerEngine):
       avg_loss2.append(loss2)
       self.P("Epoch {} siam training done. loss:{:>7.4f}  avg:{:>7.4f}".format(
           epoch+1, loss2, np.mean(avg_loss2)))
-      if (((epoch+1) % save_embeds_every) == 0) and epoch < (epochs-1):
-        self.save_model()
+      if (((epoch+1) % save_embeds_every) == 0 or epoch == 0) and epoch < (epochs-1):
+        self.save_model(epoch=epoch+1)
         self._get_generated_embeddings()
-        self.debug_unk_words_model()      
-        self.P("")    
-    self.save_model(overwrite_pretrained=overwrite_pretrained)                
+        self.debug_unk_words_model()
+        self.compute_performance(unk_words, true_words, tops=[1,3,5])
+        self.P("")
+    self.save_model(overwrite_pretrained=overwrite_pretrained, epoch=epochs)                
     self._get_generated_embeddings()
     return
   
   
-  def save_model(self, overwrite_pretrained=False):
+  def save_model(self, overwrite_pretrained=False, epoch=None):
     if not overwrite_pretrained:
-      self.log.SaveKerasModel(self.embgen_model, label='embgen_model', use_prefix=True)
+      label = 'embgen_model'
+      use_prefix = True
     else:
       label = self.embgen_model_config['PRETRAINED'] if 'PRETRAINED' in self.embgen_model_config.keys() else 'embgen_model'
-      self.log.SaveKerasModel(self.embgen_model, label=label, use_prefix=False)
+      use_prefix = False
+    
+    if epoch is not None:
+      label += '_ep{}'.format(epoch)
+
+    self.log.SaveKerasModel(self.embgen_model, label=label, use_prefix=use_prefix)
+    
     return
     
   
@@ -586,8 +613,8 @@ class EmbeddingApproximator(ALLANTaggerEngine):
   
   
   def compute_performance(self, unk_words, true_words, tops=[1,3,5]):
-    assert type(unk_words) == list
-    assert type(true_words) == list
+    assert type(unk_words) in [list, np.ndarray]
+    assert type(true_words) in [list, np.ndarray]
     assert len(unk_words) == len(true_words)
     
     self.P("Computing EmbeddingApproximator performance on {} examples ..."
@@ -649,26 +676,20 @@ if __name__ == '__main__':
       l.P(" A:{:>15}  D:{:>15}  F:{:>15}".format(sa,sd,sf))
 
 
-  if True:
-    eng.train_unk_words_model(epochs=100, force_generate=True, overwrite_pretrained=False)
+  if False:
+    eng.train_unk_words_model(epochs=100, force_generate=True, overwrite_pretrained=False,
+                              save_embeds_every=10)
 
     eng.debug_known_words()
     
   if True:
-    xa, xd, _ = eng._get_siamese_datasets(force_generate=True)
-    unk_words, true_words = [], []
-    for i in range(xa.shape[0]):
-      sa = eng.char_tokens_to_word(xa[i])
-      sd = eng.char_tokens_to_word(xd[i])
-      
-      unk_words.append(sd)
-      true_words.append(sa)
-
+    eng.maybe_load_pretrained_embgen()
+    eng._get_generated_embeddings()
+  
+  if True:
+    xa, xd, _ = eng._get_siamese_datasets(force_generate=False, save=False)
+    unk_words, true_words = eng._get_performance_comput_input(xa, xd, nr_pairs=20000)
+    res = eng.compute_performance(unk_words, true_words)
     
-    unk_words  = np.array(unk_words)
-    true_words = np.array(true_words) 
-  
-    indexes = np.random.choice(np.arange(unk_words.shape[0]),
-                               20000, replace=False)
-  
-    res = eng.compute_performance(unk_words[indexes], true_words[indexes])
+    
+    
