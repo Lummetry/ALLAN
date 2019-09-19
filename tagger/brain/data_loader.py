@@ -3,6 +3,8 @@
 Created on Fri Jul 12 08:13:19 2019
 
 @author: Andrei DAMIAN
+
+
 """
 import tensorflow as tf
 import numpy as np
@@ -74,10 +76,12 @@ class ALLANDataLoader(ALLANTaggerEngine):
     """
 
     dict_labels2idx = None
-    if ".txt" in fn_labels_dict:
-      dict_labels2idx = self.log.LoadDictFromModels(fn_labels_dict)
-    else:
-      dict_labels2idx = self.log.LoadPickleFromModels(fn_labels_dict)
+    self.P("Loading labels file '{}'".format(fn_labels_dict))
+    if fn_labels_dict is not None:
+      if ".txt" in fn_labels_dict:
+        dict_labels2idx = self.log.LoadDictFromData(fn_labels_dict)
+      else:
+        dict_labels2idx = self.log.LoadPickleFromData(fn_labels_dict)
     if dict_labels2idx is None:
       self.P(" No labels2idx dict found")
     
@@ -124,6 +128,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
     min_len = min(lens)
     max_len = max(lens)
     avg_len = np.mean(lens)
+    med_len = np.median(lens)
     
     if dict_labels2idx is None:
       dict_labels2idx = {k:v for v,k in enumerate(np.unique(lst_unique_lab))}
@@ -154,9 +159,11 @@ class ALLANDataLoader(ALLANTaggerEngine):
     self.dic_index2labels = {v:k for k,v in self.dic_labels.items()}
     self.P("Loaded {} docs w. {} total tags, max {} tags/obs".format(
               len(x_docs), self.output_size, np.max(tags)))
-    self.P("  Min doc len: {}".format(min_len))
-    self.P("  Max doc len: {}".format(max_len))
-    self.P("  Avg doc len: {}".format(avg_len))
+    self.P("  Min doc word len: {}".format(min_len))
+    self.P("  Max doc word len: {}".format(max_len))
+    self.P("  Avg doc word len: {}".format(avg_len))
+    self.P("  Med doc word len: {}".format(med_len))
+    self.log.ShowTextHistogram(lens, caption='Doc word len distrib', )
     self.P("  Loaded documents vocabulary: {}".format(len(self.lst_loaded_words)))
     self.P("  Words-to-indexes vocabulary: {}".format(len(self.dic_word2index)))
     return x_docs, y_labels

@@ -4,6 +4,12 @@ Created on Thu Jul 11 13:22:51 2019
 
 @author: damian
 
+
+
+TODO:
+  - add EmbeddingEncoderModel as alternative to embedding-lookup and similarity model
+  
+
 """
 
 import tensorflow as tf
@@ -16,6 +22,8 @@ from libraries.lummetry_layers.gated import GatedDense
 from libraries.logger import Logger
 from time import time
 
+__VER__ = '1.0.0'
+
 class ALLANTaggerEngine(LummetryObject):
   """
   ALLAN 'Abstract' Engine
@@ -26,17 +34,12 @@ class ALLANTaggerEngine(LummetryObject):
                output_size=None,
                vocab_size=None,
                embed_size=None,
-               DEBUG=False, MAX_CHR=100000):
-    super().__init__(log=log, DEBUG=DEBUG)
-    self.__name__ = 'AT_TE'
-    self.P("Init ALLANEngine...")
-    self.log.SetNicePrints()
+               DEBUG=False, MAX_CHR=100000,
+               TOP_TAGS=None):
     if log is None or (type(log).__name__ != 'Logger'):
       raise ValueError("Loggger object is invalid: {}".format(log))
-    self.log = log
-    self.config_data = self.log.config_data
     #"".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
-    self.char_full_voc = "".join([chr(x) for x in range(MAX_CHR)])
+    self.MAX_CHR = MAX_CHR
     self.DEBUG = DEBUG
     self.min_seq_len = 20
     self.sess = None
@@ -45,6 +48,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.pre_inputs = None
     self.pre_outputs = None
     self.pre_columns_end = None
+    self.TOP_TAGS = TOP_TAGS
     self.prev_saved_model = []
     self.first_run = {}
     self.frames_data = None
@@ -57,18 +61,20 @@ class ALLANTaggerEngine(LummetryObject):
     self.output_size = len(dict_label2index) if dict_label2index is not None else output_size
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
     self.dic_word2index = dict_word2index
-    if dict_word2index is not None:
-      self._get_reverse_word_dict()
-      self._get_vocab_stats()
     self.dic_labels = dict_label2index
-    self._generate_idx2labels()
+    self.dic_topic2tags = None
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
-    self.startup()
+    super().__init__(log=log, DEBUG=DEBUG)
     return
   
   
   def startup(self):
+    super().startup()
+    self.__name__ = 'AT_TE'
+    self.version = __VER__
+    self.P("Init ALLANEngine v{}...".format(self.version))
+    self.char_full_voc = "".join([chr(x) for x in range(self.MAX_CHR)])
     self.train_config = self.config_data['TRAINING']
     self.token_config = self.config_data['TOKENS']
     self.UNK_ID = self.token_config['UNK']
@@ -86,23 +92,52 @@ class ALLANTaggerEngine(LummetryObject):
     self.model_config = self.config_data['MODEL']
     self.doc_ext = self.train_config['DOCUMENT']
     self.label_ext = self.train_config['LABEL']
+    if self.TOP_TAGS is None:
+      self.TOP_TAGS = self.config_data['TOP_TAGS'] if 'TOP_TAGS' in self.config_data.keys() else 10
     self.fn_word2idx = self.config_data['WORD2IDX'] if 'WORD2IDX' in self.config_data.keys() else None
     self.fn_idx2word = self.config_data['IDX2WORD'] if 'IDX2WORD' in self.config_data.keys() else None
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
-    self.doc_max_words = self.config_data['DOCUMENT_MAX_WORDS']
+    self.fn_topic2tags = self.config_data['TOPIC2TAGS'] if 'TOPIC2TAGS' in self.config_data.keys() else None
+    self.doc_size = self.model_config['DOC_SIZE']
     self.model_name = self.model_config['NAME']
     self.dist_func_name = self.config_data['DIST_FUNC']
-    super().startup()
+    if self.dic_word2index is not None:
+      self._get_reverse_word_dict()
+      self._get_vocab_stats()    
+    self._generate_idx2labels()
+    
+    if self.fn_topic2tags is not None:
+      self.P("Loading topic2tags file '{}'".format(self.fn_topic2tags))
+      if '.txt' in self.fn_topic2tags:
+        self.dic_topic2tags = self.log.LoadDictFromData(self.fn_topic2tags)
+      else:
+        self.dic_topic2tags = self.log.LoadPickleFromData(self.fn_topic2tags)
+
     return
         
-      
+  
+  def _setup_vocabs_and_dicts(self):
+    self.P("Loading labels file '{}'".format(self.fn_labels2idx))
+    if ".txt" in self.fn_labels2idx:
+      dict_labels2idx = self.log.LoadDictFromData(self.fn_labels2idx)
+    else:
+      dict_labels2idx = self.log.LoadPickleFromData(self.fn_labels2idx)
+    if dict_labels2idx is None:
+      self.log.P(" No labels2idx dict found")
+    
+    dic_index2label = {v:k for k,v in dict_labels2idx.items()}
+    self.dic_labels = dict_labels2idx
+    self.dic_index2label = dic_index2label
+    self._setup_vocabs(self.fn_word2idx, self.fn_idx2word)
+    return
+    
   
   def _setup_word_embeddings(self, embeds_filename=None):
     self.embeddings = None
     fn_emb = embeds_filename
     if fn_emb is None:
       fn_emb = self.model_config['EMBED_FILE'] if 'EMBED_FILE' in self.model_config.keys() else ""
-      fn_emb = self.log.GetModelFile(fn_emb)
+      fn_emb = self.log.GetDataFile(fn_emb)
     if os.path.isfile(fn_emb):
       self.P("Loading embeddings {}...".format(fn_emb[-25:]))
       self.embeddings = np.load(fn_emb, allow_pickle=True)
@@ -122,13 +157,14 @@ class ALLANTaggerEngine(LummetryObject):
     fn_emb = embeds_filename
     if fn_emb is None:
       fn_emb = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else ""
-    if self.log.GetModelsFile(fn_emb) is not None:
+    if self.log.GetDataFile(fn_emb) is not None:
       self.P("Loading similarity embeddings {}...".format(fn_emb))
-      self.generated_embeddings = self.log.LoadPickleFromModels(fn_emb)
+      self.generated_embeddings = self.log.LoadPickleFromData(fn_emb)
       self.P(" Loaded similarity embeddings: {}".format(self.generated_embeddings.shape))    
     else:
       self.P("WARNING: Embed file '{}' does not exists. generated_embeddings='None'".format(
           fn_emb))
+      self._get_generated_embeddings()
     return  
 
 
@@ -192,7 +228,7 @@ class ALLANTaggerEngine(LummetryObject):
     t2 = time()
     self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
     fn = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else "embgen_embeds.pkl"
-    self.log.SavePickleToModels(self.generated_embeddings, fn)
+    self.log.SavePickleToData(self.generated_embeddings, fn)
     return 
   
   
@@ -252,18 +288,18 @@ class ALLANTaggerEngine(LummetryObject):
       
     self.P("Loading vocabs...")
     if ".txt" in fn_words_dict:
-      dict_word2idx = self.log.LoadDictFromModels(fn_words_dict)
+      dict_word2idx = self.log.LoadDictFromData(fn_words_dict)
     else:
-      dict_word2idx = self.log.LoadPickleFromModels(fn_words_dict)
+      dict_word2idx = self.log.LoadPickleFromData(fn_words_dict)
     if dict_word2idx is None:
       self.P("  No word2idx dict found")
     else:
       self.P(" Found word2idx[{}]".format(len(dict_word2idx)))
 
     if ".txt" in fn_idx_dict:
-      dict_idx2word = self.log.LoadDictFromModels(fn_idx_dict)
+      dict_idx2word = self.log.LoadDictFromData(fn_idx_dict)
     else:
-      dict_idx2word = self.log.LoadPickleFromModels(fn_idx_dict)
+      dict_idx2word = self.log.LoadPickleFromData(fn_idx_dict)
       if type(dict_idx2word) in [list, tuple]:
         dict_idx2word = {i:v for i,v in enumerate(dict_idx2word)}
     if dict_idx2word is None:
@@ -338,7 +374,7 @@ class ALLANTaggerEngine(LummetryObject):
       determine closest word based on second mebedding matrix (similarity word matrix)
         
     """
-    char_tokens = np.array(self.word_to_char_tokens(word)).reshape((1,-1))
+    char_tokens = np.array(self.word_to_char_tokens(word, pad_up_to=5)).reshape((1,-1))
     res = self.embgen_model.predict(char_tokens)
     return res.ravel()
   
@@ -382,7 +418,23 @@ class ALLANTaggerEngine(LummetryObject):
       _min = _mins[:top]
       _dst = _dist[:top]      
     return _min, _dst
-
+  
+  
+  def _get_token_from_embed(self, np_embed):
+    if self.embeddings is None:
+      raise ValueError("Embeddings matrix is undefined!")
+    matches = (self.embeddings == np_embed).sum(axis=-1) == len(np_embed)
+    if np.any(matches):
+      return np.argmax(matches)
+    else:
+      return -1
+    
+  def _get_tokens_from_embeddings(self, np_embeddings):
+    tokens = []
+    for np_embed in np_embeddings:
+      tokens.append(self._get_token_from_embed(np_embed))
+    return tokens
+  
   
   def get_unk_word_similar_id(self, unk_word, top=1):
     if unk_word in self.dic_word2index.keys():
@@ -433,7 +485,9 @@ class ALLANTaggerEngine(LummetryObject):
         raise ValueError("Embeddings loading failed!")
     idx = self.dic_word2index[word] if word in self.dic_word2index.keys() else self.UNK_ID
     if convert_unknown_words and (idx == self.UNK_ID):
-      idx = self.get_unk_word_similar_id(word)      
+      idx = self.get_unk_word_similar_id(word)
+    if idx in self.SPECIALS:
+      idx = self.UNK_ID      
     emb = self.embeddings[idx]
     return idx, emb
       
@@ -453,7 +507,7 @@ class ALLANTaggerEngine(LummetryObject):
              rank_labels=False,
              convert_unknown_words=True,
              direct_embeddings=False,
-             min_len=0,
+             fixed_len=0,
              DEBUG=False):
     """
     this function will tokenize or directly output the embedding represenation
@@ -472,15 +526,20 @@ class ALLANTaggerEngine(LummetryObject):
         s += ' into embeddings'
       else:
         s += ' into similar tokens'
-    self.P(s)
-    if min_len:
-      self.P("Sequences less then {} will pe padded".format(min_len))
+    if DEBUG:
+      self.P(s)
+    if fixed_len and DEBUG:
+      self.P("Sequences less then {} will pe padded and those above will be truncated".format(fixed_len))
     if type(text) in [str]:
       text = [text]
     lst_enc_texts = []
     lst_enc_labels = []
     self.last_max_size = 0
-    for txt in text:
+    nr_obs = len(text)
+    for i,txt in enumerate(text):
+      if not DEBUG and (len(text) > 10):
+        print("\rProcessing {:.1f}% of input documents...".format(
+            i/nr_obs * 100), end='', flush=True)
       splitted = self._get_words(txt)
       self.last_max_size = max(self.last_max_size, len(splitted))
       tkns = []
@@ -501,12 +560,14 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("  '{}'".format(text))
         self.P(" into")
         self.P("  '{}'".format(self.decode(tkns))) 
-      if len(tokens) < min_len:
-        added = min_len - len(tokens)
+      if len(tokens) < fixed_len:
+        added = fixed_len - len(tokens)
         if direct_embeddings:
           tokens += [self.embeddings[self.PAD_ID]] * added
         else:
           tokens += [self.PAD_ID] * added
+      if fixed_len > 0:
+        tokens = tokens[:fixed_len]
       lst_enc_texts.append(tokens)
     if text_label is not None:
       assert type(text_label) in [list, tuple, np.ndarray], "labels must be provided as list/list or lists"
@@ -527,23 +588,29 @@ class ALLANTaggerEngine(LummetryObject):
       return lst_enc_texts
 
     
-  def decode(self, tokens, labels_idxs=None, from_onehot=True):
+  def decode(self, tokens, 
+             tokens_as_embeddings=False,
+             labels_idxs=None, 
+             labels_from_onehot=True):
     """
     this function will transform a series of token sequences into text as well 
     as a list of sequences of labels indices into coresponding indices
     """
-    if type(tokens[0]) in [int]:
+    if (("int" in str(type(tokens[0]))) or 
+        (type(tokens) == np.ndarray and len(tokens.shape) == 2)):
       tokens = [tokens]
     texts = []
     labels = []
     for seq in tokens:
-      txt = " ".join([self.dic_index2word[x] for x in seq])
+      if tokens_as_embeddings:
+        seq = self._get_tokens_from_embeddings(seq)
+      txt = " ".join([self.dic_index2word[x] for x in seq if x != self.PAD_ID]) 
       texts.append(txt)
     if labels_idxs is not None:
       if type(labels_idxs[0]) in [int]:
         labels_idxs = [labels_idxs]
       for seq_idxs in labels_idxs:
-        if from_onehot:
+        if labels_from_onehot:
           seq = np.argwhere(seq_idxs).ravel().tolist()
         else:
           seq = seq_idxs
@@ -623,43 +690,94 @@ class ALLANTaggerEngine(LummetryObject):
                    text, 
                    convert_unknown_words=True,
                    convert_tags=True,
-                   top=5):
+                   top=None,
+                   return_input_processed=True,
+                   return_topic=True,
+                   force_below_threshold=True,
+                   DEBUG=False,
+                   verbose=1):
     """
     given a simple document will output the results based on curent model
+      Args:
+        text : the document that can be one string or a list of strings
+        convert_unknown_words : True will use siamse net to find unk words
+        convert_tags : True will convert tag-id into tag names
+        top : number of top findings (5)
+      
+      Returns:
+        the found tags dict in {tag: proba ...} format
     """
+    if top is None:
+      top = self.TOP_TAGS
     assert self.trained and self.model is not None
     self.maybe_generate_idx2labels()
-    threshold = 0.5 if "tag" in self.model_output else 0 
-    self.P("Inferring '{}'".format(text))
+    if DEBUG: 
+      self.P("Inferring initial text '{}'".format(text))
     direct_embeddings = False
     if len(self.model.inputs[0].shape) == 3:
       direct_embeddings = True
-      self.P("Model inputs {} identified to directly receive embeddings".format(
-          self.model.inputs[0].shape))
+      if DEBUG:
+        self.P("Model inputs {} identified to directly receive embeddings".format(
+            self.model.inputs[0].shape))
     
     tokens = self.encode(text, 
                          convert_unknown_words=convert_unknown_words,
                          direct_embeddings=direct_embeddings,
-                         min_len=self.min_seq_len,
-                         DEBUG=True)
+                         fixed_len=self.doc_size,
+                         DEBUG=DEBUG)
+    processed_input = self.decode(tokens=tokens, tokens_as_embeddings=direct_embeddings)[0]
+    if verbose >= 1:
+      self.P("Inferring (decoded): '{}'".format(processed_input))
     np_tokens = np.array(tokens)
-    tags_probas = self._predict_single(np_tokens)
-    tags_probas = tags_probas.ravel()
-    tags_idxs = np.argsort(tags_probas)[::-1]
+    np_tags_probas = self._predict_single(np_tokens)
+    tags = self.array_to_tags(np_tags_probas, 
+                              top=top, 
+                              convert_tags=convert_tags,
+                              force_below_threshold=force_below_threshold)
+    
+    topic_document = None
+    if return_topic:
+      topic_document = self.find_topic(dict_tags=tags,
+                                       choose_by_length=False) #USE True to check by length    
+    
+    
+    if DEBUG:
+      top_10_preds = self.array_to_tags(
+                                        np_tags_probas, 
+                                        top=10, 
+                                        convert_tags=True,
+                                        force_below_threshold=True)
+      self.P("  Predicted: {}".format("".join(["'{}':{:.3f} ".format(k,v) 
+                                    for k,v in top_10_preds.items()])))
+      
+    ret = (tags,)
+    if return_topic:
+      ret += (topic_document,)
+    if return_input_processed:
+      ret += (text, processed_input)
+    
+    return ret
+  
+  
+  def array_to_tags(self, np_probas, top=5, convert_tags=True, force_below_threshold=False):
+    threshold = 0.5 if "tag" in self.model_output else 0
+    np_probas = np_probas.ravel()
+    tags_idxs = np.argsort(np_probas)[::-1]
     top_idxs = tags_idxs[:top]
     top_labels = [self.dic_index2label[idx] for idx in top_idxs]
-    top_prob = tags_probas[top_idxs]
+    top_prob = np_probas[top_idxs]
     self.last_probas = top_prob
     self.last_labels = top_labels
     dct_res = OrderedDict()
     for i, idx in enumerate(top_idxs):
-      if (i > 0) and tags_probas[idx] < threshold:
-        # skip after first if below threshold
-        continue
+      if not force_below_threshold:
+        if (i > 0) and (np_probas[idx] < threshold):
+          # skip after first if below threshold
+          continue
       if convert_tags:
-        dct_res[self.dic_index2label[idx]] = tags_probas[idx]
+        dct_res[self.dic_index2label[idx]] = float(np_probas[idx])
       else:
-        dct_res[idx] = tags_probas[idx]
+        dct_res[idx] = float(np_probas[idx])
     return dct_res
   
   def maybe_generate_idx2labels(self):
@@ -674,9 +792,10 @@ class ALLANTaggerEngine(LummetryObject):
       self.dic_index2label = None
     return
   
-  def get_stats(self, X_tokens, show=True):
+  def get_stats(self, X_tokens, show=True, X_docs=None, X_labels=None):
     self.P("Calculating documens stats...")
     sizes = [len(seq) for seq in X_tokens]
+    idxs_min = np.argsort(sizes)
     dict_stats = {
         "Min" : int(np.min(sizes)), 
         "Max" : int(np.max(sizes)), 
@@ -686,10 +805,24 @@ class ALLANTaggerEngine(LummetryObject):
     self.P("Done calculating documents stats.")
     if show:
       for stat in dict_stats:
-        self.P(" {} docs size: {}".format(stat, dict_stats[stat]))
+        self.P("  {} docs size: {}".format(stat, dict_stats[stat]))
+      self.P("  Example of small docs:")
+      for i in range(5):
+        idx = idxs_min[i]
+        i_sz = sizes[idx]
+        if X_docs is not None:
+          s_doc = X_docs[idx]
+        else:
+          s_doc = self.decode(X_tokens[idx], 
+                              tokens_as_embeddings=self.direct_embeddings)
+        lbl = ''
+        if X_labels is not None:
+          lbl = 'Label: {}'.format(X_labels[idx])
+        self.P("    ID:{:>4} Size:{:>2}  Doc: '{}'  {}".format(
+            idx, i_sz, s_doc, lbl))
     return dict_stats
   
-  def pad_data(self, X_tokens, max_doc_size=None):
+  def __pad_data(self, X_tokens, max_doc_size=None):
     """
      pad data based on 'max_doc_size' or on predefined self.max_doc_size
     """
@@ -708,8 +841,12 @@ class ALLANTaggerEngine(LummetryObject):
     
 
   def _train_loop(self, X_data, y_data, batch_size, n_epochs, 
+                  X_text_valid=None, y_text_valid=None,
                   save_best=True,
-                  save_end=True):
+                  save_end=True, 
+                  test_every_epochs=1,
+                  DEBUG=True,
+                  compute_topic=True):
     """
     this is the basic 'protected' training loop loop that uses tf.keras methods and
     works both on embeddings inputs or tokenized inputs
@@ -720,40 +857,68 @@ class ALLANTaggerEngine(LummetryObject):
     n_batches = n_obs // batch_size + 1
     self.train_losses = []
     self.log.SupressTFWarn()
-    best_loss = np.inf
+    best_recall = 0
+    self.train_recall_history = []
+    self.train_recall_history_epochs = []
+    self.train_recall_non_zero_epochs = []
+    self.train_epoch = 0
+    
+    fct_test = self.test_model_on_texts_with_topic if compute_topic else self.test_model_on_texts
+    
     for epoch in range(n_epochs):
+      self.train_epoch = epoch + 1
       epoch_losses = []
       for i_batch in range(n_batches):
         batch_start = (i_batch * batch_size) % n_obs
         batch_end = min(batch_start + batch_size, n_obs)
-        X_batch = np.array(X_data[batch_start:batch_end])
+        X_batch = np.array(X_data[batch_start:batch_end].tolist())
         y_batch = np.array(y_data[batch_start:batch_end])
-        loss = self.model.train_on_batch(X_batch, y_batch)
-        print("\r Epoch {:>3}: {:>5.1f}% completed [loss: {:.4f}]".format(
-            epoch+1, i_batch / n_batches * 100, loss), end='', flush=True)
+        batch_output = self.model.train_on_batch(X_batch, y_batch)
+        s_bout = self.log.EvaluateSummary(self.model, batch_output)
+        loss = batch_output[0] if type(batch_output)  in [list, np.ndarray, tuple] else batch_output
+        batch_info = "Epoch {:>3}: {:>5.1f}% completed [{}]".format(
+            epoch+1, i_batch / n_batches * 100, s_bout)        
+        print("\r {}".format(batch_info), end='', flush=True)
         self.train_losses.append(loss)
-        epoch_losses.append(loss)
+        epoch_losses.append(loss)        
+        self.trained = True
       print("\r",end="")
       epoch_loss = np.mean(epoch_losses)
-      self.P("Epoch {} done. loss:{:>7.4f}, all avg :{:>7.4f}".format(
-          epoch+1, epoch_loss,np.mean(self.train_losses)))
-      if epoch_loss < best_loss:
-        s_name = 'ep{}_loss{:.3f}'.format(epoch+1, epoch_loss)
-        self.save_model(s_name, delete_prev_named=True)
-        best_loss = epoch_loss
-    self.trained = True
+      self.P("Epoch {} done. loss:{:>7.4f}, all avg :{:>7.4f}, last batch: [{}]".format(
+          epoch+1, epoch_loss,np.mean(self.train_losses), s_bout))
+      if (epoch > 0) and (test_every_epochs > 0) and (X_text_valid is not None) and ((epoch+1) % test_every_epochs == 0):
+        self.P("Testing on epoch {}".format(epoch+1))
+        rec = fct_test(lst_docs=X_text_valid, lst_labels=y_text_valid,
+                       DEBUG=True, top=10)
+        if compute_topic:
+          rec, topic_rec = rec
+        if self.last_test_non_zero and (best_recall < rec):
+          self.train_recall_non_zero_epochs.append(epoch+1)
+          s_name = 'ep{}_R{:.0f}_ANZ'.format(epoch+1, rec)
+          self.save_model(s_name, delete_prev_named=True)
+          best_recall = rec
+        elif best_recall < rec:
+          s_name = 'ep{}_R{:.0f}'.format(epoch+1, rec)
+          self.save_model(s_name, delete_prev_named=True)
+          best_recall = rec
+     
+          
+    self.P("Model training done.")
+    self.P("Train recall history: {}".format(self.train_recall_history))
+    if compute_topic:
+      self.P("Train topic recall history: {}".format(self.train_topic_recall_history))
     self._reload_embeds_from_model()
     if save_end:
-      self.save_model()
+      self.save_model()    
     return  
   
   
-  def save_model(self, name=None, delete_prev_named=True):
+  def save_model(self, name=None, delete_prev_named=False, DEBUG=False):
     s_name = self.model_name
     if name is not None:
       s_name += '_' + name
       
-    debug = not delete_prev_named
+    debug = (not delete_prev_named) or DEBUG
     
     if debug:      
       self.P("Saving tagger model '{}'".format(s_name))
@@ -791,18 +956,23 @@ class ALLANTaggerEngine(LummetryObject):
   def train_on_texts(self, 
             X_texts, 
             y_labels, 
+            X_texts_valid=None,
+            y_labels_valid=None,
             convert_unknown_words=True,
             batch_size=32, 
             n_epochs=1,
-            force_batch=False,
             save=True,
-            skip_if_pretrained=True
+            skip_if_pretrained=True, 
+            test_every_epochs=5,
+            DEBUG=True,   
+            compute_topic=True
             ):
     """
     this methods trains the loaded/created `model` directly on text documents
     and text labels after tokenizing and (if required) converting to embeddings 
     the inputs all based on the structure of the existing `model` inputs
     """
+    
     if self.model is None:
       raise ValueError("Model is undefined!")
     
@@ -822,45 +992,78 @@ class ALLANTaggerEngine(LummetryObject):
       raise ValueError("X and y contain different number of observations")
 
     self._check_model_inputs()
+    
+    if convert_unknown_words and self.generated_embeddings is None:
+      self.setup_embgen_model()
+      
 
     rank_labels = 'multi' in self.model_output
+    
+    
+    pad_data = self.doc_size
     
     X_tokens, y_data = self.encode(X_texts, 
                                    text_label=y_labels,
                                    to_onehot=True,
                                    rank_labels=rank_labels,
                                    convert_unknown_words=convert_unknown_words,
-                                   direct_embeddings=self.direct_embeddings)
-    if self.doc_max_words.lower() == 'auto':
-      self.max_doc_size = self.last_max_size + 1
-    else:
-      self.max_doc_size = int(self.doc_max_words)
+                                   direct_embeddings=self.direct_embeddings,
+                                   fixed_len=pad_data)
+
+    self.max_doc_size = self.doc_size
 
     self.P("Training on sequences of max {} words".format(self.max_doc_size))
 
-    if force_batch:
-      X_data = self.pad_data(X_tokens=X_tokens)
+    if pad_data > 0:
+      X_data = X_tokens
     else:
       batch_size = 1
       X_data = X_tokens
-      self.get_stats(X_data)
+      self.get_stats(X_data, X_labels=y_labels)
       self.P("Reducing batch_size to 1 and processing doc by doc")
+
+    idxs_chk = [133] + np.random.choice(n_obs, size=5, replace=False).tolist()
+    if X_texts_valid is None:
+      X_texts_valid = [X_texts[x] for x in idxs_chk]
+      y_labels_valid = [y_labels[x] for x in idxs_chk]
       
+    if self.direct_embeddings:
+      self.P("Sanity check before training loop for direct embeddings:")
+      for idx in idxs_chk:
+        x_e = X_data[idx]
+        y_l = y_data[idx]
+        txt = X_texts[idx]
+        lbl = y_labels[idx]
+        x_txt = self.decode(tokens=x_e, tokens_as_embeddings=True)
+        y_lbl = self.array_to_tags(y_l)
+        self.P("  Doc: '{}'".format(txt))
+        self.P("  DEC: '{}'".format(x_txt[0]))
+        self.P("  Lbl:  {}".format(lbl))
+        self.P("  DEC:  {}".format(y_lbl))
+        self.P("")
+
+    
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
-                     save_best=save, save_end=save)
-    return
+                     X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
+                     save_best=save, save_end=save, test_every_epochs=test_every_epochs,
+                     compute_topic=compute_topic)
+    
+    if compute_topic:
+      return self.train_recall_history, self.train_topic_recall_history
+    return self.train_recall_history
 
 
 
-  def train_on_tokens(self, 
+  def __train_on_tokens(self, 
                       X_tokens, 
                       y_labels,
                       batch_size=32, 
                       n_epochs=1,
-                      force_batch=False,
                       save=True,
                       skip_if_pretrained=False):
     """
+    TODO: Check this one and make it public!
+    
     this method assumes a `model` has been created and it accepts
     sequences of tokens as inputs. y_labels are indices of labels
     """
@@ -883,10 +1086,7 @@ class ALLANTaggerEngine(LummetryObject):
     
     y_data = self.labels_to_onehot_targets(y_labels, rank=rank_labels)
 
-    if self.doc_max_words.lower() == 'auto':
-      self.max_doc_size = max([len(s) for s in X_tokens]) + 1
-    else:
-      self.max_doc_size = int(self.doc_max_words)
+    self.max_doc_size = self.doc_size
     
     self.P("Training on sequences of max {} words".format(self.max_doc_size))
 
@@ -927,12 +1127,25 @@ class ALLANTaggerEngine(LummetryObject):
     _res = False
     if "PRETRAINED" in self.model_config.keys():
       fn = self.model_config['PRETRAINED']
+      _ver = ''
+      _f = 0
+      for i,x in enumerate(fn):
+        if x.isdigit():
+          _ver += x
+        if x == '_' and i != 0 :
+          if _f == 0:
+            _ver += "."
+            _f += 1
+          else:
+            break
+      self.version += '.' + _ver
       if self.log.GetModelsFile(fn) is not None:
         self.P("Loading pretrained model {}".format(fn))
         self.model = self.log.LoadKerasModel(
                                   fn,
                                   custom_objects={
                                       "GatedDense" : GatedDense,
+                                      "K_rec" : self.log.K_rec,
                                       })
         _res = True
         self._reload_embeds_from_model()
@@ -986,12 +1199,22 @@ class ALLANTaggerEngine(LummetryObject):
     self.log.ShowTextHistogram(lens)
     return dct_stats
   
-  
+  def check_labels_set(self, val_labels):
+    for obs in val_labels:
+      if type(obs) not in [list, tuple, np.ndarray]:
+        raise ValueError("LabelSetCheck: All observations must be lists of labels")
+      for label in obs:
+        if label not in self.dic_labels.keys():
+          raise ValueError("LabelSetCheck: Label '{}' not found in valid labels dict".format(label))
+    self.P("LabelSetCheck: All {} labels are valid.".format(len(val_labels)))
+    return
+    
   def initialize(self):
     self.P("Full initialization started ...")
+    self._setup_vocabs_and_dicts()
     self._init_hyperparams()
     self.setup_embgen_model()
-    self.setup_pretrained_model()
+    self.setup_pretrained_model()    
     if self.embeddings is None:
       raise ValueError("Embeddings loading failed!")
     if self.model is None:
@@ -1000,27 +1223,236 @@ class ALLANTaggerEngine(LummetryObject):
       raise ValueError("EmbGen model loading failed!")
     if self.generated_embeddings is None:
       raise ValueError("Generated similarity siamese embeddings loading failed!")
-    self.P("Full initialization done.")
+    self.P("Full initialization done {} v{}.".format(
+        self.__class__.__name__, self.version))
     
     
-  def tagdict_to_text(self, tags):
+  def tagdict_to_text(self, tags, max_tags=None):
     txt = ''
+    cnt = 0
     for k in tags:
+      cnt += 1
       txt = txt + "'{}':{:.2f} ".format(k, tags[k])
+      if max_tags is not None:
+        if cnt >= max_tags:
+          break
     return txt
 
   
+  def test_model_on_texts(self, lst_docs, lst_labels, top=5, 
+                          show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
+    """
+    function that calculates (and displays) model validation/testing indicators
     
+    inputs:
+      lst_docs    : list of documents (each can be a string or a list of strings)
+      lst_labels  : list of labels (list) for each document
+      top         : max number of tags to generate 
+      show        : display stats
+    
+    returns:
+      scalar float with overall accuracy (mean recall)
       
+    """
+    if not hasattr(self, "train_recall_history"):
+      self.train_recall_history = []
+    if type(lst_docs) == str:
+      lst_docs = [lst_docs]
+    if type(lst_labels[0]) == str:
+      lst_labels = [lst_labels]
+    if len(lst_docs) != len(lst_labels):
+      raise ValueError("Number of documents {} must match number of label-groups {}".format(
+          len(lst_docs), len(lst_labels)))
+    docs_acc = []
+    tags_per_doc = []
+    if show:
+      self.P("")
+      self.P("Starting model testing on {} documents with zero-doc-penalty: {:.1f}".format(
+          len(lst_docs), zero_penalty))
+    zero_preds = False
+    self.last_test_non_zero = False
+    for idx, doc in enumerate(lst_docs):
+      doc_acc = 0
+      dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
+                                   convert_unknown_words=True, 
+                                   top=top,
+                                   DEBUG=False,
+                                   return_input_processed=True,
+                                   verbose=0,
+                                   )
+      lst_tags = [x.lower() for x in dct_tags]
+      gt_tags = lst_labels[idx]
+      for y_true in gt_tags:
+        if y_true.lower() in lst_tags:
+          doc_acc += 1
+      if show and DEBUG:
+        self.P("  Inputs: ({} chars) '{}...'".format(len(inputs), inputs[:50]))
+        self.P("  Predicted: {}".format(self.tagdict_to_text(dct_tags, max_tags=5)))
+        self.P("  Labels:    {}".format(gt_tags[:5]))
+        self.P("  Match: {}/{}".format(doc_acc, len(gt_tags)))
+        self.P("")
+      doc_prc = doc_acc / len(gt_tags)      
+      tags_per_doc.append(len(gt_tags))
+      if doc_prc == 0:
+        zero_preds = True
+        doc_prc = zero_penalty
+      docs_acc.append(doc_prc)
+    overall_acc = np.mean(docs_acc)
+    self.last_test_non_zero = not zero_preds
+    if record_trace:
+      self.train_recall_history.append(round(overall_acc * 100, 1))
+      self.train_recall_history_epochs.append(self.train_epoch)
+    if show:
+      self.P("Tagger benchmark on {} documents with {:.1f} avg tags/doc".format(
+          len(lst_docs), np.mean(tags_per_doc)))
+      self.P("  {}".format("ZERO PREDS :( !!!" if zero_preds else "Hurray! All preds non-zero! :)))"))
+      self.P("  Overall recall: {:5.1f}%".format(overall_acc * 100))
+      self.P("  Max doc recall: {:5.1f}%".format(np.max(docs_acc) * 100))
+      self.P("  Min doc recall: {:5.1f}%".format(np.min(docs_acc) * 100))
+      self.P("  Med doc recall: {:5.1f}%".format(np.median(docs_acc) * 100))
+    return max(0, round(overall_acc * 100, 2))
+  
+  
+  def test_model_on_texts_with_topic(self, lst_docs, lst_labels, top=10, 
+                                     show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
+    """
+    function that calculates (and displays) model validation/testing indicators
+    
+    inputs:
+      lst_docs    : list of documents (each can be a string or a list of strings)
+      lst_labels  : list of labels (list) for each document
+      top         : max number of tags to generate 
+      show        : display stats
+    
+    returns:
+      scalar float with overall accuracy (mean recall)
+      
+    """
+    if not hasattr(self, "train_recall_history"):
+      self.train_recall_history = []
+    if not hasattr(self, "train_topic_recall_history"):
+      self.train_topic_recall_history = []
+    if type(lst_docs) == str:
+      lst_docs = [lst_docs]
+    if type(lst_labels[0]) == str:
+      lst_labels = [lst_labels]
+    if len(lst_docs) != len(lst_labels):
+      raise ValueError("Number of documents {} must match number of label-groups {}".format(
+          len(lst_docs), len(lst_labels)))
+    if self.dic_topic2tags is None:
+      raise ValueError("Each topic should have a list of associated tags.")
+    docs_acc = []
+    tags_per_doc = []
+    if show:
+      self.P("")
+      self.P("Starting model testing on {} documents with zero-doc-penalty: {:.1f}".format(
+          len(lst_docs), zero_penalty))
+    zero_preds = False
+    self.last_test_non_zero = False
+    
+    matched_by_topic = 0
+    
+    for idx, doc in enumerate(lst_docs):
+      doc_acc = 0
+      dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
+                                   convert_unknown_words=True, 
+                                   top=top,
+                                   DEBUG=False,
+                                   return_input_processed=True,
+                                   verbose=0,
+                                   )
+      
+      pred_topic = self.find_topic(dct_tags, choose_by_length=False)
+      
+      lst_tags = [x.lower() for x in dct_tags]
+      gt_tags = lst_labels[idx]
+      true_topic = list(filter(lambda x: 'topic' in x, gt_tags))
+      assert len(true_topic) == 1
+      true_topic = true_topic[0]
+      
+      if pred_topic == true_topic:
+        matched_by_topic += 1
+      
+      for y_true in gt_tags:
+        if y_true.lower() in lst_tags:
+          doc_acc += 1
+      if show and DEBUG:
+        self.P("  Inputs: ({} chars) '{}...'".format(len(inputs), inputs[:50]))
+        self.P("  Predicted: {}".format(self.tagdict_to_text(dct_tags, max_tags=10)))
+        self.P("  Labels:    {}".format(gt_tags[:5]))
+        self.P("  Match: {}/{}".format(doc_acc, len(gt_tags)))
+        self.P("  True Topic: {}".format(true_topic))
+        self.P("  Pred Topic: {}".format(pred_topic))
+        self.P("  Correct Topic until now: {}/{}".format(matched_by_topic, idx+1))
+        self.P("")
+      doc_prc = doc_acc / len(gt_tags)
+      tags_per_doc.append(len(gt_tags))
+      if doc_prc == 0:
+        zero_preds = True
+        doc_prc = zero_penalty
+      docs_acc.append(doc_prc)
+    overall_acc = np.mean(docs_acc)
+    topic_acc = matched_by_topic / len(lst_docs)
+    self.last_test_non_zero = not zero_preds
+    if record_trace:
+      self.train_recall_history.append(round(overall_acc * 100, 1))
+      self.train_recall_history_epochs.append(self.train_epoch)
+      self.train_topic_recall_history.append(round(topic_acc * 100, 1))
+    if show:
+      self.P("Tagger benchmark on {} documents with {:.1f} avg tags/doc".format(
+          len(lst_docs), np.mean(tags_per_doc)))
+      self.P("  {}".format("ZERO PREDS :( !!!" if zero_preds else "Hurray! All preds non-zero! :)))"))
+      self.P("  Overall recall: {:5.1f}%".format(overall_acc * 100))
+      self.P("  Max doc recall: {:5.1f}%".format(np.max(docs_acc) * 100))
+      self.P("  Min doc recall: {:5.1f}%".format(np.min(docs_acc) * 100))
+      self.P("  Med doc recall: {:5.1f}%".format(np.median(docs_acc) * 100))
+      self.P("  Topic recall  : {:5.1f}%".format(topic_acc * 100))
+    return max(0, round(overall_acc * 100, 2)), max(0, round(topic_acc * 100, 2))
+  
+  def find_topic(self, dict_tags, choose_by_length=False):
+    """
+    Returns the topic id based on the tags found by the document tagger.
+    
+    First constructs a topic_identification map: a dictionary where all the keys
+    are the topics, and the values are lists of the tags which appear in 
+    the documents where the topic appears.
+    
+    Following that, another dictionary is constructed where the keys are the topics 
+    but the values are length of the list in the first dictionary/ sum of the probabilities.
+    
+    Returns the max value of the dictionary as the found topic
+    """
+    assert self.dic_topic2tags is not None
+    topic_labels = list(self.dic_topic2tags.keys())
+    topic_identification_map = {k:list() for k in topic_labels}
+    #topic identification on best tags:
+    for tag, conf in dict_tags.items():
+      for topic in topic_labels:
+        if tag in self.dic_topic2tags[topic]:
+          topic_identification_map[topic].append((tag,conf))
+  
+    if choose_by_length:
+      topic_identification_len_map = {k: len(v) for k,v in topic_identification_map.items()}
+      max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
+      return max_len_key
+    
+    else:
+      topic_identification_sum_map = {k:0 for k in topic_identification_map.keys()}
+    
+      for key, values in topic_identification_map.items():
+        topic_identification_sum_map[key] += sum([pair[1] for pair in values])
+      
+      max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
+    
+      return max_sum_key
+
   
 if __name__ == '__main__':
   from libraries.logger import Logger
-  from tagger.brain.data_loader import ALLANDataLoader
   
-  cfg1 = "tagger/brain/config.txt"
+  cfg1 = "tagger/brain/configs/config.txt"
   
   use_raw_text = True
-  save_model = True
   force_batch = True
   use_model_conversion = False
   epochs = 30
@@ -1029,38 +1461,53 @@ if __name__ == '__main__':
   l = Logger(lib_name="ALNT",config_file=cfg1)
   l.SupressTFWarn()
   
-  loader = ALLANDataLoader(log=l, multi_label=True, 
-                           normalize_labels=False)
-  loader.LoadData()
+
   
-  eng = ALLANTaggerEngine(log=l, 
-                          dict_word2index=loader.dic_word2index,
-                          dict_label2index=loader.dic_labels)
+  eng = ALLANTaggerEngine(log=l,)
+  
   eng.initialize()
   
     
   l.P("")
-  tags = eng.predict_text("ma doare stomacelul")
-  res = eng.tagdict_to_text(tags)
-  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
-        for x,p in zip(eng.last_labels, eng.last_probas)]))
-
   l.P("")
-  tags = eng.predict_text("ma doare caputul, in gatutul si nasucul")
+  tags, inputs = eng.predict_text("as vrea info despre salarizare daca se poate")
   res = eng.tagdict_to_text(tags)
-  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
       
+
   l.P("")
-  tags = eng.predict_text("cred ca am o durerica la gurita din cauza de la creieras")
+  l.P("")
+  tags, inputs = eng.predict_text("Aveti cumva sediu si in cluj?")
   res = eng.tagdict_to_text(tags)
-  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
+  l.P("")
+  l.P("")
+  tags, inputs = eng.predict_text("unde aveti birourile in bucuresti?")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
 
 
   l.P("")
-  tags = eng.predict_text("simt un disconform la spatic pentru ca sunt cam dus cu caputul")
+  l.P("")
+  tags, inputs = eng.predict_text("care este atmosfera de echipa in EY?")
   res = eng.tagdict_to_text(tags)
-  l.P("Result: {} \n {}".format(res, ['{}:{:.2f}'.format(x,p) 
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
         for x,p in zip(eng.last_labels, eng.last_probas)]))
-      
+
+
+  l.P("")
+  l.P("")
+  tags, inputs = eng.predict_text("in ce zona aveti biroul in Iasi?")
+  res = eng.tagdict_to_text(tags)
+  l.P("Result: {}".format(res))
+  l.P(" Debug results: {}".format(['{}:{:.2f}'.format(x,p) 
+        for x,p in zip(eng.last_labels, eng.last_probas)]))
+
