@@ -22,7 +22,7 @@ from libraries.lummetry_layers.gated import GatedDense
 from libraries.logger import Logger
 from time import time
 
-__VER__ = '0.9.1'
+__VER__ = '1.0.0'
 
 class ALLANTaggerEngine(LummetryObject):
   """
@@ -692,6 +692,7 @@ class ALLANTaggerEngine(LummetryObject):
                    convert_tags=True,
                    top=None,
                    return_input_processed=True,
+                   return_topic=True,
                    force_below_threshold=True,
                    DEBUG=False,
                    verbose=1):
@@ -733,6 +734,13 @@ class ALLANTaggerEngine(LummetryObject):
                               top=top, 
                               convert_tags=convert_tags,
                               force_below_threshold=force_below_threshold)
+    
+    topic_document = None
+    if return_topic:
+      topic_document = self.find_topic(dict_tags=tags,
+                                       choose_by_length=False) #USE True to check by length    
+    
+    
     if DEBUG:
       top_10_preds = self.array_to_tags(
                                         np_tags_probas, 
@@ -741,10 +749,14 @@ class ALLANTaggerEngine(LummetryObject):
                                         force_below_threshold=True)
       self.P("  Predicted: {}".format("".join(["'{}':{:.3f} ".format(k,v) 
                                     for k,v in top_10_preds.items()])))
+      
+    ret = (tags,)
+    if return_topic:
+      ret += (topic_document,)
     if return_input_processed:
-      return tags, (text, processed_input)
-    else:
-      return tags
+      ret += (text, processed_input)
+    
+    return ret
   
   
   def array_to_tags(self, np_probas, top=5, convert_tags=True, force_below_threshold=False):

@@ -15,8 +15,11 @@ if __name__ == '__main__':
   
   results = OrderedDict({'MODEL': [], "MAX": [], "EP":[], 'EP_NZ': [] ,'END_SC': [], 'HISTORY': [] })
   
+  VALIDATION = True
+  
   for i,cfg in enumerate(configs):
-    if 'emb_noi' not in cfg: continue
+    if cfg != 'config_v3_with_v2_emb_noi.txt':
+      continue
     
     path_cfg = os.path.join(root_configs, cfg)
     
@@ -32,12 +35,14 @@ if __name__ == '__main__':
                              normalize_labels=False)
     loader.LoadData()
     
-    valid_texts, valid_labels = l.LoadDocuments(folder=l.GetDataSubFolder(l.config_data['TRAINING']['FOLDER']),
-                                           doc_ext='.txt',
-                                           label_ext='.txt',
-                                           doc_folder='Extended_Validation_Texts',
-                                           label_folder='Extended_Validation_Labels',
-                                           return_labels_list=False)
+    valid_texts, valid_labels = None, None
+    if VALIDATION:
+      valid_texts, valid_labels = l.LoadDocuments(folder=l.GetDataSubFolder(l.config_data['TRAINING']['FOLDER']),
+                                             doc_ext='.txt',
+                                             label_ext='.txt',
+                                             doc_folder='Extended_Validation_Texts',
+                                             label_folder='Extended_Validation_Labels',
+                                             return_labels_list=False)
   
     
     epochs = 150
@@ -48,7 +53,8 @@ if __name__ == '__main__':
                              dict_word2index=loader.dic_word2index,
                              dict_label2index=loader.dic_labels)
     
-    eng.check_labels_set(valid_labels)
+    if VALIDATION:
+      eng.check_labels_set(valid_labels)
     
     eng.setup_model(dict_model_config=model_def, model_name=model_name) # default architecture
     
@@ -62,26 +68,27 @@ if __name__ == '__main__':
                               skip_if_pretrained=False,
                               DEBUG=False,
                               compute_topic=True)
-  
-    score = eng.test_model_on_texts(valid_texts, valid_labels, record_trace=False)
     
-    hist, hist_topics = hist
+    if VALIDATION:
+      score = eng.test_model_on_texts(valid_texts, valid_labels, record_trace=False)
     
-    max_idx = np.argmax(hist)
-    max_epoch = eng.train_recall_history_epochs[max_idx]
-    max_score = hist[max_idx]
-    nz_epochs = eng.train_recall_non_zero_epochs
-  
-    results['MODEL'].append(model_name)
-    results['END_SC'].append(score)
-    results['HISTORY'].append(hist[-10:])
-    results['MAX'].append(max_score)
-    results['EP'].append(max_epoch)
-    results['EP_NZ'].append(nz_epochs)
-    df = pd.DataFrame(results).sort_values('MAX')    
-    l.P("")
-    l.P("Results so far:\n{}".format(df))
-    l.P("")
-    l.SaveDataFrame(df, fn='20190919_results1')
+      hist, hist_topics = hist
+      
+      max_idx = np.argmax(hist)
+      max_epoch = eng.train_recall_history_epochs[max_idx]
+      max_score = hist[max_idx]
+      nz_epochs = eng.train_recall_non_zero_epochs
+    
+      results['MODEL'].append(model_name)
+      results['END_SC'].append(score)
+      results['HISTORY'].append(hist[-10:])
+      results['MAX'].append(max_score)
+      results['EP'].append(max_epoch)
+      results['EP_NZ'].append(nz_epochs)
+      df = pd.DataFrame(results).sort_values('MAX')    
+      l.P("")
+      l.P("Results so far:\n{}".format(df))
+      l.P("")
+      l.SaveDataFrame(df, fn='20190919_results1')
   
   

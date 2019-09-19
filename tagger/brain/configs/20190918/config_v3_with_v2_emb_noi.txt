@@ -25,8 +25,8 @@
     "SUBFOLDERS" : 
         {
           "ENABLED" : 1,
-          "DOCS"    : "Texts",
-          "LABELS"  : "Labels"
+          "DOCS"    : "Train_and_Validation_Texts",
+          "LABELS"  : "Train_and_Validation_Labels"
         },
     "DOCUMENT"   : ".txt",
     "LABEL"      : ".txt"

@@ -11,21 +11,12 @@ from libraries.model_server.simple_model_server import SimpleFlaskModelServer
 from tagger.brain.base_engine import ALLANTaggerEngine
 
 import numpy as np
-import pickle as pkl
 
 from datetime import datetime
 
 
 if __name__ == '__main__':
-  
-  cfg1 = "tagger/brain/configs/config.txt"
-  
-  use_raw_text = True
-  force_batch = True
-  use_model_conversion = False
-  epochs = 30
-  use_loaded = True
-  
+  cfg1 = "tagger/brain/configs/config.txt"  
   l = Logger(lib_name="ALNT",config_file=cfg1, HTML=True)
   l.SupressTFWarn()
   
@@ -36,12 +27,6 @@ if __name__ == '__main__':
   DEBUG_MODE = 0
   
   TOP = 5
-    
-  topic_tag_map_path = l.GetDropboxDrive() + '/' + l.config_data['APP_FOLDER'] + '/_data/EY_topic_tag_map.pkl'   
-  
-  with open(topic_tag_map_path, 'rb') as handle:
-    topic_tag_map = pkl.load(handle)
-
     
   #####      
   # now load FlaskServer tools and .run()
@@ -55,19 +40,16 @@ if __name__ == '__main__':
   def output_callback(data):
     DEBUG = False
     res1 = data[0]
-    inputs = data[1]
+    topic_document = data[1]
+    inputs = data[2]
     std_input = inputs[0]
     enc_input = inputs[1]
     vals = [x for x in res1.values()]
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
-    dic_top = {keys[x]:float(round(vals[x],3)) for x in top_idxs}
     dic_top_best ={keys[x]:float(round(vals[x],3)) for x in top_idxs[:TOP]}
     dic_top_runner ={keys[x]:float(round(vals[x],3)) for x in top_idxs[TOP:]}
 
-    topic_document = eng.find_topic(topic_tag_map=topic_tag_map,
-                                    dict_tags=dic_top,
-                                    choose_by_length=False) #USE True to check by length    
     str_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:22]
     
     dct_info = {
