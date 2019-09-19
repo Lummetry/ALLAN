@@ -1174,7 +1174,6 @@ class ALLANTaggerEngine(LummetryObject):
   
 
   def setup_pretrained_model(self):
-    self._setup_word_embeddings()    
     if self.maybe_load_pretrained():
       self.P("Pretrained model:\n{}".format(
           self.log.GetKerasModelSummary(self.model)))
@@ -1213,6 +1212,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.P("Full initialization started ...")
     self._setup_vocabs_and_dicts()
     self._init_hyperparams()
+    self._setup_word_embeddings()
     self.setup_embgen_model()
     self.setup_pretrained_model()    
     if self.embeddings is None:

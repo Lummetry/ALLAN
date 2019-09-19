@@ -41,9 +41,8 @@ if __name__ == '__main__':
     DEBUG = False
     res1 = data[0]
     topic_document = data[1]
-    inputs = data[2]
-    std_input = inputs[0]
-    enc_input = inputs[1]
+    std_input = data[2]
+    enc_input = data[3]
     vals = [x for x in res1.values()]
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
