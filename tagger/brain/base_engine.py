@@ -62,13 +62,11 @@ class ALLANTaggerEngine(LummetryObject):
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
     self.dic_word2index = dict_word2index
     self.dic_labels = dict_label2index
+    self.dic_topic2tags = None
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
     super().__init__(log=log, DEBUG=DEBUG)
     return
-  
-  
-  
   
   
   def startup(self):
@@ -99,6 +97,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.fn_word2idx = self.config_data['WORD2IDX'] if 'WORD2IDX' in self.config_data.keys() else None
     self.fn_idx2word = self.config_data['IDX2WORD'] if 'IDX2WORD' in self.config_data.keys() else None
     self.fn_labels2idx = self.config_data['LABEL2IDX'] if 'LABEL2IDX' in self.config_data.keys() else None
+    self.fn_topic2tags = self.config_data['TOPIC2TAGS'] if 'TOPIC2TAGS' in self.config_data.keys() else None
     self.doc_size = self.model_config['DOC_SIZE']
     self.model_name = self.model_config['NAME']
     self.dist_func_name = self.config_data['DIST_FUNC']
@@ -106,17 +105,26 @@ class ALLANTaggerEngine(LummetryObject):
       self._get_reverse_word_dict()
       self._get_vocab_stats()    
     self._generate_idx2labels()
+    
+    if self.fn_topic2tags is not None:
+      self.P("Loading topic2tags file '{}'".format(self.fn_topic2tags))
+      if '.txt' in self.fn_topic2tags:
+        self.dic_topic2tags = self.log.LoadDictFromData(self.fn_topic2tags)
+      else:
+        self.dic_topic2tags = self.log.LoadPickleFromData(self.fn_topic2tags)
+
     return
         
-      
+  
   def _setup_vocabs_and_dicts(self):
     self.P("Loading labels file '{}'".format(self.fn_labels2idx))
     if ".txt" in self.fn_labels2idx:
-      dict_labels2idx = self.log.LoadDictFromModels(self.fn_labels2idx)
+      dict_labels2idx = self.log.LoadDictFromData(self.fn_labels2idx)
     else:
-      dict_labels2idx = self.log.LoadPickleFromModels(self.fn_labels2idx)      
+      dict_labels2idx = self.log.LoadPickleFromData(self.fn_labels2idx)
     if dict_labels2idx is None:
-      raise ValueError(" No labels2idx dict found")
+      self.log.P(" No labels2idx dict found")
+    
     dic_index2label = {v:k for k,v in dict_labels2idx.items()}
     self.dic_labels = dict_labels2idx
     self.dic_index2label = dic_index2label
@@ -129,7 +137,7 @@ class ALLANTaggerEngine(LummetryObject):
     fn_emb = embeds_filename
     if fn_emb is None:
       fn_emb = self.model_config['EMBED_FILE'] if 'EMBED_FILE' in self.model_config.keys() else ""
-      fn_emb = self.log.GetModelFile(fn_emb)
+      fn_emb = self.log.GetDataFile(fn_emb)
     if os.path.isfile(fn_emb):
       self.P("Loading embeddings {}...".format(fn_emb[-25:]))
       self.embeddings = np.load(fn_emb, allow_pickle=True)
@@ -149,13 +157,14 @@ class ALLANTaggerEngine(LummetryObject):
     fn_emb = embeds_filename
     if fn_emb is None:
       fn_emb = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else ""
-    if self.log.GetModelsFile(fn_emb) is not None:
+    if self.log.GetDataFile(fn_emb) is not None:
       self.P("Loading similarity embeddings {}...".format(fn_emb))
-      self.generated_embeddings = self.log.LoadPickleFromModels(fn_emb)
+      self.generated_embeddings = self.log.LoadPickleFromData(fn_emb)
       self.P(" Loaded similarity embeddings: {}".format(self.generated_embeddings.shape))    
     else:
       self.P("WARNING: Embed file '{}' does not exists. generated_embeddings='None'".format(
           fn_emb))
+      self._get_generated_embeddings()
     return  
 
 
@@ -219,7 +228,7 @@ class ALLANTaggerEngine(LummetryObject):
     t2 = time()
     self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
     fn = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else "embgen_embeds.pkl"
-    self.log.SavePickleToModels(self.generated_embeddings, fn)
+    self.log.SavePickleToData(self.generated_embeddings, fn)
     return 
   
   
@@ -279,18 +288,18 @@ class ALLANTaggerEngine(LummetryObject):
       
     self.P("Loading vocabs...")
     if ".txt" in fn_words_dict:
-      dict_word2idx = self.log.LoadDictFromModels(fn_words_dict)
+      dict_word2idx = self.log.LoadDictFromData(fn_words_dict)
     else:
-      dict_word2idx = self.log.LoadPickleFromModels(fn_words_dict)
+      dict_word2idx = self.log.LoadPickleFromData(fn_words_dict)
     if dict_word2idx is None:
       self.P("  No word2idx dict found")
     else:
       self.P(" Found word2idx[{}]".format(len(dict_word2idx)))
 
     if ".txt" in fn_idx_dict:
-      dict_idx2word = self.log.LoadDictFromModels(fn_idx_dict)
+      dict_idx2word = self.log.LoadDictFromData(fn_idx_dict)
     else:
-      dict_idx2word = self.log.LoadPickleFromModels(fn_idx_dict)
+      dict_idx2word = self.log.LoadPickleFromData(fn_idx_dict)
       if type(dict_idx2word) in [list, tuple]:
         dict_idx2word = {i:v for i,v in enumerate(dict_idx2word)}
     if dict_idx2word is None:
@@ -824,7 +833,8 @@ class ALLANTaggerEngine(LummetryObject):
                   save_best=True,
                   save_end=True, 
                   test_every_epochs=1,
-                  DEBUG=True):
+                  DEBUG=True,
+                  compute_topic=True):
     """
     this is the basic 'protected' training loop loop that uses tf.keras methods and
     works both on embeddings inputs or tokenized inputs
@@ -840,6 +850,9 @@ class ALLANTaggerEngine(LummetryObject):
     self.train_recall_history_epochs = []
     self.train_recall_non_zero_epochs = []
     self.train_epoch = 0
+    
+    fct_test = self.test_model_on_texts_with_topic if compute_topic else self.test_model_on_texts
+    
     for epoch in range(n_epochs):
       self.train_epoch = epoch + 1
       epoch_losses = []
@@ -863,17 +876,25 @@ class ALLANTaggerEngine(LummetryObject):
           epoch+1, epoch_loss,np.mean(self.train_losses), s_bout))
       if (epoch > 0) and (test_every_epochs > 0) and (X_text_valid is not None) and ((epoch+1) % test_every_epochs == 0):
         self.P("Testing on epoch {}".format(epoch+1))
-        rec = self.test_model_on_texts(lst_docs=X_text_valid, lst_labels=y_text_valid,
-                                       DEBUG=True)
+        rec = fct_test(lst_docs=X_text_valid, lst_labels=y_text_valid,
+                       DEBUG=True, top=10)
+        if compute_topic:
+          rec, topic_rec = rec
         if self.last_test_non_zero and (best_recall < rec):
           self.train_recall_non_zero_epochs.append(epoch+1)
           s_name = 'ep{}_R{:.0f}_ANZ'.format(epoch+1, rec)
+          self.save_model(s_name, delete_prev_named=True)
+          best_recall = rec
+        elif best_recall < rec:
+          s_name = 'ep{}_R{:.0f}'.format(epoch+1, rec)
           self.save_model(s_name, delete_prev_named=True)
           best_recall = rec
      
           
     self.P("Model training done.")
     self.P("Train recall history: {}".format(self.train_recall_history))
+    if compute_topic:
+      self.P("Train topic recall history: {}".format(self.train_topic_recall_history))
     self._reload_embeds_from_model()
     if save_end:
       self.save_model()    
@@ -931,7 +952,8 @@ class ALLANTaggerEngine(LummetryObject):
             save=True,
             skip_if_pretrained=True, 
             test_every_epochs=5,
-            DEBUG=True,            
+            DEBUG=True,   
+            compute_topic=True
             ):
     """
     this methods trains the loaded/created `model` directly on text documents
@@ -1011,8 +1033,11 @@ class ALLANTaggerEngine(LummetryObject):
     
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
                      X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
-                     save_best=save, save_end=save, test_every_epochs=test_every_epochs)
+                     save_best=save, save_end=save, test_every_epochs=test_every_epochs,
+                     compute_topic=compute_topic)
     
+    if compute_topic:
+      return self.train_recall_history, self.train_topic_recall_history
     return self.train_recall_history
 
 
@@ -1274,6 +1299,140 @@ class ALLANTaggerEngine(LummetryObject):
       self.P("  Min doc recall: {:5.1f}%".format(np.min(docs_acc) * 100))
       self.P("  Med doc recall: {:5.1f}%".format(np.median(docs_acc) * 100))
     return max(0, round(overall_acc * 100, 2))
+  
+  
+  def test_model_on_texts_with_topic(self, lst_docs, lst_labels, top=10, 
+                                     show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
+    """
+    function that calculates (and displays) model validation/testing indicators
+    
+    inputs:
+      lst_docs    : list of documents (each can be a string or a list of strings)
+      lst_labels  : list of labels (list) for each document
+      top         : max number of tags to generate 
+      show        : display stats
+    
+    returns:
+      scalar float with overall accuracy (mean recall)
+      
+    """
+    if not hasattr(self, "train_recall_history"):
+      self.train_recall_history = []
+    if not hasattr(self, "train_topic_recall_history"):
+      self.train_topic_recall_history = []
+    if type(lst_docs) == str:
+      lst_docs = [lst_docs]
+    if type(lst_labels[0]) == str:
+      lst_labels = [lst_labels]
+    if len(lst_docs) != len(lst_labels):
+      raise ValueError("Number of documents {} must match number of label-groups {}".format(
+          len(lst_docs), len(lst_labels)))
+    if self.dic_topic2tags is None:
+      raise ValueError("Each topic should have a list of associated tags.")
+    docs_acc = []
+    tags_per_doc = []
+    if show:
+      self.P("")
+      self.P("Starting model testing on {} documents with zero-doc-penalty: {:.1f}".format(
+          len(lst_docs), zero_penalty))
+    zero_preds = False
+    self.last_test_non_zero = False
+    
+    matched_by_topic = 0
+    
+    for idx, doc in enumerate(lst_docs):
+      doc_acc = 0
+      dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
+                                   convert_unknown_words=True, 
+                                   top=top,
+                                   DEBUG=False,
+                                   return_input_processed=True,
+                                   verbose=0,
+                                   )
+      
+      pred_topic = self.find_topic(dct_tags, choose_by_length=False)
+      
+      lst_tags = [x.lower() for x in dct_tags]
+      gt_tags = lst_labels[idx]
+      true_topic = list(filter(lambda x: 'topic' in x, gt_tags))
+      assert len(true_topic) == 1
+      true_topic = true_topic[0]
+      
+      if pred_topic == true_topic:
+        matched_by_topic += 1
+      
+      for y_true in gt_tags:
+        if y_true.lower() in lst_tags:
+          doc_acc += 1
+      if show and DEBUG:
+        self.P("  Inputs: ({} chars) '{}...'".format(len(inputs), inputs[:50]))
+        self.P("  Predicted: {}".format(self.tagdict_to_text(dct_tags, max_tags=10)))
+        self.P("  Labels:    {}".format(gt_tags[:5]))
+        self.P("  Match: {}/{}".format(doc_acc, len(gt_tags)))
+        self.P("  True Topic: {}".format(true_topic))
+        self.P("  Pred Topic: {}".format(pred_topic))
+        self.P("  Correct Topic until now: {}/{}".format(matched_by_topic, idx+1))
+        self.P("")
+      doc_prc = doc_acc / len(gt_tags)
+      tags_per_doc.append(len(gt_tags))
+      if doc_prc == 0:
+        zero_preds = True
+        doc_prc = zero_penalty
+      docs_acc.append(doc_prc)
+    overall_acc = np.mean(docs_acc)
+    topic_acc = matched_by_topic / len(lst_docs)
+    self.last_test_non_zero = not zero_preds
+    if record_trace:
+      self.train_recall_history.append(round(overall_acc * 100, 1))
+      self.train_recall_history_epochs.append(self.train_epoch)
+      self.train_topic_recall_history.append(round(topic_acc * 100, 1))
+    if show:
+      self.P("Tagger benchmark on {} documents with {:.1f} avg tags/doc".format(
+          len(lst_docs), np.mean(tags_per_doc)))
+      self.P("  {}".format("ZERO PREDS :( !!!" if zero_preds else "Hurray! All preds non-zero! :)))"))
+      self.P("  Overall recall: {:5.1f}%".format(overall_acc * 100))
+      self.P("  Max doc recall: {:5.1f}%".format(np.max(docs_acc) * 100))
+      self.P("  Min doc recall: {:5.1f}%".format(np.min(docs_acc) * 100))
+      self.P("  Med doc recall: {:5.1f}%".format(np.median(docs_acc) * 100))
+      self.P("  Topic recall  : {:5.1f}%".format(topic_acc * 100))
+    return max(0, round(overall_acc * 100, 2)), max(0, round(topic_acc * 100, 2))
+  
+  def find_topic(self, dict_tags, choose_by_length=False):
+    """
+    Returns the topic id based on the tags found by the document tagger.
+    
+    First constructs a topic_identification map: a dictionary where all the keys
+    are the topics, and the values are lists of the tags which appear in 
+    the documents where the topic appears.
+    
+    Following that, another dictionary is constructed where the keys are the topics 
+    but the values are length of the list in the first dictionary/ sum of the probabilities.
+    
+    Returns the max value of the dictionary as the found topic
+    """
+    assert self.dic_topic2tags is not None
+    topic_labels = list(self.dic_topic2tags.keys())
+    topic_identification_map = {k:list() for k in topic_labels}
+    #topic identification on best tags:
+    for tag, conf in dict_tags.items():
+      for topic in topic_labels:
+        if tag in self.dic_topic2tags[topic]:
+          topic_identification_map[topic].append((tag,conf))
+  
+    if choose_by_length:
+      topic_identification_len_map = {k: len(v) for k,v in topic_identification_map.items()}
+      max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
+      return max_len_key
+    
+    else:
+      topic_identification_sum_map = {k:0 for k in topic_identification_map.keys()}
+    
+      for key, values in topic_identification_map.items():
+        topic_identification_sum_map[key] += sum([pair[1] for pair in values])
+      
+      max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
+    
+      return max_sum_key
 
   
 if __name__ == '__main__':
