@@ -18,6 +18,7 @@ def load_module(module_name, file_name):
                    os.path.join("C:/", "Lummetry.AIDropbox/SRC"),
                    os.path.join("D:/", "Lummetry.AI Dropbox/SRC"),
                    os.path.join("D:/", "Lummetry.AIDropbox/SRC"),
+                   os.path.join("D:/", "Dropbox/SRC"),
                    ]
 
   drive_path = None
