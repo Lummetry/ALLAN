@@ -11,6 +11,14 @@ def flatten_list(a):
   return [item for sublist in a for item in sublist]
 
 def is_number_larger_than_x(number, x):
+  """
+  Function to check whether a number as a string is larger than another number
+  
+  Arguments:number - number as a string
+            x - int number
+  
+  Returns true if the number is larger,
+  """
   try:
     if int(number) > x:
       return True
@@ -20,6 +28,48 @@ def is_number_larger_than_x(number, x):
     return False
 
 class Spider(object):
+  """
+  Class that performs crawling on a single website. Generates texts, labels pairs, where the texts are
+  news articles and the labels are drawn from the meta tags of the website, and, on request, the labels 
+  can also contain labels from the tokenized title of the article
+  
+  This crawler has two modes:
+    archive mode - where if the archive parameter is not '', the crawler checks a single archive page for
+                   a list of pages with links to articles. It cycles through these pages and populates 
+                   a list of urls to articles. It then cycles through the list of urls to articles and
+                   populates a dataset with texts and labels.
+                   
+    url_cycle mode - where if the archive parameter is '', the crawler goes through the url_cylce_source 
+                     pages in the cycle_range(e.g. '/stiri/actualitate?p=1' to '/stiri/actualitate?p=20')
+                     and generates links to articles. It goes through the list of articles and populates 
+                     a dataset containing texts and labels.
+  
+  Arguments: logger
+  
+             DEBUG - boolean, if true the logger is verbose
+             
+             archive - a string pointing to a subpage of the website, where an archive resides
+                       the subpage contains a list of links where each link points to a page with a 
+                       list of links to single articles
+                       
+             url_cycle_source - a subpage such as '/stiri/actualitate?p=' where after 'p=' a number
+                                could be added so that the crawler can cylce through pages containing
+                                links to articles
+            
+             cycle_range - the range of numbers added to url_cycle_source
+             
+             urls_tag - a tuple containing the html tag and class (tag, class) where the urls to articles
+                        can be found on the url_cycle_source pages
+                        
+             data_tag - a list containing two tuples, each tuple contains an html tag and class (tag, class)
+                        where the article information (actual article story) is found. The second tuple 
+                        is nested in the html code of the page inside of the first tuple.
+            
+            include_title - flag indicating whether the crawler should save the tokenized title in the labels
+                            of each document. If true, the tags generated from the title are stored in a 
+                            separate list.
+                        
+  """
   def __init__(self, logger, DEBUG,
                domain,
                archive,
@@ -28,7 +78,19 @@ class Spider(object):
                urls_tag,
                data_tag,
                include_title=False):
+    """
+    Constructor that loads config data, populates list of urls, generates documents and labels.
     
+    The config data contains: base and app folder to dump generated data
+                              MINIMUM_DOCUMENT_LENGTH - int, smallest length of tokenized document allowed, 
+                                                        the smaller ones are discarded
+                              OCCURENCE_THRESHOLD - Float between  0 - 1
+                                                    percentage over which tags are removed from dataset
+                                                    if a tag occurs in enough documents, it is discarded
+                              
+                              MINIMUM_LABEL_LENGTH - int, tags of shorter length are discarded
+                              
+    """
     self.logger = logger
     self.DEBUG = DEBUG
     
@@ -52,6 +114,13 @@ class Spider(object):
       
     
   def validate_url(self, url):
+    """
+    Function that checks whether a URL returns 200.
+    
+    Arguments - url - String pointing to a web page
+    
+    Returns True/False
+    """
     request = requests.get(url)
     if request.status_code == 200:
         return True
@@ -60,6 +129,13 @@ class Spider(object):
         return False
   
   def check_url_same_domain(self, url):
+    """
+    Function that checks whether a URL is in the domain of the spider
+    
+    Arguments - url - String pointing to a web page
+    
+    Returns True/False
+    """
     if self.domain_name in url:
       return True
     else:
@@ -67,6 +143,14 @@ class Spider(object):
   
   #find links on page_url in urls_tag
   def get_news_urls(self, page_url, urls_tag):
+    """
+    Finds urls to news articles on a single page.
+    
+    Arguments: page_url - the page where links to news articles reside
+               urls_tag - html tag containing the urls to news articles
+    
+    Returns: a list of links to news articles
+    """
     #get links for articles
     site_request = requests.get(page_url)
     page_content = site_request.content
@@ -94,6 +178,17 @@ class Spider(object):
     return list_of_links
   
   def cycle_for_urls(self):
+    """
+    Function that cycles the domain in either the archive of the url_cycle_source for article urls.
+    
+    Populates self.article_sources which the crawler uses to get documents and labels.
+    
+    If in archive mode, it collects all the news urls from the archive
+    
+    If in non archive mode, it collects all news urls in cycle_range.
+    
+    No returns, changes article_sources list of Spider object
+    """
     self.article_sources = []
     #NO ARCHIVE, CYCLE THROUGH PAGES LIKE THE 'o's in google
     if(len(self.archive) == 0):
@@ -116,6 +211,15 @@ class Spider(object):
   
   #get text and label from url    
   def get_text_and_label(self, url):
+    """
+    Atomic function that finds the text, labels and title labels of a single news article.
+    
+    Arguments: url to a page containing a news article
+    
+    Returns: text - string containing the text of the news article, as found by the data_tag
+             labels - a list of labels drawn from the meta tags of the page
+             title_tags - a list of labels drawn from the tokenized title of the page
+    """
     self.logger.start_timer("request_url")
     news_request = requests.get(url)
     self.logger.end_timer("request_url")
@@ -180,6 +284,15 @@ class Spider(object):
 
   #get document and label list from all urls in article_source   
   def get_labeled_documents(self):
+    """
+    Iterate through the list of news articles and populate a list of documents, a list of labels 
+    and a list of title_labels.
+    
+    Returns: documents - a list of strings where each item is the text of an article
+             labels - a list of lists of labels for each document
+             title_labels - a list of lists of labels for each document- as drawn from titles.
+                            is empty if include_titles is False.
+    """
     documents = []
     labels = []
     title_labels = []
@@ -210,14 +323,38 @@ class Spider(object):
     return documents, labels, title_labels
   
 class Crawled_Dataset(object):
+  """
+  Dataset object, the shared result of multiple crawlers
+  
+  Arguments: logger
+             DEBUG - boolean, if true the logger is verbose
+             spider_params - a list of lists, each list containing the required parameters for a spider 
+                             to crawl: domain, archive, url_cycle_source, cycle_range, urls_tag, data_tag
+                             See Spider object documentation for further information.
+             include_titles - boolean, will add tags from tokenized title if true
+             
+             The following parameters are meant to be loaded from the config file, if values are specified
+             upon declaring the crawled_dataset object, the config file data will be overridden and the 
+             class will use the values assigned by the user in the declaration:
+             
+             occurence_threshold - Float between  0 - 1
+                                    percentage over which tags are removed from dataset
+                                    if a tag occurs in enough documents, it is discarded
+             min_document_length - int, smallest length of tokenized document allowed, 
+                                        the smaller ones are discarded              
+             min_label_length - int, tags of shorter length are discarded
+  """
   def __init__(self, logger, DEBUG, 
                spider_params,
                include_titles=False,
                occurence_threshold=None,
                min_document_length=None,
                min_label_length=None):
-    
-    
+    """
+    Constructor that parses config data, performs crawl for each spider, processes labels and texts
+                     and writes them to disk
+                              
+    """
     self.logger = logger
     self.DEBUG = DEBUG
     
@@ -251,6 +388,10 @@ class Crawled_Dataset(object):
     self.write_data()
 
   def _parse_config_data(self):
+    """
+    Function that parses the config data, populates the parameters with the values from the config file
+    if their values are None.
+    """
     if self.occurence_threshold is None:
       self.occurence_threshold = self.config_data['OCCURENCE_THRESHOLD']
       self.logger.P('Initialized occurence threshold with {}'.format(self.occurence_threshold))
@@ -264,7 +405,15 @@ class Crawled_Dataset(object):
     return
   
   def start_crawl(self):
+    """
+    Performs crawl for all spiders.
     
+    The number of spiders is the length of the spider_params list.
+    For each spider, it initializes the spider which calls the constructor of the Spider object.
+    Once the object has completed initialization(meaning the crawl is ready and the data is gathered)
+    The documents, labels, title_labels, metadata are all added to the dataset.
+    Metadata contains information about the url of an article.
+    """
     self.spider_list = []
     self.documents = []
     self.labels = []
@@ -302,7 +451,9 @@ class Crawled_Dataset(object):
       self.title_tags = flatten_list(self.title_tags)
   
   def document_information(self):
-    
+    """
+    FunctiOn that display the distribution of document lengths in self.documents
+    """
     df_lengths = pd.DataFrame(columns=['doc_len'])
     df_lengths.doc_len = self.document_lengths
     df_length_distrib = df_lengths.describe()
@@ -314,6 +465,14 @@ class Crawled_Dataset(object):
     return 
     
   def label_information(self, labels):
+    """
+    Function that displays information on a list of lists of labels.
+    
+    Arguments: labels - list of lists of labels
+    
+    No returns, displays the distribution of lengths of labels, the labels grouped by frequency and 
+                         the distribution of labels.
+    """
     #update flattened labels
     flattened_labels = flatten_list(labels)
     #update label occurence counter
@@ -356,6 +515,13 @@ class Crawled_Dataset(object):
     return
 
   def remove_tag_from_labels(self, tag):
+    """
+    Function meant to remove a single tag from the self.labels list
+    
+    Arguments: tag - a label in the self.labels list
+    
+    No returns, just a change in the self.labels list of the Crawled_Dataset object
+    """
     self.logger.P('Removing tag {} from all labels...'.format(tag))
     new_labels = []
     for i in self.labels:
@@ -364,6 +530,12 @@ class Crawled_Dataset(object):
     self.labels = new_labels
 
   def remove_data_row(self, index):
+    """
+    Function that removes a data row from the dataset.
+    
+    The dataset is a collection of lists of equal length, so deleting a data row means deleting the entry
+    from each of these lists(documents, labels, document_lengths, metadata, title_tags)
+    """
     self.logger.P('Deleting row {}'.format(index))
     del self.documents[index]
     del self.labels[index]
@@ -373,6 +545,10 @@ class Crawled_Dataset(object):
       del self.title_tags[index]
       
   def generate_dict_label_occ_in_docs(self):
+    """
+    Function generating a dictionary where keys are labels and values are their occurence
+    in the self.labels list of lists.
+    """
     self.unqiue_labels  = list(set(flatten_list(self.labels)))
     dictonary = {}
     for i in self.labels:
@@ -386,6 +562,14 @@ class Crawled_Dataset(object):
     return dictonary
 
   def process_labels(self):
+    """
+    Function that cleans and reduces the number of labels.
+    
+    Performs reduction of labels based on their occurence percentage, meaning that if a label occurs in 
+    more than occurence_threshold percent of data rows, the label will be removed from the dataset.
+    
+    No returns, only changes in the content of the self.labels list of lists
+    """
     self.dict_label_occurence = self.generate_dict_label_occ_in_docs()
     self.common_labels = []
     
@@ -407,11 +591,17 @@ class Crawled_Dataset(object):
     
     self.logger.P('Total number of removed labels {}'.format(len(self.common_labels)))  
     
-
     return
   
   
   def process_texts(self):
+    """
+    Function that cleans the dataset by removing texts of uninteresting lengths.
+    
+    After observing the distribuiton of text lengths, only the ones between 25% and 75% are kept.
+    This removes outliers and enforces balance in the dataset.
+    
+    """
     self.min_document_length = 25
     
     self.logger.P('To remove outliers, will keep the documents with lengths between {} and {}...'.format(self.min_document_length, self.max_document_length))
@@ -433,7 +623,18 @@ class Crawled_Dataset(object):
     self.logger.P('Total number of documents left {}'.format(len(self.documents)))
 
   def write_data(self):
+    """
+    Function that writes the data to disk
     
+    Texts,
+    Labels,
+    Metadata,
+    Title_tags,
+    
+    are all stored in the _output folder of the app folder in distinct Folders.
+    
+    Texts and their labels have the same filenames.
+    """
     dir_location = self.logger.GetDropboxDrive()  + '/' + self.logger.config_data['APP_FOLDER']
     for i in range(len(self.documents)):
       with open(dir_location + '/_output/Texts/Text_%s.txt' % i, 'w', encoding='utf-8') as f_doc:
@@ -441,7 +642,7 @@ class Crawled_Dataset(object):
 
       f_doc.close()
 
-      with open(dir_location + '/_output/Labels/Labels_%s.txt' % i, 'w', encoding='utf-8') as f_label:
+      with open(dir_location + '/_output/Labels/Text_%s.txt' % i, 'w', encoding='utf-8') as f_label:
         for j in self.labels[i]:
           f_label.write(j + '\n')
       
