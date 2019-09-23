@@ -4,8 +4,10 @@ from libraries.logger import Logger
 from models_creator.elmo_model import ELMo
 
 
-#remove pesky sklearn warnings...
 def warn(*args, **kwargs):
+"""
+Function to override sklearn warnings
+"""
     pass
 warnings.warn = warn
 
