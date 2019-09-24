@@ -15,8 +15,21 @@ def flatten_list(a):
 class EY_Data(object):  
   """
   Object for preprocessing raw data of the form: questions, answers, topics (each in different files)
-  into training and validation datasets for a document tagger.
+  into training + validation dataset for a document tagger.
   
+  This object constructs the dataset by using the entire answer and each line in the questions file as individual observations,
+  and each observation has a topic label, which is drawn from the respective topic file.
+  For each topic there are a number of additional generated labels from the text of all observations in the topic, 
+  and for each observation only the labels which can also be found in the text of the observation is kept.
+  
+  Generating labels in this manner means dealing with a large volume of tags that add noise to the tagger's training data.
+  To remove these undesirable tags that hinder the predictive power of the tagger, a list of exclusions(labels automatically removed
+  from the dataset), and a dictonary of reductions(labels that are replaced by other labels) are added through a json.
+  
+  This object can: generate the dataset described above and write them to disk,
+                   generate the topic label mapping and write it to disk,
+                   process the EY feedback as returned by the tagger API.
+                   
   """
   def __init__(self, logger, folder_name=None, index_of_last_file=None, occurence_threshold=None, validation_set_length=None):
     self.logger = logger
@@ -48,7 +61,21 @@ class EY_Data(object):
     self.build_tag2idx_map()
     
   def _parse_config_data(self):
+    """
+    Method for parsing the parameters passed through the config file.
     
+    The parameters are:
+      
+      folder_name: the folder name where the raw data from EY is located(format:topics, questions, answers)
+      
+      index_of_last_file: the index of the last file in the raw data, so the read knows when to stop
+      
+      occurence_threshold: float between 0-1,
+                           each label occurs in a percentage of the total final observations, if the percentage of a label
+                           is above this threshold, the label is removed from the dataset.
+                           
+      validation_set_length: the number of observations reserved for the validation set
+    """
     if self.folder_name is None:
       self.folder_name = self.logger.config_data['DATA_FOLDER_NAME']
       
@@ -64,7 +91,15 @@ class EY_Data(object):
     return
   
   def _parse_json_data(self):
-        
+    """
+    Method for parsing the parameters of the object passed through JSON.
+    
+    The parameters are: 
+      self.undesirable_list: a list of labels to be automatically excluded from the dataset
+      
+      self.dict_lbl_simpler: a dictionary where keys are labels and values are lists of labels
+                             if a label is found in the values of this list, it is replaced with its key
+    """
     with open(self._data_app_folder + 'exclusions.json', 'r', encoding='utf-8') as f:
       self.undesirable_list = json.load(f)
       
@@ -355,6 +390,9 @@ class EY_Data(object):
     
     The dictionary is written do disk as it is needed by the document tagger 
     for training.
+    
+    Arguments: write_to_disk: boolean indicating whether the mapping will be 
+                              written to a pickle file.
     """
     self.topic_label_map = dict.fromkeys(self.topic_labels, [])
     labels_copy = self.labels
@@ -371,27 +409,45 @@ class EY_Data(object):
       self.topic_label_map[index] = [self.topic_labels[index]] + topic_label_map_values[index]
     
     if write_to_disk:
-      with open(self._data_app_folder + 'topic_tag_map_v2.pkl','wb') as file:
+      with open(self._data_app_folder + 'topic_tag_map_v3.pkl','wb') as file:
         pickle.dump(self.topic_label_map, file)
-  
-  def build_tag2idx_map(self):
+      
+      self.build_tag2idx_map(write_to_disk=True)
+        
+  def build_tag2idx_map(self, write_to_disk=False):
     """
     Creates a dictionary indexing the labels.
     
     Each label is attributed a number, number which is incremented atomically.
     
+    It relies on the self.topic_label_map object which is intialized once the 
+    self.build_topic_label_map is run. So make sure that function is called before
+    calling this one!
+    
     The mapping is printed on the screen.
     """
     dic_lbl2idx = {}
     index = 0 
-    for tags in self.topic_label_map.values():
-      for tag in tags:
-        if tag not in list(dic_lbl2idx.keys()):
-          dic_lbl2idx[tag] = index
-          index += 1
+    try:
+      for tags in self.topic_label_map.values():
+        for tag in tags:
+          if tag not in list(dic_lbl2idx.keys()):
+            dic_lbl2idx[tag] = index
+            index += 1
         
-    for k,v in dic_lbl2idx.items():
-      print('{} : "{}"'.format(k,v))
+      for k,v in dic_lbl2idx.items():
+        print('{} : "{}"'.format(k,v))
+        
+      if write_to_disk:  
+        with open(self._data_app_folder + 'topic_tag2idx_v3.txt',"w") as f:
+          f.write("{\n")
+          for k,v in dic_lbl2idx.items():
+            f.write('{} : "{}" \n'.format(k,v))
+          f.write("}")
+        
+    except AttributeError as e:
+      self.logger.P('[ERROR] self.topic_label_map is not initialized. Please call the build_topic_label_map function before calling this function!')
+      raise type(e)('[ERROR] self.topic_label_map is not initialized. Please call the build_topic_label_map function before calling this function!')
       
   def intersect_text_and_labels(self, text, labels):
     """
@@ -692,8 +748,11 @@ if __name__ == '__main__':
                   TF_KERAS=False)
   
   data = EY_Data(logger)
-  
+  data.build_outputs()
+  #uncomment next line to write built dataset to disk
 #  data.write_to_file()
+#  data.build_topic_label_map(write_to_disk=True)
+
   #UNCOMMENT THIS BIT TO GET RESUTLS OF EY tests, change file argument for new tests
 #  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
 #
