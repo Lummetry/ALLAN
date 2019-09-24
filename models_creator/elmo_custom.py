@@ -33,6 +33,11 @@ class Metrics(Callback):
     self.var_y_pred = tf.Variable(0., validate_shape=False)
     
   def on_train_begin(self, logs):
+    """
+    Keras callback in-built method.
+    
+    On training start, initiates metrics list as empty,
+    """
     self.val_f1_micros = []
     self.val_f1_macros = []
 
@@ -40,6 +45,12 @@ class Metrics(Callback):
     self.val_precisions = []
 
   def _get_validation_preds(self):
+    """
+    Method for generating validation predictions.
+    
+    Returns: val_true: ground truth for validation set
+             val_pred: model predictions on validation set
+    """
     val_true = []
     val_pred = []
     
@@ -58,6 +69,11 @@ class Metrics(Callback):
     return val_true, val_pred
     
   def on_epoch_end(self, epoch, logs):
+    """
+    At the end of each 5 epochs, generate validation predictions and display metrics.
+    
+    At the end of each 10 epochs, displays verbose metrics(f1, recall, precision for each class).
+    """
     if (epoch + 1) % 5 == 0:
       val_true, val_pred = self._get_validation_preds()
       
