@@ -1273,13 +1273,15 @@ class ALLANTaggerEngine(LummetryObject):
     self.last_test_non_zero = False
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
-      dct_tags, inputs = self.predict_text(doc, convert_tags=True, 
+      dct_tags, i1, i2 = self.predict_text(doc, convert_tags=True, 
                                    convert_unknown_words=True, 
                                    top=top,
                                    DEBUG=False,
                                    return_input_processed=True,
+                                   return_topic=False,
                                    verbose=0,
                                    )
+      inputs = (i1,i2)
       lst_tags = [x.lower() for x in dct_tags]
       gt_tags = lst_labels[idx]
       for y_true in gt_tags:
