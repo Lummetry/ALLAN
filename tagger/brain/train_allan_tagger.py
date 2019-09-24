@@ -89,6 +89,6 @@ if __name__ == '__main__':
       l.P("")
       l.P("Results so far:\n{}".format(df))
       l.P("")
-      l.SaveDataFrame(df, fn='20190919_results1')
+      l.SaveDataFrame(df, fn='20190924_results1')
   
   
