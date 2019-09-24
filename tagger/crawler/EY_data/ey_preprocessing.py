@@ -1,3 +1,4 @@
+import json
 import pickle
 import random
 import pandas as pd
@@ -15,105 +16,62 @@ class EY_Data(object):
   """
   Object for preprocessing raw data of the form: questions, answers, topics (each in different files)
   into training and validation datasets for a document tagger.
-  The tags are generated tokenizing 
+  
   """
-  def __init__(self, logger, folder_name, occurence_threshold=0.25, validation_set_length=10):
+  def __init__(self, logger, folder_name=None, index_of_last_file=None, occurence_threshold=None, validation_set_length=None):
     self.logger = logger
+    
     self.folder_name = folder_name
+    self.index_of_last_file = index_of_last_file
     self.occurence_threshold = occurence_threshold
     self.validation_set_length = validation_set_length
     
-    self.tokenizer = TweetTokenizer()
-
-    self.data_dir = logger.GetDropboxDrive() + '/' + logger.config_data['APP_FOLDER'] + self.folder_name
+    # _data folder in the app folder of the Lummetry project
+    self._data_app_folder = self.logger.GetDropboxDrive() + '/' + self.logger.config_data['APP_FOLDER'] + '/_data/'
     
+    self._parse_config_data()
+    
+    self._parse_json_data()
+    
+    self.tokenizer = TweetTokenizer()
+    
+    #folder containing data for preprocessing
+    self.data_dir = self._data_app_folder + self.folder_name
+
     self.read_files()
 
-    self.undesirable_list = ['acest', 'pot', 'legate', 'gasesc', 'prezent',
-                             'consta', 'dau', 'cadrul', 'parcurg', 'dureaza', 'trebuie',
-                             'primesc', 'aflu', 'trec', 'dupa', 'chiar', 'mail', 'fiu', 'indifierent',
-                             'companie', 'avem', 'exista', 'alte', 'compania', 'pentru', 'angajatilor','acoperite', 'langa','afara', 'lucru',
-                             'fel','fac','faceti',
-                             'inseamna',
-                             'exista', 'timp','avea',
-                             'trebui', 'face',
-                             'inseamna', 'noi', 'de',
-                             'desfasoara',
-                             'functie', 'are', 'voi','peste',
-                             'unui','ocupa',
-                             'oferiti',
-                             'abordarea','privind','alt','posibilitatea',
-                             'lucru','activeaza',
-                             'description',
-                             'face', 'lucrez',
-                             'daca', 'cineva', 'mult','dispun', 'bine', 'facut', 'indiferent', 'alta',
-                             'cine','cum','home','des','from','cate','cat', 'variaza',
-                             'moment','inceput','stat','politica','politicile','politici','negativ','maine',
-                             'cazul','informatii', 'vorba', 'despre', 'cand', 'parte', 'jocuri', 'activitati',
-                             'relaxare', 'meu', 'pliaza', 'personal', 'stilul','profesional','suportate',
-                             'prezenta','ideea','practica', 'drumul','companiei', 'procedeaza',
-                             'imi', 'vor', 'mele', 'ajustez', 'procedeaza', 'aduce', 'incepe','ajung','pleca',
-                             'intro', 'inscrie', 'dintr-un', 'poti', 'dintrun','implicat','posibilitatie','impreuna',
-                             'lua','primi', 'mediu', 'astept', 'cati', 'luna', 'gasi', 'existente', 'localizat',
-                             'ale','altul', 'vin', 'sustinere', 'sustinut', 'suportate', 'decontare', 'munca',
-                             'toata', 'munci','petreceri', 'extra', 'inteleg', 'traseul', 'astepta','posibilitatile'
-                             'relaxeaza','suport','posibilitatea', 'posibilitate', 'relaxeaza', 'posibilitatile','organizati','organizeaza'
-                             'bonus','bonusuri','primeste', 'raman', 'castigat', 'bonus'
-                             ]
-    
-    
-    self.dict_lbl_simpler = {
-        'angajat': ['angajatii', 'angajez', 'angajare', 'angajati'],
-        'asigurare': ['asigurat', 'transportului'],
-        'anuntat': ['anuntati', 'anunt'],
-        'audit': ['auditor', 'auditorii'],
-        'avansez': ['cariera', 'avansa', 'avansarea', 'dezvolta'],
-        'beneficii' : ['beneficiez','beneficiile','bonuri', 'sala', 'masa', 'costurile', 'discounturi', 'abonamentele', 'costurile', 'reduceri'],
-        'biroul': ['birouri'],
-        'certificari': ['certificarilor','certificarile', 'cerificarilor'],
-        'comunitate': ['comunitati','comunitatile'],
-        'consultant': ['consultanta', 'consultantii','advisor','advisory'],
-        'contactat': ['contactati'],
-        'disponibile' : ['disponibila'],
-        'etape': ['etapele'],
-        'echipa': ['colegii', 'colectivul','oamenii','echipei'],
-        'feedback': ['feedback-ul'],
-        'flexibil': ['fix'],
-        'interviu': ['interviul','interviului','rezultat','raspuns'],
-        'junior' : ['juniorilor'],
-        'mentorship': ['mentoring', 'ajute', 'ghideze', 'mentor', 'mentori', 'indrumare'],
-        'mobilitate': ['mobilitatea', 'muta', ],
-        'oferta': ['oferite', 'oferte', 'ofera'],
-        'oportunitati': ['cresc'],
-        'overtime' : ['overtime-ul'],
-        'platit': ['platite','plateste','suma'],
-        'pozitii':['pozitie','pozitiile', 'deschise','pozitia'],
-        'procesul': ['procesului'],
-        'program':['programului','programul','libere', 'lucra','lucreaza'],
-        'promovare':['promoveaza', 'promovat', 'promovarile'],
-        'recrutare':['recrutarea', 'contactat'],
-        'relocare':['tara', 'internationala', 'mut'],
-        'remote' : ['work', 'acasa'],
-        'responsabil' : ['responsabili', 'responsabilitatile', 'intrebunitarile', 'responabilitatile'],
-        'salariu': ['salariale','salariul','grilele', 'castiga', 'brut', 'net', 'bani'],
-        'sediu': ['sediul', 'sediuri', 'sediile','sedii'],
-        'senior' : ['senioritate', 'manager'],
-        'social' : ['sociale', 'prietenos', 'prietenosi'],
-        'task' : ['taskuri', 'task-urile', 'taskurile', 'task-uri','intrebuintarile'],
-        'taxe': ['tax', 'taxele'],
-        'training' : ['traininguri', 'trainingurile', 'trainigurilor', 'training-urile'],
-        'transport':['transportul','mijloace', 'metrou', 'metroul', 'autobuz', 'biletele', 'transportului'],
-        'trib':['triburile', 'triburi'],
-        'zile':['zilele']
-        }
-    
     self.generate_raw_labels()
     
     self.process_labels()
+    
     self.build_topic_label_map()
     self.build_tag2idx_map()
-#    _, self.labels, _ , _ = self.build_outputs()
-#    self.write_to_file()
+    
+  def _parse_config_data(self):
+    
+    if self.folder_name is None:
+      self.folder_name = self.logger.config_data['DATA_FOLDER_NAME']
+      
+    if self.index_of_last_file is None:
+      self.index_of_last_file = self.logger.config_data['INDEX_OF_LAST_FILE']
+      
+    if self.occurence_threshold is None:
+      self.occurence_threshold = self.logger.config_data['OCCURENCE_THRESHOLD']
+      
+    if self.validation_set_length is None:
+      self.validation_set_length = self.logger.config_data['VALIDATION_SET_LENGTH']
+    
+    return
+  
+  def _parse_json_data(self):
+        
+    with open(self._data_app_folder + 'exclusions.json', 'r', encoding='utf-8') as f:
+      self.undesirable_list = json.load(f)
+      
+    with open(self._data_app_folder + 'reductions.json', 'r', encoding='utf-8') as f:
+      self.dict_lbl_simpler = json.load(f)  
+    
+    return
     
   def read_files(self):
     """
@@ -128,7 +86,7 @@ class EY_Data(object):
     self.questions = []
     self.topics = []
     
-    for i in range(25):
+    for i in range(self.index_of_last_file):
       logger.P('Processing file {}...'.format(i))
       
       a_filename='a' + str(i + 1) + '.txt'
@@ -253,8 +211,8 @@ class EY_Data(object):
       lbl = flatten_list(lbl)
       lbl = list(set(lbl))
       self.labels.append(lbl)
-  
-   return
+      
+    return
   
   def generate_dict_label_occ_in_docs(self, labels):
     """
@@ -387,7 +345,7 @@ class EY_Data(object):
       
     return
   
-  def build_topic_label_map(self):
+  def build_topic_label_map(self, write_to_disk=False):
     """
     Builds a mapping(dictionary) between topic_labels, and all other labels.
     
@@ -411,9 +369,10 @@ class EY_Data(object):
     self.logger.P('Mapping of tags to topics:')
     for index in range(len(self.topic_labels)):
       self.topic_label_map[index] = [self.topic_labels[index]] + topic_label_map_values[index]
-
-    with open('topic_tag_map_v2.pkl','wb') as file:
-      pickle.dump(self.topic_label_map, file)
+    
+    if write_to_disk:
+      with open(self._data_app_folder + 'topic_tag_map_v2.pkl','wb') as file:
+        pickle.dump(self.topic_label_map, file)
   
   def build_tag2idx_map(self):
     """
@@ -732,8 +691,9 @@ if __name__ == '__main__':
                   config_file='./tagger/crawler/EY_data/config_eydata.txt',
                   TF_KERAS=False)
   
-  data = EY_Data(logger, '/_data/EY_FAQ_RAW2/', occurence_threshold=0.25)
+  data = EY_Data(logger)
   
+#  data.write_to_file()
   #UNCOMMENT THIS BIT TO GET RESUTLS OF EY tests, change file argument for new tests
 #  list_of_entries = data.get_entries('/ALLEN_Wrong_Questions_2.txt')
 #
