@@ -25,7 +25,7 @@ if __name__ == '__main__':
   
   args = parser.parse_args()
   mode = args.mode
-  mode = 'tagging'
+
   assertion_str = "You should specify the mode in which the server behaves (tagging/ranking)"
   assertion_str += '\nExample: python tagger/brain/run_server.py --mode tagging'
   assertion_str += '\nExample: python tagger/brain/run_server.py -m tagging'
