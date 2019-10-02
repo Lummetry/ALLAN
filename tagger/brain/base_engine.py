@@ -31,6 +31,7 @@ class ALLANTaggerEngine(LummetryObject):
   def __init__(self, log: Logger, 
                dict_word2index=None,
                dict_label2index=None,
+               dict_topic2tags=None,
                output_size=None,
                vocab_size=None,
                embed_size=None,
@@ -62,7 +63,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.vocab_size = len(dict_word2index) if dict_word2index is not None else vocab_size
     self.dic_word2index = dict_word2index
     self.dic_labels = dict_label2index
-    self.dic_topic2tags = None
+    self.dic_topic2tags = dict_topic2tags
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
     super().__init__(log=log, DEBUG=DEBUG)
@@ -105,13 +106,6 @@ class ALLANTaggerEngine(LummetryObject):
       self._get_reverse_word_dict()
       self._get_vocab_stats()    
     self._generate_idx2labels()
-    
-    if self.fn_topic2tags is not None:
-      self.P("Loading topic2tags file '{}'".format(self.fn_topic2tags))
-      if '.txt' in self.fn_topic2tags:
-        self.dic_topic2tags = self.log.LoadDictFromData(self.fn_topic2tags)
-      else:
-        self.dic_topic2tags = self.log.LoadPickleFromData(self.fn_topic2tags)
 
     return
         
@@ -124,6 +118,14 @@ class ALLANTaggerEngine(LummetryObject):
       dict_labels2idx = self.log.LoadPickleFromData(self.fn_labels2idx)
     if dict_labels2idx is None:
       self.log.P(" No labels2idx dict found")
+    
+    if self.fn_topic2tags is not None and self.dic_topic2tags is None:
+      self.P("Loading topic2tags file '{}'".format(self.fn_topic2tags))
+      if '.txt' in self.fn_topic2tags:
+        self.dic_topic2tags = self.log.LoadDictFromData(self.fn_topic2tags)
+      else:
+        self.dic_topic2tags = self.log.LoadPickleFromData(self.fn_topic2tags)
+    
     
     dic_index2label = {v:k for k,v in dict_labels2idx.items()}
     self.dic_labels = dict_labels2idx
@@ -737,8 +739,9 @@ class ALLANTaggerEngine(LummetryObject):
     
     topic_document = None
     if return_topic:
-      topic_document = self.find_topic(dict_tags=tags,
-                                       choose_by_length=False) #USE True to check by length    
+      topic_document, topic_score = self.find_topic(dict_tags=tags,
+                                                    choose_by_length=False,
+                                                    return_score=True)   
     
     
     if DEBUG:
@@ -752,7 +755,7 @@ class ALLANTaggerEngine(LummetryObject):
       
     ret = (tags,)
     if return_topic:
-      ret += (topic_document,)
+      ret += (topic_document,topic_score)
     if return_input_processed:
       ret += (text, processed_input)
     
@@ -845,6 +848,7 @@ class ALLANTaggerEngine(LummetryObject):
                   save_best=True,
                   save_end=True, 
                   test_every_epochs=1,
+                  test_top=1,
                   DEBUG=True,
                   compute_topic=True):
     """
@@ -889,7 +893,7 @@ class ALLANTaggerEngine(LummetryObject):
       if (epoch > 0) and (test_every_epochs > 0) and (X_text_valid is not None) and ((epoch+1) % test_every_epochs == 0):
         self.P("Testing on epoch {}".format(epoch+1))
         rec = fct_test(lst_docs=X_text_valid, lst_labels=y_text_valid,
-                       DEBUG=True, top=10)
+                       DEBUG=True, top=test_top)
         if compute_topic:
           rec, topic_rec = rec
         if self.last_test_non_zero and (best_recall < rec):
@@ -964,6 +968,7 @@ class ALLANTaggerEngine(LummetryObject):
             save=True,
             skip_if_pretrained=True, 
             test_every_epochs=5,
+            test_top=1,
             DEBUG=True,   
             compute_topic=True
             ):
@@ -1046,6 +1051,7 @@ class ALLANTaggerEngine(LummetryObject):
     self._train_loop(X_data, y_data, batch_size, n_epochs, 
                      X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
                      save_best=save, save_end=save, test_every_epochs=test_every_epochs,
+                     test_top=test_top,
                      compute_topic=compute_topic)
     
     if compute_topic:
@@ -1356,14 +1362,14 @@ class ALLANTaggerEngine(LummetryObject):
     
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
-      dct_tags, pred_topic, i1, i2 = self.predict_text(doc, convert_tags=True, 
-                                                       convert_unknown_words=True, 
-                                                       top=top,
-                                                       DEBUG=False,
-                                                       return_input_processed=True,
-                                                       return_topic=True,
-                                                       verbose=0,
-                                                       )
+      dct_tags, pred_topic, topic_score, i1, i2 = self.predict_text(doc, convert_tags=True, 
+                                                                    convert_unknown_words=True, 
+                                                                    top=top,
+                                                                    DEBUG=False,
+                                                                    return_input_processed=True,
+                                                                    return_topic=True,
+                                                                    verbose=0,
+                                                                    )
 
       inputs = (i1,i2)
       
@@ -1385,7 +1391,7 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("  Labels:    {}".format(gt_tags[:5]))
         self.P("  Match: {}/{}".format(doc_acc, len(gt_tags)))
         self.P("  True Topic: {}".format(true_topic))
-        self.P("  Pred Topic: {}".format(pred_topic))
+        self.P("  Pred Topic: {} (score: {})".format(pred_topic, topic_score))
         self.P("  Correct Topic until now: {}/{}".format(matched_by_topic, idx+1))
         self.P("")
       doc_prc = doc_acc / len(gt_tags)
@@ -1412,7 +1418,7 @@ class ALLANTaggerEngine(LummetryObject):
       self.P("  Topic recall  : {:5.1f}%".format(topic_acc * 100))
     return max(0, round(overall_acc * 100, 2)), max(0, round(topic_acc * 100, 2))
   
-  def find_topic(self, dict_tags, choose_by_length=False):
+  def find_topic(self, dict_tags, choose_by_length=False, return_score=True):
     """
     Returns the topic id based on the tags found by the document tagger.
     
@@ -1437,7 +1443,11 @@ class ALLANTaggerEngine(LummetryObject):
     if choose_by_length:
       topic_identification_len_map = {k: len(v) for k,v in topic_identification_map.items()}
       max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
-      return max_len_key
+      score = topic_identification_len_map[max_len_key]
+      if return_score:
+        return max_len_key, score
+      else:
+        return max_len_key
     
     else:
       topic_identification_sum_map = {k:0 for k in topic_identification_map.keys()}
@@ -1446,8 +1456,11 @@ class ALLANTaggerEngine(LummetryObject):
         topic_identification_sum_map[key] += sum([pair[1] for pair in values])
       
       max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
-    
-      return max_sum_key
+      score = topic_identification_sum_map[max_sum_key]
+      if return_score:
+        return max_sum_key, score
+      else:
+        return max_sum_key
 
   
 if __name__ == '__main__':
