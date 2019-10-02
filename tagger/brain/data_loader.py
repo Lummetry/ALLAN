@@ -18,6 +18,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
                **kwargs):
     super().__init__(**kwargs)
     self.__name__ = 'AT_DL'
+    self._prefix_topic = 'topic_'
     self.multi_label = multi_label
     self.normalize_labels  = normalize_labels
     self._setup()
@@ -37,7 +38,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
     return
      
   
-  def LoadData(self):
+  def LoadData(self, has_topics=True):
     fn_w2i = self.fn_word2idx
     fn_i2w = self.fn_idx2word
     fn_l2i = self.fn_labels2idx
@@ -54,8 +55,10 @@ class ALLANDataLoader(ALLANTaggerEngine):
                                     fn_idx_dict=fn_i2w,
                                     fn_labels_dict=fn_l2i,
                                     multi_label=self.multi_label,
-                                    normalize=self.normalize_labels
+                                    normalize=self.normalize_labels,
+                                    has_topics=has_topics
                                     )
+
     return
   
   
@@ -69,7 +72,8 @@ class ALLANDataLoader(ALLANTaggerEngine):
                           fn_idx_dict,
                           fn_labels_dict,
                           save_dicts=True, 
-                          multi_label=True, normalize=False):
+                          multi_label=True, normalize=False,
+                          has_topics=True):
     """
      utility function to load training data and tokenize as follows:
      if word2idx is none then use tf tokenizer and save dict
@@ -100,6 +104,24 @@ class ALLANDataLoader(ALLANTaggerEngine):
 
     self.raw_documents = lst_docs
     self.raw_labels = lst_labels
+
+    self.dic_topic2tags = {}
+    if has_topics:
+      for lst in self.raw_labels:
+        topic = list(filter(lambda x: self._prefix_topic in x, lst))
+        assert len(topic) == 1
+        topic = topic[0]
+        tags = list(filter(lambda x: self._prefix_topic not in x, lst))
+        if topic not in self.dic_topic2tags:
+          self.dic_topic2tags[topic] = set()
+        self.dic_topic2tags[topic].update([topic] + tags)
+      
+      for k,v in self.dic_topic2tags.items():
+        self.dic_topic2tags[k] = list(v)
+        
+      if save_dicts:
+        self.log.SaveDataJSON(self.dic_topic2tags, 'auto_topic2tags.txt')
+    #endif
 
 
     tokenizer = tf.keras.preprocessing.text.Tokenizer()
@@ -168,7 +190,6 @@ class ALLANDataLoader(ALLANTaggerEngine):
     self.P("  Words-to-indexes vocabulary: {}".format(len(self.dic_word2index)))
     return x_docs, y_labels
   
-    
 
 if __name__ == '__main__':
   cfg1 = "tagger/brain/config.txt"

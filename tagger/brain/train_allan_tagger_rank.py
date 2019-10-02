@@ -18,7 +18,7 @@ if __name__ == '__main__':
   VALIDATION = True
   
   for i,cfg in enumerate(configs):
-    if cfg != 'config_v3_with_v2_emb_noi.txt':
+    if cfg != 'config_v4_emb_noi.txt':
       continue
     
     path_cfg = os.path.join(root_configs, cfg)
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     l.P("")
     l.P("*" * 80)
 
-    loader = ALLANDataLoader(log=l, multi_label=True, 
+    loader = ALLANDataLoader(log=l, multi_label=False, 
                              normalize_labels=False)
     loader.LoadData()
     
@@ -40,8 +40,8 @@ if __name__ == '__main__':
       valid_texts, valid_labels = l.LoadDocuments(folder=l.GetDataSubFolder(l.config_data['TRAINING']['FOLDER']),
                                              doc_ext='.txt',
                                              label_ext='.txt',
-                                             doc_folder='Extended_Validation_Texts',
-                                             label_folder='Extended_Validation_Labels',
+                                             doc_folder='Validation_Texts',
+                                             label_folder='Validation_Labels',
                                              return_labels_list=False)
   
     
@@ -51,7 +51,8 @@ if __name__ == '__main__':
     model_name = model_def['NAME']
     eng = ALLANTaggerCreator(log=l, 
                              dict_word2index=loader.dic_word2index,
-                             dict_label2index=loader.dic_labels)
+                             dict_label2index=loader.dic_labels,
+                             dict_topic2tags=loader.dic_topic2tags)
     
     if VALIDATION:
       eng.check_labels_set(valid_labels)
@@ -67,6 +68,7 @@ if __name__ == '__main__':
                               y_labels_valid=valid_labels,
                               skip_if_pretrained=False,
                               DEBUG=False,
+                              test_top=1,
                               compute_topic=True)
     
     if VALIDATION:
