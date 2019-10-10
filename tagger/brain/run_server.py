@@ -34,7 +34,7 @@ if __name__ == '__main__':
     },
       
     'ranking': {
-        'fn' : 'tagger/brain/configs/20190918/config_v4_emb_noi.txt'
+        'fn' : 'tagger/brain/configs/20191009/config_v4_emb_noi_inside_tagger_1_FL.txt'
     }
   }
 
@@ -103,7 +103,6 @@ if __name__ == '__main__':
     
     dct_info = {
         'input_document_init' : std_input,
-        'pre_topic_document': pre_topic_document,
         'topic_document': topic_document,
         'topic_id': topic_id,
         'date_time' : str_now
@@ -117,10 +116,10 @@ if __name__ == '__main__':
       dct_info['topic_score'] = topic_score
       dct_info['sorted_values'] = sorted_values
       dct_info['sorted_keys'] = sorted_keys
+      dct_info['pre_topic_document'] = pre_topic_document
 
     dct_res = {'result' : dct_info}
     return dct_res
-
 
   simple_server = SimpleFlaskModelServer(model=eng,
                                          predict_function='predict_text',
