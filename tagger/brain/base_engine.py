@@ -739,9 +739,9 @@ class ALLANTaggerEngine(LummetryObject):
     
     topic_document = None
     if return_topic:
-      topic_document, topic_score = self.find_topic(dict_tags=tags,
-                                                    choose_by_length=False,
-                                                    return_score=True)   
+      topic_document, dict_topics, topic_score = self.find_topic(dict_tags=tags,
+                                                                 choose_by_length=False,
+                                                                 return_score=True)   
     
     
     if DEBUG:
@@ -755,12 +755,13 @@ class ALLANTaggerEngine(LummetryObject):
       
     ret = (tags,)
     if return_topic:
-      ret += (topic_document,topic_score)
+      ret += (topic_document,dict_topics,topic_score)
     if return_input_processed:
       ret += (text, processed_input)
     
     return ret
-  
+
+    
   
   def array_to_tags(self, np_probas, top=5, convert_tags=True, force_below_threshold=False):
     threshold = 0.5 if "tag" in self.model_output else 0
@@ -1362,14 +1363,14 @@ class ALLANTaggerEngine(LummetryObject):
     
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
-      dct_tags, pred_topic, topic_score, i1, i2 = self.predict_text(doc, convert_tags=True, 
-                                                                    convert_unknown_words=True, 
-                                                                    top=top,
-                                                                    DEBUG=False,
-                                                                    return_input_processed=True,
-                                                                    return_topic=True,
-                                                                    verbose=0,
-                                                                    )
+      dct_tags, pred_topic, _, topic_score, i1, i2 = self.predict_text(doc, convert_tags=True, 
+                                                                       convert_unknown_words=True, 
+                                                                       top=top,
+                                                                       DEBUG=False,
+                                                                       return_input_processed=True,
+                                                                       return_topic=True,
+                                                                       verbose=0,
+                                                                       )
 
       inputs = (i1,i2)
       
@@ -1445,9 +1446,9 @@ class ALLANTaggerEngine(LummetryObject):
       max_len_key = max(topic_identification_len_map, key=lambda k: topic_identification_len_map[k])
       score = topic_identification_len_map[max_len_key]
       if return_score:
-        return max_len_key, score
+        return max_len_key, topic_identification_len_map, score
       else:
-        return max_len_key
+        return max_len_key, topic_identification_len_map
     
     else:
       topic_identification_sum_map = {k:0 for k in topic_identification_map.keys()}
@@ -1458,9 +1459,9 @@ class ALLANTaggerEngine(LummetryObject):
       max_sum_key = max(topic_identification_sum_map, key=topic_identification_sum_map.get)
       score = topic_identification_sum_map[max_sum_key]
       if return_score:
-        return max_sum_key, score
+        return max_sum_key, topic_identification_sum_map, score
       else:
-        return max_sum_key
+        return max_sum_key, topic_identification_sum_map
 
   
 if __name__ == '__main__':
