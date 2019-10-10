@@ -7,13 +7,9 @@ Created on Mon Aug 19 21:14:55 2019
 
 from libraries.logger import Logger
 from libraries.model_server.simple_model_server import SimpleFlaskModelServer
-
 from tagger.brain.base_engine import ALLANTaggerEngine
-
 import numpy as np
-
 from datetime import datetime
-
 import argparse
 
 
@@ -34,13 +30,11 @@ if __name__ == '__main__':
   
   dct_cfg = {
     'tagging': {
-        'fn' : 'tagger/brain/configs/20190918/config_v3_with_v2_emb_noi.txt',
-        'thr': 0.5
+        'fn' : 'tagger/brain/configs/20190918/config_v3_with_v2_emb_noi.txt'
     },
       
     'ranking': {
-        'fn' : 'tagger/brain/configs/20190918/config_v4_emb_noi.txt',
-        'thr': 0.5
+        'fn' : 'tagger/brain/configs/20191009/config_v4_emb_noi_inside_tagger_1_FL.txt'
     }
   }
 
@@ -55,7 +49,6 @@ if __name__ == '__main__':
   
   DEBUG_MODE = 0
   TOP = 5
-  THR_DEFAULT = dct_cfg[mode]['thr']   
   
   topic_index_map = l.LoadDictFromData(l.config_data['TOPIC2IDX'])
   
@@ -68,13 +61,31 @@ if __name__ == '__main__':
     s = data['current_query']
     return s
   
+  def decide_default_topic(dict_topics, thr_default=1.5):
+    values = np.array(list(dict_topics.values()))
+    keys = np.array(list(dict_topics.keys()))
+    
+    sorted_indexes = np.argsort(values)[::-1]
+    sorted_values = values[sorted_indexes]
+    sorted_keys = keys[sorted_indexes]
+
+    return_default = False
+
+    proc = sorted_values[0] / sorted_values[1]
+    if proc < thr_default:
+      return_default = True
+
+    return return_default, sorted_values, sorted_keys
+      
+
   def output_callback(data):
     DEBUG = False
     res1 = data[0]
     topic_document = data[1]
-    topic_score = data[2]
-    std_input = data[3]
-    enc_input = data[4]
+    dict_topics = data[2]
+    topic_score = data[3]
+    std_input = data[4]
+    enc_input = data[5]
     vals = [x for x in res1.values()]
     keys = [x for x in res1.keys()]    
     top_idxs = np.argsort(vals)[::-1]
@@ -83,7 +94,9 @@ if __name__ == '__main__':
 
     str_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:22]
     
-    if topic_score < THR_DEFAULT:
+    pre_topic_document = topic_document
+    is_default, sorted_values, sorted_keys = decide_default_topic(dict_topics, thr_default=1.3)
+    if is_default:
       topic_document = 'topic_default'
     
     topic_id = topic_index_map[topic_document]
@@ -92,7 +105,7 @@ if __name__ == '__main__':
         'input_document_init' : std_input,
         'topic_document': topic_document,
         'topic_id': topic_id,
-        'date_time' : str_now,
+        'date_time' : str_now
         }
     
     if DEBUG:
@@ -101,11 +114,13 @@ if __name__ == '__main__':
       dct_info['best_tags'] = dic_top_best
       dct_info['comment'] = 'id_topic_document == -1 means ALLANTagger is in DEBUG(0) mode => no topics are available. Switch to DEBUG(1) or NODEBUG.'
       dct_info['topic_score'] = topic_score
+      dct_info['sorted_values'] = sorted_values
+      dct_info['sorted_keys'] = sorted_keys
+      dct_info['pre_topic_document'] = pre_topic_document
 
     dct_res = {'result' : dct_info}
     return dct_res
-  
-  
+
   simple_server = SimpleFlaskModelServer(model=eng,
                                          predict_function='predict_text',
                                          fun_input=input_callback,
