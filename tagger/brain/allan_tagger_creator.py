@@ -9,6 +9,7 @@ from tagger.brain.base_engine import ALLANTaggerEngine
 import tensorflow as tf
 import numpy as np
 from libraries.lummetry_layers.gated import GatedDense
+from libraries.custom_layers import CUSTOM_LAYERS
 from collections import OrderedDict
 
 _VER_ = '0.8.1'
@@ -137,8 +138,13 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       self._setup_word_embeddings()
     if model_name is not None:
       self.model_name = model_name
+      
+    str_loss = 'crossentropy'
+    if 'LOSS' in dict_model_config:
+      if 'focal' in dict_model_config['LOSS'].lower():
+        str_loss = 'focal_loss'
 
-    self.P("Defining model '{}'...".format(self.model_name))
+    self.P("Defining model '{}' with loss '{}'...".format(self.model_name, str_loss))
     if 'embeds' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len, self.emb_size), 
                                        name='tagger_input')
@@ -159,6 +165,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     else:
       raise ValueError("Uknown model input '{}'".format(self.model_input))
     tf_lst_cols = []
+    tf_x = None
     for i,col in enumerate(self.model_columns):
       n_feats = col['FEATURES'] 
       ker_size = col['KERNEL'] if 'KERNEL' in col.keys() else 0
@@ -179,16 +186,37 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                  use_cuda=self.use_cuda
                                  )
       tf_lst_cols.append(tf_x)
-    tf_x = tf.keras.layers.concatenate(tf_lst_cols)
-    drp = self.dropout_end 
-    tf_x = tf.keras.layers.Dropout(drp, 
-                                   name='drop_{}_{}'.format(
-                                       drp,0))(tf_x)
-    self.n_concat_outs = len(self.model_columns) * n_feats * 2
+      
+    if len(tf_lst_cols) > 0:
+      tf_x = tf.keras.layers.concatenate(tf_lst_cols)
     
+      drp = self.dropout_end 
+      tf_x = tf.keras.layers.Dropout(drp, 
+                                     name='drop_{}_{}'.format(
+                                         drp,0))(tf_x)
+      self.n_concat_outs = len(self.model_columns) * n_feats * 2
+      
+      
+      tf_x = self._get_end_fc(tf_x, self.end_fc)
     
-    tf_x = self._get_end_fc(tf_x, self.end_fc)
-    
+    if 'ranking' in self.model_output and 'INSIDE_TAGGER' in dict_model_config:
+      self.P("[INFO] Using inside tagger which helps the ranker.")
+      tagger = self.log.LoadKerasModel(dict_model_config['INSIDE_TAGGER'],
+                                       custom_objects={
+                                           "GatedDense" : GatedDense,
+                                           "K_rec" : self.log.K_rec,
+                                       },
+                                       compile=False)
+  
+      tagger.trainable = False
+      
+      if tf_x is not None:
+        tf_x = tf.keras.layers.concatenate([tf_x, tagger(tf_embeds)], name='concat_tagger_ranker')
+      else:
+        tf_x = tagger(tf_embeds)
+        tf_x = self._get_end_fc(tf_x, self.end_fc)
+    #endif
+
     # now model output
     self.P("Setting model output mode to '{}'".format(self.model_output))
     if 'ranking' in self.model_output:
@@ -199,7 +227,13 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       model = tf.keras.models.Model(inputs=tf_input,
                                     outputs=tf_readout,
                                     name=self.model_name)
-      model.compile(optimizer='adam', loss='categorical_crossentropy', 
+      
+      if str_loss == 'crossentropy':
+        loss = 'categorical_crossentropy'
+      elif str_loss == 'focal_loss':
+        loss = CUSTOM_LAYERS['focal_loss_softmax']
+      
+      model.compile(optimizer='adam', loss=loss, 
                     metrics=['acc', self.log.K_rec]
                     )
     
@@ -212,9 +246,14 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       model = tf.keras.models.Model(inputs=tf_input,
                                     outputs=tf_readout,
                                     name=self.model_name)
-      model.compile(optimizer='adam', loss='binary_crossentropy', 
-                    metrics=['acc', self.log.K_rec]
-                    )
+      
+      if str_loss == 'crossentropy':
+        loss = 'binary_crossentropy'
+      elif str_loss == 'focal_loss':
+        loss = CUSTOM_LAYERS['focal_loss_sigmoid']
+      
+      model.compile(optimizer='adam', loss=loss, 
+                    metrics=['acc', self.log.K_rec])
     else:
       raise ValueError("Unknown model output '{}'".format(self.model_output))
     self.model = model
