@@ -1,7 +1,5 @@
 from libraries.logger import Logger
 import os
-from collections import Counter
-
 
 def check_labels(log, dct, is_bot):
   name = 'BOT' if is_bot else 'USER'
