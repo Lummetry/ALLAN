@@ -92,7 +92,7 @@ if __name__ == '__main__':
   str_log = str_log[:-2]
   logger.P("", noprefix=True)
   logger.P(str_log)
-
+  logger.P("", noprefix=True)
   
   if check_user_bot_labels:
     check_labels(logger, dct_user_labels, is_bot=False)
