@@ -22,7 +22,7 @@ def check_labels(log, dct, is_bot):
 
 if __name__ == '__main__':
   logger = Logger(lib_name='ALLANBOT',
-                  config_file='chatbot/config_check_ready.py',
+                  config_file='chatbot/config_check_ready.txt',
                   TF_KERAS=False)
   
   texts_folder = logger.GetDataSubFolder(logger.config_data['TEXTS_FOLDER'])
