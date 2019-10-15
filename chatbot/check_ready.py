@@ -32,12 +32,12 @@ if __name__ == '__main__':
   bot_labels_fn = os.path.join(logger.GetDataFolder(), logger.config_data['SAVE_BOT_LABELS'])
   check_user_bot_labels = bool(logger.config_data['CHECK_USER_BOT_LABELS'])
   
-  logger.P("* Texts  folder: '{}'".format(texts_folder))
-  logger.P("* Labels folder: '{}'".format(labels_folder))
-  logger.P("* All labels fn: '{}'".format(all_labels_fn))
-  
   conv_texts = set(os.listdir(texts_folder))
   conv_labels = set(os.listdir(labels_folder))
+  
+  logger.P("* Texts  folder: '{}' ({} convs)".format(texts_folder, len(conv_texts)))
+  logger.P("* Labels folder: '{}' ({} convs)".format(labels_folder, len(conv_labels)))
+  logger.P("* All labels fn: '{}'".format(all_labels_fn))
   
   set_all_labels = set()
   dct_user_labels = dict()
