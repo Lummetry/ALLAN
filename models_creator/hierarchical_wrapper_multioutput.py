@@ -58,7 +58,6 @@ class HierarchicalNet:
     self.max_characters = self.data_processer.max_nr_chars
     self.nr_user_labels = len(self.data_processer.dict_user_id2label)
     self.nr_bot_labels  = len(self.data_processer.dict_bot_id2label)
-    self._parse_config_data()
 
     self.tf_graph = None
     self.trainable_model = None
@@ -81,6 +80,10 @@ class HierarchicalNet:
     
     self._log("Initialized HierarchicalNet v{}".format(self._version))
     
+    return
+  
+  def Initialize(self):
+    self._parse_config_data()
     return
   
   def _initialize_datastructures(self):
@@ -972,6 +975,8 @@ class HierarchicalNet:
     fn_config = os.path.join(self.logger.GetModelsFolder(), model_folder + '/config.txt')
     fn_losshist = os.path.join(self.logger.GetModelsFolder(), model_folder + '/loss_hist.jpg')
     self.config_data['EPOCH'] = epoch
+    self.config_data['MAX_WORDS'] = self.max_words
+    self.config_data['MAX_CHARACTERS'] = self.max_characters
     with open(fn_config, 'w') as f:
       f.write(json.dumps(self.config_data, indent=2))
     self._log("Saved model config in '{}'.".format(fn_config))
@@ -1146,15 +1151,19 @@ class HierarchicalNet:
     
     if return_text:
       predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
+      predicted_text = self.data_processer.organize_text(predicted_text)
       if verbose:
         self._log("  --> '{}'".format(predicted_text))
     else:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
-    if self.has_bot_intent: intent_bot = intent_bot.reshape(-1)
-    last_intent_user = last_intent_user.reshape(-1)
-
-    return predicted_text, last_intent_user, intent_bot
+    
+    last_intent_user = self.data_processer.dict_user_id2label[last_intent_user.reshape(-1)[0]]
+    if self.has_bot_intent:
+      intent_bot = self.data_processer.dict_bot_id2label[intent_bot.reshape(-1)[0]]
+      return predicted_text, last_intent_user, intent_bot
+    
+    return predicted_text, last_intent_user
 
   
   def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
