@@ -86,7 +86,7 @@ if __name__ == '__main__':
   log_data.P("* Bot labels fn:  '{}'".format(bot_labels_fn))
   
   logger = Logger(lib_name='ALLANBOT-TRAIN', config_file=args.config, TF_KERAS=True)
-  d = DocUtils(logger, logger.GetDataFile(logger.config_data['DATA_W2V_INDEX2WORD']))
+  d = DocUtils(logger, logger.config_data['DATA_W2V_INDEX2WORD'])
   
   d.CreateUserLabelsVocab(fn=user_labels_fn)
   d.CreateBotLabelsVocab(fn=bot_labels_fn)
@@ -134,7 +134,7 @@ if __name__ == '__main__':
   hnet.DefineTrainableModel()
   hnet.CreatePredictionModels()
 
-  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=250,
-           steps_per_epoch=steps_per_epoch, save_period=50)
+  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=1,
+           steps_per_epoch=steps_per_epoch, save_period=1)
 
   

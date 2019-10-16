@@ -13,7 +13,7 @@ class DocUtils():
     self.logger = logger
     self.gensim_i2v = gensim_i2v
     
-    with open(self.gensim_i2v, 'rb') as handle:
+    with open(self.logger.GetDataFile(self.gensim_i2v), 'rb') as handle:
       id2word = pickle.load(handle)
 
     self.dict_id2word = {}
