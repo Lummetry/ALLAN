@@ -486,7 +486,9 @@ class HierarchicalNet:
                 Emb = Embedding(input_dim=input_dim, output_dim=output_dim, trainable=trainable,
                                 name=name)
               else:
-                Emb = Embedding(input_dim=input_dim, output_dim=output_dim, weights=[weights],
+                initializer = tf.keras.initializers.Constant(weights)
+                Emb = Embedding(input_dim=input_dim, output_dim=output_dim,
+                                embeddings_initializer=initializer,
                                 trainable=trainable, name=name)
           #endif use_keras_emb
 
