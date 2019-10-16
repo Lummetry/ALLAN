@@ -2,3 +2,5 @@ __pycache__/
 .spyproject
 *.pyc
 chatbot/server/pipe/
+
+chatbot/server/static/img/wordcloud/
