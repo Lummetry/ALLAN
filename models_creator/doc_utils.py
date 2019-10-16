@@ -443,3 +443,21 @@ class DocUtils():
       new_sentence = [self.dict_id2word[word] for word in out_batch]
       self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_bot_id2label[in_label_batch[-1]], noprefix=True)
     return
+  
+  
+  def GenerateRunnerConfig(self):
+    self.dct_config = {}
+    
+    self.dct_config['DATA_W2V_INDEX2WORD'] = self.gensim_i2v
+    self.dct_config['MAX_WORDS'] = self.max_nr_words
+    self.dct_config['MAX_CHARACTERS'] = self.max_nr_chars
+    self.dct_config['DICT_USER_ID2LABEL'] = self.dict_user_id2label
+    self.dct_config['DICT_BOT_ID2LABEL'] = self.dict_bot_id2label
+    
+    fn_config = os.path.join(self.logger.GetOutputFolder(),
+                             self.logger.file_prefix + '_runner_config.pickle')
+    self.logger.SavePickleToOutput(self.dct_config, fn_config)
+    self._log("Saved runner config in '{}'.".format(fn_config))
+
+    return
+  
