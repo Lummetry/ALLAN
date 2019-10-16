@@ -4,6 +4,7 @@ import numpy as np
 import random
 from models_creator.doc_utils import DocUtils
 import argparse
+import os
 
 def compare_models(model1, model2):
   nr_layers = len(model1.layers)
@@ -76,6 +77,14 @@ if __name__ == '__main__':
   user_labels_fn = log_data.GetDataFile(log_data.config_data['SAVE_USER_LABELS'])
   bot_labels_fn = log_data.GetDataFile(log_data.config_data['SAVE_BOT_LABELS'])
 
+  conv_texts = set(os.listdir(texts_folder))
+  conv_labels = set(os.listdir(labels_folder))
+
+  log_data.P("* Texts  folder:  '{}' ({} convs)".format(texts_folder, len(conv_texts)))
+  log_data.P("* Labels folder:  '{}' ({} convs)".format(labels_folder, len(conv_labels)))
+  log_data.P("* User labels fn: '{}'".format(user_labels_fn))
+  log_data.P("* Bot labels fn:  '{}'".format(bot_labels_fn))
+  
   logger = Logger(lib_name='ALLANBOT-TRAIN', config_file=args.config, TF_KERAS=True)
   d = DocUtils(logger, logger.GetDataFile(logger.config_data['DATA_W2V_INDEX2WORD']))
   
@@ -97,6 +106,7 @@ if __name__ == '__main__':
     batches_train_to_validate[k] = random.sample(v, min(9, len(v)))
 
   d.SetPredictionBatches(batches_train_to_validate, batches_val)
+  d.GenerateRunnerConfig()
 
   logger.config_data['ENCODER_ARCHITECTURE']['PARENT']['INPUTS'][0]['SHAPE'][1] = d.max_nr_words + d.max_nr_chars
   
@@ -120,6 +130,7 @@ if __name__ == '__main__':
   TRAIN_GENERATOR = TrainGenerator(batches_train, loop_forever=True, use_bot_intent=has_bot_intent)
 
   hnet = HierarchicalNet(logger, d)
+  hnet.Initialize()
   hnet.DefineTrainableModel()
   hnet.CreatePredictionModels()
 
