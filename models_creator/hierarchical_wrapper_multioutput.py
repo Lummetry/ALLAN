@@ -898,11 +898,12 @@ class HierarchicalNet:
                                 show_prefix=True,
                                 to_data=False,
                                 ignore_index=True)
-      self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_val),
-                                fn='global_val_results',
-                                show_prefix=True,
-                                to_data=False,
-                                ignore_index=True)
+      if self.data_processer.batches_validation is not None:
+        self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_val),
+                                  fn='global_val_results',
+                                  show_prefix=True,
+                                  to_data=False,
+                                  ignore_index=True)
 
     return
 
