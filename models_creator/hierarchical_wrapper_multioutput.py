@@ -17,10 +17,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import json
 
-from metrics import compute_bleu
+from models_creator.metrics import compute_bleu
 from sklearn.metrics import accuracy_score
 import pandas as pd
-import keras.backend as K
+import tensorflow.keras.backend as K
 import random
 
 
@@ -54,6 +54,10 @@ class HierarchicalNet:
     self.data_processer = data_processer
     self.config_data = self.logger.config_data
     self.has_decoder = False
+    self.max_words = self.data_processer.max_nr_words
+    self.max_characters = self.data_processer.max_nr_chars
+    self.nr_user_labels = len(self.data_processer.dict_user_id2label)
+    self.nr_bot_labels  = len(self.data_processer.dict_bot_id2label)
     self._parse_config_data()
 
     self.tf_graph = None
@@ -108,12 +112,6 @@ class HierarchicalNet:
       self.decoder_architecture = self.config_data["DECODER_ARCHITECTURE"]
 
     self.model_trained_layers = self.__get_trained_layers_names()   
-    
-    self.max_words = self.config_data["MAX_WORDS"]
-    self.max_characters = self.config_data["MAX_CHARACTERS"]
-    self.nr_user_labels = self.config_data["NR_USER_LABELS"]
-    self.nr_bot_labels  = self.config_data["NR_BOT_LABELS"]
-
     return
 
   def __get_trained_layers_names(self):
@@ -594,10 +592,18 @@ class HierarchicalNet:
 
       if lstm_type == 'bidirectional':
         # TOOD initial_state
-        LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True, return_state=True), name=name)
-        crt_tf_input, tf_state_h_fw, tf_state_c_fw, tf_state_h_bw, tf_state_c_bw = LSTMCell(crt_tf_input)
-        tf_state_h = concatenate([tf_state_h_fw, tf_state_h_bw], name=identifier+'_concat_state_h_{}'.format(i))
-        tf_state_c = concatenate([tf_state_c_fw, tf_state_c_bw], name=identifier+'_concat_state_c_{}'.format(i))
+        if save_state:
+          LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True, return_state=True), name=name)
+          crt_tf_input, tf_state_h_fw, tf_state_c_fw, tf_state_h_bw, tf_state_c_bw = LSTMCell(crt_tf_input)
+          tf_state_h = concatenate([tf_state_h_fw, tf_state_h_bw], name=identifier+'_concat_state_h_{}'.format(i))
+          tf_state_c = concatenate([tf_state_c_fw, tf_state_c_bw], name=identifier+'_concat_state_c_{}'.format(i))
+        else:
+          if i == len(layers) - 1:
+            LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=False), name=name)
+            tf_state_h = LSTMCell(crt_tf_input)
+          else:
+            LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True), name=name)
+            crt_tf_input = LSTMCell(crt_tf_input)
       
       if lstm_type == 'unidirectional':
         LSTMCell = RecUnit(units=units, return_sequences=True, return_state=True, name=name)
