@@ -8,10 +8,12 @@ import json
 import random
 
 class DocUtils():
-  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None):
+  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None,
+               dict_user_id2label={}, dict_bot_id2label={}):
     self.logger = logger
+    self.gensim_i2v = gensim_i2v
     
-    with open(gensim_i2v, 'rb') as handle:
+    with open(self.gensim_i2v, 'rb') as handle:
       id2word = pickle.load(handle)
 
     self.dict_id2word = {}
@@ -29,11 +31,11 @@ class DocUtils():
     self.dict_char2id = {full_voc[i]:i for i in range(len(full_voc))}
     self.dict_id2char = {v:k for k,v in self.dict_char2id.items()}
     
-    self.dict_user_label2id = {}
-    self.dict_user_id2label = {}
+    self.dict_user_id2label = dict_user_id2label
+    self.dict_user_label2id = {v:k for k,v in self.dict_user_id2label.items()}
     
-    self.dict_bot_label2id = {}
-    self.dict_bot_id2label = {}
+    self.dict_bot_id2label = dict_bot_id2label
+    self.dict_bot_label2id = {v:k for k,v in self.dict_bot_id2label.items()}
 
     self.all_labels = {}
     
