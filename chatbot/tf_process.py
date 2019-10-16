@@ -52,7 +52,8 @@ if __name__ == '__main__':
     prefix = msg_file[:LEN_PREFIX]
 
     try:
-      reply, label = hnet._step_by_step_prediction(message_history, method='argmax')
+      reply, label, _ = hnet._step_by_step_prediction(message_history, method='argmax',
+                                                      return_text=True)
     except:
       reply, label = "A fost intampinata o eroare! Te rugam reincarca pagina.", ""
 
