@@ -1075,7 +1075,8 @@ class HierarchicalNet:
   
   
 
-  def _step_by_step_prediction(self, _input, method='sampling', verbose=1, return_text=True):
+  def _step_by_step_prediction(self, _input, method='sampling',
+                               verbose=1, return_text=True):
     assert method in ['sampling', 'argmax', 'beamsearch']
     _type = type(_input)
 
@@ -1157,13 +1158,15 @@ class HierarchicalNet:
     else:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
-    
-    last_intent_user = self.data_processer.dict_user_id2label[last_intent_user.reshape(-1)[0]]
+    last_intent_user = last_intent_user.reshape(-1)
+    if return_text:
+      last_intent_user = self.data_processer.dict_user_id2label[last_intent_user[0]]
     if self.has_bot_intent:
-      intent_bot = self.data_processer.dict_bot_id2label[intent_bot.reshape(-1)[0]]
-      return predicted_text, last_intent_user, intent_bot
+      intent_bot = intent_bot.reshape(-1)
+      if return_text:
+        intent_bot = self.data_processer.dict_bot_id2label[intent_bot[0]]
     
-    return predicted_text, last_intent_user
+    return predicted_text, last_intent_user, intent_bot
 
   
   def compute_metrics(self, bleu_params, intents_user_params=None, intent_bot_params=None):
