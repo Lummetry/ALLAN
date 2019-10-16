@@ -103,6 +103,7 @@ class HierarchicalNet:
     self._learning_rate   = self.config_data['LEARNING_RATE']
     self._str_loss        = self.config_data['LOSS'].lower()
     self._model_name      = self.config_data['MODEL_NAME']
+    self._save_weights    = bool(self.config_data['SAVE_WEIGHTS'])
 
     self._model_name = self.logger.file_prefix + '_' + self._model_name
     assert self._str_optimizer in str_optimizers
@@ -979,8 +980,12 @@ class HierarchicalNet:
     
     diff = list(set(true_names) - set(self.model_trained_layers))
     if len(diff) != 0: self._log("WARNING! model_trained_layers mismatch. Check {}".format(diff))
-
-    self.logger.SaveKerasModelWeights(fn_weights, self.trainable_model, self.model_trained_layers)
+    
+    if self._save_weights:
+      self.logger.SaveKerasModelWeights(fn_weights, self.trainable_model, self.model_trained_layers)
+    else:
+      self.logger.SaveKerasModel(self.enc_pred_model, model_folder + '/encoder')
+      self.logger.SaveKerasModel(self.dec_pred_model, model_folder + '/decoder')
     self._mk_plot(fn_losshist)
     return
   
