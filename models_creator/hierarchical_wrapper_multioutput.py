@@ -1151,8 +1151,7 @@ class HierarchicalNet:
     predicted_tokens = predicted_tokens[:-1]
     
     if return_text:
-      predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
-      predicted_text = self.data_processer.organize_text(predicted_text)
+      predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])[0]
       if verbose:
         self._log("  --> '{}'".format(predicted_text))
     else:

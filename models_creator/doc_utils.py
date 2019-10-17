@@ -386,8 +386,8 @@ class DocUtils():
           row_text = row_text + ' ' + self.dict_id2word[list_tokens[r][c]]
       text = text + [row_text]
     
-    text = text[1:]
-    return self.organize_text(" ".join(text))
+    text = [self.organize_text(t[1:]) for t in text]
+    return text
 
   
   def translate_tokenized_input(self, _input):
