@@ -67,7 +67,7 @@
   			{ "KERNEL":  5, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
   			{ "KERNEL":  7, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
   			{ "KERNEL":  7, "FEATURES":  256, "DEPTH" : 1, "END" : "lstm" },
-  			{ "KERNEL": 10, "FEATURES":  256, "DEPTH" : 1, "END" : "lstm" },
+  			{ "KERNEL": 10, "FEATURES":  256, "DEPTH" : 1, "END" : "lstm" }
       ],
       
      "DROPOUT_CONCAT" : 0.7,
