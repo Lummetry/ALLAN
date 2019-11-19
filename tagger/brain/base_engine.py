@@ -877,7 +877,7 @@ class ALLANTaggerEngine(LummetryObject):
     n_batches = n_obs // batch_size + 1
     self.train_losses = []
     self.log.SupressTFWarn()
-    best_recall = 0
+    best_recall = -np.inf
     self.train_recall_history = []
     self.train_recall_history_epochs = []
     self.train_recall_non_zero_epochs = []
@@ -916,12 +916,12 @@ class ALLANTaggerEngine(LummetryObject):
         self.log.end_timer('_train_loop__test_model_on_texts')
         if compute_topic:
           rec, topic_rec = rec
-        if self.last_test_non_zero and (best_recall < rec):
+        if self.last_test_non_zero and (best_recall <= rec):
           self.train_recall_non_zero_epochs.append(epoch+1)
           s_name = 'ep{}_R{:.0f}_ANZ'.format(epoch+1, rec)
           self.save_model(s_name, delete_prev_named=True)
           best_recall = rec
-        elif best_recall < rec:
+        elif best_recall <= rec:
           s_name = 'ep{}_R{:.0f}'.format(epoch+1, rec)
           self.save_model(s_name, delete_prev_named=True)
           best_recall = rec
