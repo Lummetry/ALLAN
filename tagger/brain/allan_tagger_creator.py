@@ -146,7 +146,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     
     use_masking = False
     if 'MASKING' in dict_model_config:
-      if dict_model_config['LOSS'] == 1:
+      if dict_model_config['MASKING'] == 1:
         use_masking = True
 
     self.P("Defining model '{}' with loss '{}'...".format(self.model_name, str_loss))
