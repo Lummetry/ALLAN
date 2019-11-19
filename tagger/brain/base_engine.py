@@ -66,6 +66,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.dic_topic2tags = dict_topic2tags
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
+    self.pre_encoded_tokens = None
     super().__init__(log=log, DEBUG=DEBUG)
     return
   
@@ -703,7 +704,8 @@ class ALLANTaggerEngine(LummetryObject):
                    return_topic=True,
                    force_below_threshold=True,
                    DEBUG=False,
-                   verbose=1):
+                   verbose=1,
+                   use_pre_encoded=True):
     """
     given a simple document will output the results based on curent model
       Args:
@@ -728,11 +730,15 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("Model inputs {} identified to directly receive embeddings".format(
             self.model.inputs[0].shape))
     
-    tokens = self.encode(text, 
-                         convert_unknown_words=convert_unknown_words,
-                         direct_embeddings=direct_embeddings,
-                         fixed_len=self.doc_size,
-                         DEBUG=DEBUG)
+    if not use_pre_encoded or self.pre_encoded_tokens is None:
+      tokens = self.encode(text, 
+                           convert_unknown_words=convert_unknown_words,
+                           direct_embeddings=direct_embeddings,
+                           fixed_len=self.doc_size,
+                           DEBUG=DEBUG)
+      self.pre_encoded_tokens = tokens
+    
+    tokens = self.pre_encoded_tokens
     if verbose >= 1:
       processed_input = self.decode(tokens=tokens, tokens_as_embeddings=direct_embeddings)[0]
       self.P("Inferring (decoded): '{}'".format(processed_input))
@@ -879,6 +885,7 @@ class ALLANTaggerEngine(LummetryObject):
     
     fct_test = self.test_model_on_texts_with_topic if compute_topic else self.test_model_on_texts
     
+    self.pre_encoded_tokens = None
     for epoch in range(n_epochs):
       self.train_epoch = epoch + 1
       epoch_losses = []
@@ -904,7 +911,8 @@ class ALLANTaggerEngine(LummetryObject):
         self.P("Testing on epoch {}".format(epoch+1))
         self.log.start_timer('_train_loop__test_model_on_texts')
         rec = fct_test(lst_docs=X_text_valid, lst_labels=y_text_valid,
-                       DEBUG=True, top=test_top, verbose=verbose)
+                       DEBUG=True, top=test_top, verbose=verbose,
+                       use_pre_encoded=True)
         self.log.end_timer('_train_loop__test_model_on_texts')
         if compute_topic:
           rec, topic_rec = rec
@@ -1290,7 +1298,7 @@ class ALLANTaggerEngine(LummetryObject):
   
   def test_model_on_texts(self, lst_docs, lst_labels, top=5, 
                           show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0,
-                          verbose=0):
+                          verbose=0, use_pre_encoded=True):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1331,6 +1339,7 @@ class ALLANTaggerEngine(LummetryObject):
                               return_input_processed=True,
                               return_topic=False,
                               verbose=verbose,
+                              use_pre_encoded=use_pre_encoded
                               )
       self.log.end_timer('test_model_on_texts__predict')
       if verbose >= 1:
@@ -1375,7 +1384,8 @@ class ALLANTaggerEngine(LummetryObject):
   
   def test_model_on_texts_with_topic(self, lst_docs, lst_labels, top=10, 
                                      show=True, DEBUG=False, record_trace=True,
-                                     zero_penalty=-1.0, verbose=0):
+                                     zero_penalty=-1.0, verbose=0,
+                                     use_pre_encoded=True):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1422,6 +1432,7 @@ class ALLANTaggerEngine(LummetryObject):
                               return_input_processed=True,
                               return_topic=True,
                               verbose=verbose,
+                              use_pre_encoded=use_pre_encoded
                               )
 
       if verbose >= 1:
