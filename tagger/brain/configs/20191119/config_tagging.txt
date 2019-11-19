@@ -12,6 +12,7 @@
   "TOPIC2TAGS": "",
   "TOPIC2IDX" : "",
   "PREFIX_TOPIC" : "profile_",
+  "ENCODING_FOLDER" : "train_encoded",
   
   "TOKENS" : {
     "PAD" : 0,
