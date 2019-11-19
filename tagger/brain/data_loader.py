@@ -18,7 +18,6 @@ class ALLANDataLoader(ALLANTaggerEngine):
                **kwargs):
     super().__init__(**kwargs)
     self.__name__ = 'AT_DL'
-    self._prefix_topic = 'topic_'
     self.multi_label = multi_label
     self.normalize_labels  = normalize_labels
     self._setup()
@@ -26,6 +25,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
   
   def _setup(self):
     self.train_subfolders_config = self.train_config['SUBFOLDERS'] if 'SUBFOLDERS' in self.train_config.keys() else None
+    self._prefix_topic = self.config_data['PREFIX_TOPIC']
     if self.train_subfolders_config is not None:
       self.train_subfolders = self.train_subfolders_config['ENABLED']
       self.docs_subfolder = self.train_subfolders_config['DOCS']

@@ -539,6 +539,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.last_max_size = 0
     nr_obs = len(text)
     for i,txt in enumerate(text):
+      self.log.start_timer('encode_document')
       if not DEBUG and (len(text) > 10):
         print("\rProcessing {:.1f}% of input documents...".format(
             i/nr_obs * 100), end='', flush=True)
@@ -571,6 +572,9 @@ class ALLANTaggerEngine(LummetryObject):
       if fixed_len > 0:
         tokens = tokens[:fixed_len]
       lst_enc_texts.append(tokens)
+      self.log.end_timer('encode_document')
+    #endfor
+
     if text_label is not None:
       assert type(text_label) in [list, tuple, np.ndarray], "labels must be provided as list/list or lists"
       if type(text_label[0]) in [str]:
@@ -605,7 +609,9 @@ class ALLANTaggerEngine(LummetryObject):
     labels = []
     for seq in tokens:
       if tokens_as_embeddings:
+        self.log.start_timer('decode__get_tokens_from_embeddings')
         seq = self._get_tokens_from_embeddings(seq)
+        self.log.end_timer('decode__get_tokens_from_embeddings')
       txt = " ".join([self.dic_index2word[x] for x in seq if x != self.PAD_ID]) 
       texts.append(txt)
     if labels_idxs is not None:
@@ -727,8 +733,8 @@ class ALLANTaggerEngine(LummetryObject):
                          direct_embeddings=direct_embeddings,
                          fixed_len=self.doc_size,
                          DEBUG=DEBUG)
-    processed_input = self.decode(tokens=tokens, tokens_as_embeddings=direct_embeddings)[0]
     if verbose >= 1:
+      processed_input = self.decode(tokens=tokens, tokens_as_embeddings=direct_embeddings)[0]
       self.P("Inferring (decoded): '{}'".format(processed_input))
     np_tokens = np.array(tokens)
     np_tags_probas = self._predict_single(np_tokens)
@@ -757,7 +763,9 @@ class ALLANTaggerEngine(LummetryObject):
     if return_topic:
       ret += (topic_document,dict_topics,topic_score)
     if return_input_processed:
-      ret += (text, processed_input)
+      ret += (text,)
+      if verbose >= 1:
+        ret += (processed_input,)
     
     return ret
 
@@ -851,7 +859,8 @@ class ALLANTaggerEngine(LummetryObject):
                   test_every_epochs=1,
                   test_top=1,
                   DEBUG=True,
-                  compute_topic=True):
+                  compute_topic=True,
+                  verbose=0):
     """
     this is the basic 'protected' training loop loop that uses tf.keras methods and
     works both on embeddings inputs or tokenized inputs
@@ -893,8 +902,10 @@ class ALLANTaggerEngine(LummetryObject):
           epoch+1, epoch_loss,np.mean(self.train_losses), s_bout))
       if (epoch > 0) and (test_every_epochs > 0) and (X_text_valid is not None) and ((epoch+1) % test_every_epochs == 0):
         self.P("Testing on epoch {}".format(epoch+1))
+        self.log.start_timer('_train_loop__test_model_on_texts')
         rec = fct_test(lst_docs=X_text_valid, lst_labels=y_text_valid,
-                       DEBUG=True, top=test_top)
+                       DEBUG=True, top=test_top, verbose=verbose)
+        self.log.end_timer('_train_loop__test_model_on_texts')
         if compute_topic:
           rec, topic_rec = rec
         if self.last_test_non_zero and (best_recall < rec):
@@ -971,7 +982,8 @@ class ALLANTaggerEngine(LummetryObject):
             test_every_epochs=5,
             test_top=1,
             DEBUG=True,   
-            compute_topic=True
+            compute_topic=True,
+            sanity_check=True
             ):
     """
     this methods trains the loaded/created `model` directly on text documents
@@ -1008,13 +1020,43 @@ class ALLANTaggerEngine(LummetryObject):
     
     pad_data = self.doc_size
     
-    X_tokens, y_data = self.encode(X_texts, 
-                                   text_label=y_labels,
-                                   to_onehot=True,
-                                   rank_labels=rank_labels,
-                                   convert_unknown_words=convert_unknown_words,
-                                   direct_embeddings=self.direct_embeddings,
-                                   fixed_len=pad_data)
+    X_tokens, y_data = None, None
+    fct_params = [X_texts, y_labels, True, rank_labels, convert_unknown_words,
+                  self.direct_embeddings, pad_data]
+    encoding_folder = None
+    if 'ENCODING_FOLDER' in self.log.config_data:
+      encoding_folder = self.log.config_data['ENCODING_FOLDER']
+      output_folder = self.log.GetOutputFolder()
+      fld = os.path.join(output_folder, encoding_folder)
+      if encoding_folder not in os.listdir(output_folder):
+        os.makedirs(fld)
+      files = os.listdir(fld)
+      self.P("Searching training encoding data in {} ...".format(fld))
+      for f in files:
+        cache = self.log.LoadPickleFromOutput(os.path.join(encoding_folder, f))
+        params = cache['params']
+        ok = True
+        for i,p in enumerate(params):
+          if p != fct_params[i]:
+            ok = False
+        if ok:
+          X_tokens, y_data = cache['output']
+          self.P(" Found encoding data in '{}'.".format(f))
+          break
+    
+    if X_tokens is None or y_data is None:
+      X_tokens, y_data = self.encode(X_texts, 
+                                     text_label=y_labels,
+                                     to_onehot=True,
+                                     rank_labels=rank_labels,
+                                     convert_unknown_words=convert_unknown_words,
+                                     direct_embeddings=self.direct_embeddings,
+                                     fixed_len=pad_data)
+      if encoding_folder is not None:
+        self.log.SavePickleToOutput({'params': fct_params, 'output': (X_tokens,y_data)},
+                                    os.path.join(encoding_folder, self.log.file_prefix + '.p'))  
+    
+    #endif
 
     self.max_doc_size = self.doc_size
 
@@ -1028,12 +1070,12 @@ class ALLANTaggerEngine(LummetryObject):
       self.get_stats(X_data, X_labels=y_labels)
       self.P("Reducing batch_size to 1 and processing doc by doc")
 
-    idxs_chk = [133] + np.random.choice(n_obs, size=5, replace=False).tolist()
+    idxs_chk = np.random.choice(n_obs, size=5, replace=False).tolist()
     if X_texts_valid is None:
       X_texts_valid = [X_texts[x] for x in idxs_chk]
       y_labels_valid = [y_labels[x] for x in idxs_chk]
       
-    if self.direct_embeddings:
+    if self.direct_embeddings and sanity_check:
       self.P("Sanity check before training loop for direct embeddings:")
       for idx in idxs_chk:
         x_e = X_data[idx]
@@ -1053,7 +1095,7 @@ class ALLANTaggerEngine(LummetryObject):
                      X_text_valid=X_texts_valid, y_text_valid=y_labels_valid,
                      save_best=save, save_end=save, test_every_epochs=test_every_epochs,
                      test_top=test_top,
-                     compute_topic=compute_topic)
+                     compute_topic=compute_topic, verbose=int(sanity_check))
     
     if compute_topic:
       return self.train_recall_history, self.train_topic_recall_history
@@ -1247,7 +1289,8 @@ class ALLANTaggerEngine(LummetryObject):
 
   
   def test_model_on_texts(self, lst_docs, lst_labels, top=5, 
-                          show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
+                          show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0,
+                          verbose=0):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1280,15 +1323,23 @@ class ALLANTaggerEngine(LummetryObject):
     self.last_test_non_zero = False
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
-      dct_tags, i1, i2 = self.predict_text(doc, convert_tags=True, 
-                                   convert_unknown_words=True, 
-                                   top=top,
-                                   DEBUG=False,
-                                   return_input_processed=True,
-                                   return_topic=False,
-                                   verbose=0,
-                                   )
-      inputs = (i1,i2)
+      self.log.start_timer('test_model_on_texts__predict')
+      ret = self.predict_text(doc, convert_tags=True, 
+                              convert_unknown_words=True, 
+                              top=top,
+                              DEBUG=False,
+                              return_input_processed=True,
+                              return_topic=False,
+                              verbose=verbose,
+                              )
+      self.log.end_timer('test_model_on_texts__predict')
+      if verbose >= 1:
+        dct_tags, i1, i2 = ret
+        inputs = (i1,i2)
+      else:
+        dct_tags, i1 = ret
+        inputs = (i1,)
+      #endif
       lst_tags = [x.lower() for x in dct_tags]
       gt_tags = lst_labels[idx]
       for y_true in gt_tags:
@@ -1323,7 +1374,8 @@ class ALLANTaggerEngine(LummetryObject):
   
   
   def test_model_on_texts_with_topic(self, lst_docs, lst_labels, top=10, 
-                                     show=True, DEBUG=False, record_trace=True, zero_penalty=-1.0):
+                                     show=True, DEBUG=False, record_trace=True,
+                                     zero_penalty=-1.0, verbose=0):
     """
     function that calculates (and displays) model validation/testing indicators
     
@@ -1363,16 +1415,22 @@ class ALLANTaggerEngine(LummetryObject):
     
     for idx, doc in enumerate(lst_docs):
       doc_acc = 0
-      dct_tags, pred_topic, _, topic_score, i1, i2 = self.predict_text(doc, convert_tags=True, 
-                                                                       convert_unknown_words=True, 
-                                                                       top=top,
-                                                                       DEBUG=False,
-                                                                       return_input_processed=True,
-                                                                       return_topic=True,
-                                                                       verbose=0,
-                                                                       )
+      ret = self.predict_text(doc, convert_tags=True, 
+                              convert_unknown_words=True, 
+                              top=top,
+                              DEBUG=False,
+                              return_input_processed=True,
+                              return_topic=True,
+                              verbose=verbose,
+                              )
 
-      inputs = (i1,i2)
+      if verbose >= 1:
+        dct_tags, pred_topic, _, topic_score, i1, i2 = ret
+        inputs = (i1,i2)
+      else:
+        dct_tags, pred_topic, _, topic_score, i1 = ret
+        inputs = (i1,)
+      #endif
       
       lst_tags = [x.lower() for x in dct_tags]
       gt_tags = lst_labels[idx]
