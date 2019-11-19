@@ -39,7 +39,7 @@
   
   
   "MODEL" : {
-    "NAME"        : "u_c135577_g2_512_256_d07_cv_profiler",
+    "NAME"        : "u_X135777_g2_512_256_d07_cv_profiler",
     "PRETRAINED"  : "",
     
     "DOC_SIZE"    : 1000,
@@ -55,19 +55,19 @@
     "###OUTPUT_TYPES" : ["single-ranking", "multi-ranking", "tagging"],
     "OUTPUT"      : "single-ranking",
 
-    "USE_CUDA"    : 0,
+    "USE_CUDA"    : 1,
     
     "EMBED_FILE"  : "ro_full_embeds.npy",
     "####EMBED_SIZE"  : 128,
 
     "COLUMNS" : [
-  			{ "KERNEL": 1, "FEATURES": 1024, "DEPTH" : 1, "END" : "gp" },
-  			{ "KERNEL": 2, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
-  			{ "KERNEL": 3, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
-  			{ "KERNEL": 5, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
-  			{ "KERNEL": 5, "FEATURES":  512, "DEPTH" : 1, "END" : "gp", "STEP" : 2 },
-  			{ "KERNEL": 7, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
-  			{ "KERNEL": 7, "FEATURES":  512, "DEPTH" : 1, "END" : "gp", "STEP" : 3 }
+  			{ "KERNEL":  1, "FEATURES": 2048, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL":  2, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL":  3, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL":  5, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL":  7, "FEATURES":  512, "DEPTH" : 1, "END" : "gp" },
+  			{ "KERNEL":  7, "FEATURES":  256, "DEPTH" : 1, "END" : "lstm" },
+  			{ "KERNEL": 10, "FEATURES":  256, "DEPTH" : 1, "END" : "lstm" },
       ],
       
      "DROPOUT_CONCAT" : 0.7,
