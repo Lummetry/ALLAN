@@ -1255,15 +1255,23 @@ class ALLANTaggerEngine(LummetryObject):
     self.log.ShowTextHistogram(lens)
     return dct_stats
   
-  def check_labels_set(self, val_labels):
+  def check_labels_set(self, val_labels, exclude=True):
+    new_val_labels = []
     for obs in val_labels:
       if type(obs) not in [list, tuple, np.ndarray]:
         raise ValueError("LabelSetCheck: All observations must be lists of labels")
+      new_obs = []
       for label in obs:
         if label not in self.dic_labels.keys():
-          raise ValueError("LabelSetCheck: Label '{}' not found in valid labels dict".format(label))
-    self.P("LabelSetCheck: All {} labels are valid.".format(len(val_labels)))
-    return
+          _str_info = "LabelSetCheck: Label '{}' not found in valid labels dict".format(label)
+          if exclude:
+            self.P(_str_info)
+          else:
+            raise ValueError(_str_info)
+        else:
+          new_obs.append(label)
+      new_val_labels.append(new_obs)
+    return new_val_labels
     
   def initialize(self):
     self.P("Full initialization started ...")
