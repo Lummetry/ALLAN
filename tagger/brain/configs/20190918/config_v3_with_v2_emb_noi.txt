@@ -11,6 +11,7 @@
   "LABEL2IDX" : "auto_labels2idx.txt",
   "TOPIC2TAGS": "auto_topic2tags.txt",
   "TOPIC2IDX" : "topic_index_map.txt",
+  "PREFIX_TOPIC": "topic_",
   
   "TOKENS" : {
     "PAD" : 0,
@@ -27,8 +28,8 @@
     "SUBFOLDERS" : 
         {
           "ENABLED" : 1,
-          "DOCS"    : "Train_and_Validation_Texts",
-          "LABELS"  : "Train_and_Validation_Labels"
+          "DOCS"    : "Texts",
+          "LABELS"  : "Labels"
         },
     "DOCUMENT"   : ".txt",
     "LABEL"      : ".txt"
