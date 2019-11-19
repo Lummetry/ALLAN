@@ -26,7 +26,7 @@
   "TRAINING" : {
     "####FOLDER": "test1_one_folder",
     "FOLDER"    : "EY_CV_SCREENING/Texts",
-    "VALIDATION_FOLDER" : "EY_CV_SCREENING/Full_Validation_Texts",
+    "VALIDATION_FOLDER" : "EY_CV_SCREENING/Validation_Texts",
     "SUBFOLDERS" : 
         {
           "ENABLED" : 0,
@@ -39,7 +39,7 @@
   
   
   "MODEL" : {
-    "NAME"        : "u_X135777_g2_512_256_d07_cv_profiler",
+    "NAME"        : "u_X12357710_g2_512_256_d07_cv_profiler",
     "PRETRAINED"  : "",
     
     "DOC_SIZE"    : 1000,

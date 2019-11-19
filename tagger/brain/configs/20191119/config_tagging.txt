@@ -36,8 +36,8 @@
     "VALIDATION_SUBFOLDERS" :
       {
         "ENABLED" : 1,
-        "DOCS" : "Full_Validation_Texts",
-        "LABELS" : "Full_Validation_Labels"
+        "DOCS" : "Validation_Texts",
+        "LABELS" : "Validation_Labels"
       },
         
     "DOCUMENT"   : ".txt",
