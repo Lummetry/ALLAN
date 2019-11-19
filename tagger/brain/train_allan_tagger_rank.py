@@ -45,7 +45,7 @@ if __name__ == '__main__':
                                                   exclude_list=['ï»¿'])
   
     
-    epochs = 500
+    epochs = 100
     
     model_def = l.config_data['MODEL']
     model_name = model_def['NAME']
@@ -55,7 +55,7 @@ if __name__ == '__main__':
                              dict_topic2tags=loader.dic_topic2tags)
     
     if VALIDATION:
-      eng.check_labels_set(valid_labels)
+      new_valid_labels = eng.check_labels_set(valid_labels, exclude=True)
     
     eng.setup_model(dict_model_config=model_def, model_name=model_name) # default architecture
     
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                               convert_unknown_words=True,
                               save=True,
                               X_texts_valid=valid_texts,
-                              y_labels_valid=valid_labels,
+                              y_labels_valid=new_valid_labels,
                               skip_if_pretrained=False,
                               DEBUG=False,
                               test_top=1,
