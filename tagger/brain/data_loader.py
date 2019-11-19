@@ -126,7 +126,8 @@ class ALLANDataLoader(ALLANTaggerEngine):
         self.dic_topic2tags[k] = list(v)
         
       if save_dicts:
-        self.log.SaveDataJSON(self.dic_topic2tags, 'auto_topic2tags.txt')
+        self.log.SaveDataJSON(self.dic_topic2tags,
+                              '{}_auto_topic2tags.txt'.format(self.log.file_prefix))
     #endif
 
 
@@ -142,7 +143,8 @@ class ALLANDataLoader(ALLANTaggerEngine):
           len(self.dic_word2index), 
           ["{}:{}".format(k,v) for k,v in self.dic_word2index.items()][:4]))
       if save_dicts:
-        self.log.SaveDataJSON(self.dic_word2index,'auto_word2idx.txt')
+        self.log.SaveDataJSON(self.dic_word2index,
+                              '{}_auto_word2idx.txt'.format(self.log.file_prefix))
     else:
       self.P("Using predefined word2idx with {} words: {}".format(
           len(dict_word2idx), 
@@ -161,7 +163,8 @@ class ALLANDataLoader(ALLANTaggerEngine):
     if dict_labels2idx is None:
       dict_labels2idx = {k:v for v,k in enumerate(np.unique(lst_unique_lab))}
       if save_dicts:
-        self.log.SaveDataJSON(dict_labels2idx, 'auto_labels2idx.txt')
+        self.log.SaveDataJSON(dict_labels2idx,
+                              '{}_auto_labels2idx.txt'.format(self.log.file_prefix))
 
     self.dic_labels = dict_labels2idx
    
