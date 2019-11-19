@@ -10,7 +10,7 @@ import pandas as pd
 import os
 
 if __name__ == '__main__':
-  root_configs = 'tagger/brain/configs/20190918'
+  root_configs = 'tagger/brain/configs/20191119'
   configs = os.listdir(root_configs)
   
   results = OrderedDict({'MODEL': [], "MAX": [], "EP":[], 'EP_NZ': [] ,'END_SC': [], 'HISTORY': [] })
@@ -18,7 +18,7 @@ if __name__ == '__main__':
   VALIDATION = True
   
   for i,cfg in enumerate(configs):
-    if cfg != 'config_v4_emb_noi.txt':
+    if cfg != 'config_profiling.txt':
       continue
     
     path_cfg = os.path.join(root_configs, cfg)
@@ -37,15 +37,14 @@ if __name__ == '__main__':
     
     valid_texts, valid_labels = None, None
     if VALIDATION:
-      valid_texts, valid_labels = l.LoadDocuments(folder=l.GetDataSubFolder(l.config_data['TRAINING']['FOLDER']),
-                                             doc_ext='.txt',
-                                             label_ext='.txt',
-                                             doc_folder='Validation_Texts',
-                                             label_folder='Validation_Labels',
-                                             return_labels_list=False)
+      folder = l.GetDataSubFolder(l.config_data['TRAINING']['VALIDATION_FOLDER'])
+      valid_texts, valid_labels = l.LoadDocuments(folder=folder,
+                                                  doc_ext='.txt',
+                                                  label_ext='.label',
+                                                  return_labels_list=False)
   
     
-    epochs = 150
+    epochs = 30
     
     model_def = l.config_data['MODEL']
     model_name = model_def['NAME']
@@ -69,9 +68,12 @@ if __name__ == '__main__':
                               skip_if_pretrained=False,
                               DEBUG=False,
                               test_top=1,
-                              compute_topic=True)
+                              compute_topic=False,
+                              sanity_check=False,
+                              batch_size=2)
+    l.show_timers()
     
-    if VALIDATION:
+    if VALIDATION and False:
       score = eng.test_model_on_texts(valid_texts, valid_labels, record_trace=False)
     
       hist, hist_topics = hist
@@ -91,6 +93,6 @@ if __name__ == '__main__':
       l.P("")
       l.P("Results so far:\n{}".format(df))
       l.P("")
-      l.SaveDataFrame(df, fn='20190924_results1')
+      l.SaveDataFrame(df, fn='20191119_results1', to_data=False)
   
   
