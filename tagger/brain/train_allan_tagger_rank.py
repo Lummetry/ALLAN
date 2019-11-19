@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     loader = ALLANDataLoader(log=l, multi_label=False, 
                              normalize_labels=False)
-    loader.LoadData()
+    loader.LoadData(exclude_list=['ï»¿'])
     
     valid_texts, valid_labels = None, None
     if VALIDATION:
@@ -41,10 +41,11 @@ if __name__ == '__main__':
       valid_texts, valid_labels = l.LoadDocuments(folder=folder,
                                                   doc_ext='.txt',
                                                   label_ext='.label',
-                                                  return_labels_list=False)
+                                                  return_labels_list=False,
+                                                  exclude_list=['ï»¿'])
   
     
-    epochs = 30
+    epochs = 500
     
     model_def = l.config_data['MODEL']
     model_name = model_def['NAME']
