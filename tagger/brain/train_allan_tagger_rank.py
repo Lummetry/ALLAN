@@ -45,7 +45,7 @@ if __name__ == '__main__':
                                                   exclude_list=['ï»¿'])
   
     
-    epochs = 100
+    epochs = 200
     
     model_def = l.config_data['MODEL']
     model_name = model_def['NAME']
