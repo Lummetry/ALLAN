@@ -134,7 +134,7 @@ if __name__ == '__main__':
   hnet.DefineTrainableModel()
   hnet.CreatePredictionModels()
 
-  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=1,
-           steps_per_epoch=steps_per_epoch, save_period=1)
+  hnet.Fit(generator=TRAIN_GENERATOR, nr_epochs=250,
+           steps_per_epoch=steps_per_epoch, save_period=50)
 
   
