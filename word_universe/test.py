@@ -30,5 +30,5 @@ if __name__ == '__main__':
   fn_model = os.path.join(models_folder, args.model)
   
   log.P("Loading model from {} ...".format(fn_model))
-  model = gensim.models.Word2Vec.load()
+  model = gensim.models.Word2Vec.load(fn_model)
   log.P(" Model loaded.", show_time=True)
