@@ -22,7 +22,8 @@ def parse_and_merge_files(path, output):
 
                     #line_mod = DocUtils.strip_html_tags(line)
                     line_mod = DocUtils.prepare_for_tokenization(line)
-
+                    if line_mod[-1] != '\n':
+                      line_mod += '\n'
                     w.write(line_mod)
 
     w.close()
