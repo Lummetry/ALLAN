@@ -1,5 +1,7 @@
 import os
 import pickle
+from itertools import chain
+from collections import Counter
 
 from libraries.logger import Logger
 from word_universe.create_rowiki_dump import parse_and_merge_files
@@ -31,7 +33,6 @@ if __name__ == '__main__':
                TF_KERAS=False)
   
   NR_AAAALLZZ = 8
-  NR_AAAALLZZ_HHMMSS = 15
   file_prefix = log.file_prefix[:NR_AAAALLZZ]
   corpus_folder = log.config_data['CORPUS_FOLDER']
   path_corpus_folder = os.path.join(log.GetDataFolder(), corpus_folder)
@@ -41,19 +42,21 @@ if __name__ == '__main__':
   suffix = '_corpus_merged'
   corpus_file = file_prefix + suffix
   compute_corpus_file = True
-  if numbers_in_corpus_folder == NR_AAAALLZZ:
-    prefix = corpus_folder[:numbers_in_corpus_folder]
-    if all(c.isdigit() for c in prefix):
-      files = list(filter(lambda x: prefix in x and suffix in x,
-                          os.listdir(log.GetDataFolder())))
-      if len(files) > 0:
-        assert len(files) == 1
-        corpus_file = files[0]
-        log.P("Found already computed corpus file: {}".format(corpus_file)) 
-        compute_corpus_file = False
-      else:
-        corpus_file = prefix + suffix
-  
+
+  prefix = corpus_folder[:NR_AAAALLZZ]
+  if all(c.isdigit() for c in prefix):
+    files = list(filter(lambda x: prefix in x and suffix in x,
+                        os.listdir(log.GetDataFolder())))
+    if len(files) > 0:
+      assert len(files) == 1
+      corpus_file = files[0]
+      log.P("Found already computed corpus file: {}".format(corpus_file)) 
+      compute_corpus_file = False
+    else:
+      corpus_file = prefix + suffix
+    
+    file_prefix = prefix
+  #endif
   
   corpus_file = os.path.join(log.GetDataFolder(), corpus_file)
   
@@ -71,7 +74,7 @@ if __name__ == '__main__':
 
   log.P("Modelling word2vec ...")
   n_epochs = 25
-  model_name = log.file_prefix + '_w2v_ep{}'.format(n_epochs)
+  model_name = file_prefix + '_w2v_ep{}'.format(n_epochs)
   transfer_model_real_path = log.config_data['TRANSFER_MODEL_REAL_PATH'].replace('\\', '/')  
   if transfer_model_real_path == "":
     model = Word2Vec(sentences=sentences,
@@ -88,9 +91,39 @@ if __name__ == '__main__':
                     callbacks=[epoch_logger])
   else:
     model_transfered_name = transfer_model_real_path.split('/')[-1]
-    model_name += '_transfered_{}'.format(model_transfered_name[:NR_AAAALLZZ_HHMMSS])
+    model_name += '_transfered_{}'.format(model_transfered_name[:NR_AAAALLZZ])
     model = Word2Vec.load(transfer_model_real_path)
+    model.vocabulary.min_count = 1
     
+    old_vocab = set()
+    old_vocab.update(model.wv.index2word)
+    
+    new_vocab = set()
+    flattened_sentences = list(chain.from_iterable(sentences))
+    new_vocab.update(flattened_sentences)
+    cnt_new_vocab = Counter(flattened_sentences)
+
+    new_words_added = new_vocab - old_vocab
+    log.P("Added {} new words in vocab:".format(len(new_words_added)))
+    str_format = "{:>15} : {:<4}"
+    log.P(str_format.format("Word", "Count"), noprefix=True)
+    dct_cnt_new_vocab = {x: cnt_new_vocab[x] for x in cnt_new_vocab if x in new_words_added}
+    lst_cnt_new_vocab = list(dct_cnt_new_vocab.items())
+    lst_cnt_new_vocab = sorted(lst_cnt_new_vocab, key=lambda x: x[1])[::-1]
+    
+    for w,c in lst_cnt_new_vocab:
+      log.P(str_format.format(w[:15], c), noprefix=True)
+    
+    model.build_vocab(sentences, update=True)
+    model.train(sentences=sentences,
+                total_examples=len(sentences),
+                epochs=n_epochs,
+                start_alpha=0.005,
+                end_alpha=0.001,
+                compute_loss=True,
+                callbacks=[epoch_logger])
+    
+
   model.callbacks = []
   model.save(os.path.join(log.GetModelsFolder(), model_name))
   with open(os.path.join(log.GetModelsFolder(),
