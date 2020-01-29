@@ -13,7 +13,7 @@ def most_similar(word, n=15, show_dist=False):
 
 if __name__ == '__main__':
   
-  log = Logger(lib_name='ALLANVOCAB', config_file='chatbot/word_universe/config.txt',
+  log = Logger(lib_name='ALLANVOCAB', config_file='word_universe/config.txt',
                TF_KERAS=False)
   
   models_folder = log.GetModelsFolder()

@@ -18,8 +18,9 @@ path=/Users/laurentiupiciu/Lummetry.AI\ Dropbox/DATA
 app_path=_allan_data/_rowiki_dump
 corpus_folder=corpus
 download=true
+model=
 
-while getopts e:l:p:c:a:d: option
+while getopts e:l:p:c:a:d:m: option
 do
 case "${option}"
 in
@@ -27,8 +28,9 @@ e) ENVIRONMENT=${OPTARG};;
 l) link=${OPTARG};;
 p) path=${OPTARG};;
 c) corpus_folder=${OPTARG};;
-a) abs_path=${OPTARG};;
+a) app_path=${OPTARG};;
 d) download=${OPTARG};;
+m) model=${OPTARG};;
 esac
 done
 
@@ -68,10 +70,10 @@ fi
 echo "[INFO]  Utilitaries checked!"
 
 cd "$SCRIPTPATH"
-cat config.txt | jq --arg a "$app_path" '.APP_FOLDER = $a' | jq --arg a "$corpus_folder" '.CORPUS_FOLDER = $a' > config_tmp.txt && rm config.txt && mv config_tmp.txt config.txt
-cd ../..
+cat config.txt | jq --arg a "$app_path" '.APP_FOLDER = $a' | jq --arg a "$corpus_folder" '.CORPUS_FOLDER = $a' | jq --arg a "$model" '.TRANSFER_MODEL_REAL_PATH = $a' > config_tmp.txt && rm config.txt && mv config_tmp.txt config.txt
+cd ..
 echo "$(pwd)"
 export PYTHONPATH=$PYTHONPATH:"$(pwd)"
 echo "[INFO] Merging corpus and creating word2vec..."
-python chatbot/word_universe/main.py
+python word_universe/main.py
 echo "[INFO] Process completed!"

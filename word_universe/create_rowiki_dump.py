@@ -1,5 +1,5 @@
 import os
-from chatbot.word_universe.doc_utils import DocUtils
+from word_universe.doc_utils import DocUtils
 from tqdm import tqdm
 
 def parse_and_merge_files(path, output):
