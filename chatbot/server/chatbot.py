@@ -141,7 +141,7 @@ class Server:
           intro_messages[i] = intro_messages[i].format(self.bot_name)
 
         self.intro_message = random.choice(intro_messages)
-        self.message_history.append(self.intro_message)
+        self.message_history.append(self.intro_message.lower())
 
         self.reply_hashtags = self.get_hashtags()
 
@@ -321,7 +321,7 @@ class Server:
         self.BanVulgarity(new_message)
 
         if self.CONV_STATE == 1:
-            self.message_history.append(new_message)
+            self.message_history.append(new_message.lower())
             # self.div_conversation.text += '<p class="pull-right bg-success p-2 mr-4 mt-4 text-white rounded">{}</p><br><br>'.format(new_message)
             div_conversation_copy = self.div_conversation.text
             self.div_conversation.text += self.user_message_text.format(new_message.replace('<UNK>', '[UNK]'), '')
@@ -331,7 +331,7 @@ class Server:
             reply, label, is_hashtag = self._generate_reply(message=new_message, max_message_length=50,
                                                             custom_delay=self.custom_delay)
             self._log('Got the reply {} | {} | {}'.format(reply, label, is_hashtag))
-            self.message_history.append(reply)
+            self.message_history.append(reply.lower())
 
             folder_conversations = os.path.join(self.logger.GetOutputFolder(), 'conversations')
             if not os.path.exists(folder_conversations):
