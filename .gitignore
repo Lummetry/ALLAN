@@ -1,4 +1,8 @@
 __pycache__/
 .spyproject
 *.pyc
-.DS_Store
+chatbot/server/pipe/
+
+chatbot/server/static/img/wordcloud/
+
+*.DS_STORE

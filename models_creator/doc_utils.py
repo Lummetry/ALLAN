@@ -6,14 +6,14 @@ import pandas as pd
 from nltk.tokenize import word_tokenize
 import json
 import random
-import itertools
-from sklearn.model_selection import train_test_split
 
 class DocUtils():
-  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None):
+  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None,
+               dict_user_id2label={}, dict_bot_id2label={}):
     self.logger = logger
+    self.gensim_i2v = gensim_i2v
     
-    with open(gensim_i2v, 'rb') as handle:
+    with open(self.logger.GetDataFile(self.gensim_i2v), 'rb') as handle:
       id2word = pickle.load(handle)
 
     self.dict_id2word = {}
@@ -25,21 +25,17 @@ class DocUtils():
     self.dict_id2word[last_index + 1] = '<PAD>'
     self.dict_id2word[last_index + 2] = '<START>'
     self.dict_id2word[last_index + 3] = '<END>'
-    self.unknown_words = {}
     self.dict_word2id = {v:k for k,v in self.dict_id2word.items()}
 
     full_voc = "".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
     self.dict_char2id = {full_voc[i]:i for i in range(len(full_voc))}
     self.dict_id2char = {v:k for k,v in self.dict_char2id.items()}
     
-    self.dict_user_label2id = {}
-    self.dict_user_id2label = {}
+    self.dict_user_id2label = dict_user_id2label
+    self.dict_user_label2id = {v:k for k,v in self.dict_user_id2label.items()}
     
-    self.dict_bot_label2id = {}
-    self.dict_bot_id2label = {}
-    
-    self.dict_master_label2id = {}
-    self.dict_master_id2label = {}
+    self.dict_bot_id2label = dict_bot_id2label
+    self.dict_bot_label2id = {v:k for k,v in self.dict_bot_id2label.items()}
 
     self.all_labels = {}
     
@@ -66,9 +62,6 @@ class DocUtils():
     self.logger.VerboseLog(str_msg, results=results, show_time=show_time,
                            noprefix=noprefix)
     return
-  
-  def flatten2d(self, lst2d):
-    return list(itertools.chain.from_iterable(lst2d))
 
   def prepare_for_tokenization(self, string):
     return re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', string)
@@ -78,56 +71,21 @@ class DocUtils():
     return re.sub(r'<.*?>', '', string)
 
 
-  def _create_labels_vocab(self, labels):
+  def _create_labels_vocab(self, fn):
+    with open(fn, 'rt') as handle:
+      labels = handle.read().splitlines()
+
     dict_label2id = {labels[i]: i for i in range(len(labels))}
     dict_id2label = {v:k for k,v in dict_label2id.items()}
     
     return dict_label2id, dict_id2label
 
   def CreateUserLabelsVocab(self, fn):
-    with open(fn, 'rt') as handle:
-      labels = handle.read().splitlines()
-    self.dict_user_label2id, self.dict_user_id2label = self._create_labels_vocab(labels)
+    self.dict_user_label2id, self.dict_user_id2label = self._create_labels_vocab(fn)
 
   def CreateBotLabelsVocab(self, fn):
-    with open(fn, 'rt') as handle:
-      labels = handle.read().splitlines()
-    self.dict_bot_label2id, self.dict_bot_id2label = self._create_labels_vocab(labels)
+    self.dict_bot_label2id, self.dict_bot_id2label = self._create_labels_vocab(fn)
 
-  def CreateMasterLabelsVocab(self, path):
-    all_labels = set()
-    for file in os.listdir(path):
-      full_path = os.path.join(path, file)
-      with open(full_path, 'rt') as handle:
-        labels = handle.read().splitlines()
-        all_labels.update(labels)
-    
-    self.dict_master_label2id, self.dict_master_id2label = self._create_labels_vocab(list(all_labels))
-  
-  
-  def GenerateMasterLabels(self, path):
-    assert self.dict_master_label2id != {}
-    
-    self.all_master_labels = {}
-    for file in os.listdir(path):
-      full_path = os.path.join(path, file)
-      new_labels = []
-      with open(full_path, 'rt') as handle:
-        labels = handle.read().splitlines()
-        assert len(labels) == len(set(labels))
-        try:
-          for i,x in enumerate(labels):
-            new_labels.append(self.dict_master_label2id[x])
-        except Exception as e:
-          print(e)
-          print(full_path)
-          raise Exception
-
-      self.all_master_labels[file] = new_labels
-    
-    self._log("All labels from [{}] were processed.".format(path[-50:]))
-    return
-  
   
   def GenerateLabels(self, path):
     assert self.dict_bot_label2id != {}
@@ -153,69 +111,6 @@ class DocUtils():
     
     self._log("All labels from [{}] were processed.".format(path[-50:]))
     return
-  
-  
-  
-  def GenerateTaggingData(self, path):
-    str_log = "Generating TRAIN/DEV tagging data based on conversations extracted from [..{}]"
-    self._log(str_log.format(path[-50:]))
-  
-    conversations_w, _ = self.tokenize_conversations(path=path)
-    
-    nr_tokens_per_text = []
-    for text_name, lines in conversations_w.items():
-      flattened = self.flatten2d(lines)
-      length = len(flattened)
-      nr_tokens_per_text.append(length)
-      conversations_w[text_name] = flattened
-    #endfor
-    
-    df = pd.DataFrame(columns=['Tokens'])
-    df.Tokens = nr_tokens_per_text
-    df_distrib = df.describe()
-    self._log("Tokens distribution per text description:\n" + df_distrib.to_string())
-    
-    nr_steps = int(df_distrib.loc['75%']['Tokens'])
-    for text_name, lines in conversations_w.items():
-      lines = lines[:nr_steps]
-      nr_paddings = nr_steps - len(lines)
-      lines.extend([0 for _ in range(nr_paddings)])
-      conversations_w[text_name] = lines
-    #endfor
-    
-    text_names = list(conversations_w.keys())
-    
-    train_text_names, dev_text_names = train_test_split(text_names, test_size=0.1)
-    X_train, X_dev, y_train, y_dev = [], [], [], []
-    
-    for text_name in train_text_names:
-      lines = conversations_w[text_name]
-      labels = self.all_master_labels[text_name]
-      for l in labels:
-        X_train.append(lines)
-        y_train.append(l)
-      #endfor
-    #endfor
-    
-    for text_name in dev_text_names:
-      lines = conversations_w[text_name]
-      labels = self.all_master_labels[text_name]
-      for l in labels:
-        X_dev.append(lines)
-        y_dev.append(l)
-      #endfor
-    #endfor
-    
-    
-    X_train = np.array(X_train)
-    y_train = np.array(y_train)
-    X_dev   = np.array(X_dev)
-    y_dev   = np.array(y_dev)
-
-    return X_train, y_train, X_dev, y_dev, train_text_names, dev_text_names, conversations_w
-
-    
-    
   
   def GenerateBatches(self, path, use_characters=True, use_labels=True, eps_words=10, eps_characters=30):
     str_log = "Generating TRAINING batches based on conversations extracted from [..{}] "
@@ -367,7 +262,6 @@ class DocUtils():
   def tokenize_single_conversation(self, lines, append_to_distributions=False):
     current_conversation_w = []
     current_conversation_c = []
-    self.unknown_words_per_conv = []
    
     for line in lines:
       if line == '\n': continue
@@ -385,7 +279,6 @@ class DocUtils():
           tokens_w.append(self.dict_word2id[t])
         except:
           tokens_w.append(self.dict_word2id['<UNK>'])
-          self.unknown_words_per_conv.append(t)
           if t not in self.unknown_words:
             self.unknown_words[t] = 1
           else:
@@ -406,6 +299,7 @@ class DocUtils():
     self.num_words_distribution = []
     conversations_w = {}
     conversations_c = {}
+    self.unknown_words = {}
 
     for file in os.listdir(path):
       full_path = os.path.join(path, file)
@@ -492,8 +386,8 @@ class DocUtils():
           row_text = row_text + ' ' + self.dict_id2word[list_tokens[r][c]]
       text = text + [row_text]
     
-    text = text[1:]
-    return self.organize_text(" ".join(text))
+    text = [self.organize_text(t[1:]) for t in text]
+    return text
 
   
   def translate_tokenized_input(self, _input):
@@ -549,3 +443,21 @@ class DocUtils():
       new_sentence = [self.dict_id2word[word] for word in out_batch]
       self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_bot_id2label[in_label_batch[-1]], noprefix=True)
     return
+  
+  
+  def GenerateRunnerConfig(self):
+    self.dct_config = {}
+    
+    self.dct_config['DATA_W2V_INDEX2WORD'] = self.gensim_i2v
+    self.dct_config['MAX_WORDS'] = self.max_nr_words
+    self.dct_config['MAX_CHARACTERS'] = self.max_nr_chars
+    self.dct_config['DICT_USER_ID2LABEL'] = self.dict_user_id2label
+    self.dct_config['DICT_BOT_ID2LABEL'] = self.dict_bot_id2label
+    
+    fn_config = os.path.join(self.logger.GetOutputFolder(),
+                             self.logger.file_prefix + '_runner_config.pickle')
+    self.logger.SavePickleToOutput(self.dct_config, fn_config)
+    self._log("Saved runner config in '{}'.".format(fn_config))
+
+    return
+  

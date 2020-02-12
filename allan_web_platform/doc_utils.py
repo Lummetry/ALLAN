@@ -199,14 +199,12 @@ class DocUtils():
       if 'UNK' in words:
         idx = words.index('UNK')
         words[idx] = '<UNK>'
-
+        
       for idx, item in enumerate(words):
         if item == 'UNK':
           words[idx] = '<UNK>'
         if item == 'NAME':
           words[idx] = '<NAME>'
-        if item == 'NAMEBOT':
-          words[idx] = '<NAMEBOT>'
 
       for word in words:
         try:

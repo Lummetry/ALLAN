@@ -1,0 +1,8 @@
+{
+  "BASE_FOLDER" : "Dropbox",
+  "APP_FOLDER"  : "_allan_data/_chatbot",
+  
+  "BOT_TYPE"    : "imobiliare",
+  "VULGARITIES" : "vulgaritativ2.txt",
+  "HASHTAGS"    : "20190506_Imobiliare_v03/hashtags.txt"
+}
