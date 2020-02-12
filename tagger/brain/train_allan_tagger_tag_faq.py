@@ -10,7 +10,7 @@ import pandas as pd
 import os
 
 if __name__ == '__main__':
-  root_configs = 'tagger/brain/configs/20190918'
+  root_configs = 'tagger/brain/configs/20191918'
   configs = os.listdir(root_configs)
   
   results = OrderedDict({'MODEL': [], "MAX": [], "EP":[], 'EP_NZ': [] ,'END_SC': [], 'HISTORY': [] })
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     loader = ALLANDataLoader(log=l, multi_label=True, 
                              normalize_labels=False)
-    loader.LoadData()
+    loader.LoadData(has_topics=True)
     
     valid_texts, valid_labels = None, None
     if VALIDATION:
@@ -91,6 +91,6 @@ if __name__ == '__main__':
       l.P("")
       l.P("Results so far:\n{}".format(df))
       l.P("")
-      l.SaveDataFrame(df, fn='20190924_results1')
+      l.SaveDataFrame(df, fn='20191129_results1')
   
   

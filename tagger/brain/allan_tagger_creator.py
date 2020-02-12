@@ -143,12 +143,20 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
     if 'LOSS' in dict_model_config:
       if 'focal' in dict_model_config['LOSS'].lower():
         str_loss = 'focal_loss'
+    
+    use_masking = False
+    if 'MASKING' in dict_model_config:
+      if dict_model_config['MASKING'] == 1:
+        use_masking = True
 
     self.P("Defining model '{}' with loss '{}'...".format(self.model_name, str_loss))
     if 'embeds' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len, self.emb_size), 
                                        name='tagger_input')
-      tf_embeds = tf_input
+      if use_masking:
+        tf_embeds = tf.keras.layers.Masking(mask_value=0)(tf_input)
+      else:
+        tf_embeds = tf_input
     elif 'tokens' in self.model_input.lower():
       tf_input = tf.keras.layers.Input((self.seq_len,))
       if self.embeddings is not None:
@@ -160,7 +168,9 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
                                              self.emb_size,
                                              embeddings_initializer=_init,
                                              trainable=self.emb_trainable,
-                                             name=self.emb_layer_name)
+                                             name=self.emb_layer_name,
+                                             mask_zero=use_masking,
+                                             )
       tf_embeds = lyr_embeds(tf_input)
     else:
       raise ValueError("Uknown model input '{}'".format(self.model_input))

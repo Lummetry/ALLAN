@@ -18,7 +18,7 @@ if __name__ == '__main__':
   VALIDATION = True
   
   for i,cfg in enumerate(configs):
-    if cfg != 'config_profiling.txt':
+    if cfg != 'config_tagging.txt':
       continue
     
     path_cfg = os.path.join(root_configs, cfg)
@@ -31,21 +31,29 @@ if __name__ == '__main__':
     l.P("")
     l.P("*" * 80)
 
-    loader = ALLANDataLoader(log=l, multi_label=False, 
+    loader = ALLANDataLoader(log=l, multi_label=True, 
                              normalize_labels=False)
-    loader.LoadData(exclude_list=['ï»¿'])
+    loader.LoadData(has_topics=False, exclude_list=['ï»¿'], min_label_freq=2)
     
     valid_texts, valid_labels = None, None
     if VALIDATION:
-      folder = l.GetDataSubFolder(l.config_data['TRAINING']['VALIDATION_FOLDER'])
+      folder = l.GetDataSubFolder(l.config_data['TRAINING']['FOLDER'])
+      doc_ext = l.config_data['TRAINING']['DOCUMENT']
+      lbl_ext = l.config_data['TRAINING']['LABEL']
+      doc_folder = l.GetDataSubFolder(os.path.join(folder,
+                                                   l.config_data['TRAINING']['VALIDATION_SUBFOLDERS']['DOCS']))
+      label_folder = l.GetDataSubFolder(os.path.join(folder,
+                                                     l.config_data['TRAINING']['VALIDATION_SUBFOLDERS']['LABELS']))
       valid_texts, valid_labels = l.LoadDocuments(folder=folder,
-                                                  doc_ext='.txt',
-                                                  label_ext='.label',
+                                                  doc_ext=doc_ext,
+                                                  label_ext=lbl_ext,
+                                                  doc_folder=doc_folder,
+                                                  label_folder=label_folder,
                                                   return_labels_list=False,
                                                   exclude_list=['ï»¿'])
   
     
-    epochs = 200
+    epochs = 150
     
     model_def = l.config_data['MODEL']
     model_name = model_def['NAME']
@@ -68,11 +76,10 @@ if __name__ == '__main__':
                               y_labels_valid=new_valid_labels,
                               skip_if_pretrained=False,
                               DEBUG=False,
-                              test_top=1,
+                              test_top=10,
                               compute_topic=False,
                               sanity_check=False,
                               batch_size=2)
-    l.show_timers()
     
     if VALIDATION and False:
       score = eng.test_model_on_texts(valid_texts, valid_labels, record_trace=False)
@@ -94,6 +101,6 @@ if __name__ == '__main__':
       l.P("")
       l.P("Results so far:\n{}".format(df))
       l.P("")
-      l.SaveDataFrame(df, fn='20191119_results1', to_data=False)
+      l.SaveDataFrame(df, fn='20191129_results1')
   
   
