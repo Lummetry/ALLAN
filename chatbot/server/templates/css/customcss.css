@@ -1,0 +1,91 @@
+a.nav-link.active{
+    color: #5bc0de!important;
+  }
+
+.nav-item > a:hover,
+.nav-item > a:focus {
+    color: #fff;
+    background: #5BC0DE;
+}
+
+.hidden{
+    display: none;
+}
+
+.scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.bg-typing{
+    background-color: gray;
+}
+
+.sm-mt-4 {
+    margin-top: 1.34rem !important;
+}
+
+.lg-ml-4 {
+    margin-left: 2.1rem !important;
+}
+
+.bg-reply{
+    background-color: #aa66cc;
+}
+
+.bg-system{
+    background-color: #f44e42;
+}
+
+.bg-user-message{
+    background-color: #00C851;
+}
+
+.bg-label-message{
+    background-color: #cccccc;
+}
+
+.bg-hashtags{
+    background-color: #cccccc;
+}
+
+.bg-main {
+    background-color: #04769a;
+}
+
+.keep-spaces {
+    white-space: pre;
+}
+
+.font-courier {
+    font-family: "Courier New";
+}
+
+.bg-transparent {
+    opacity: 0.95;
+    filter: alpha(opacity=95);
+}
+
+html,
+body{
+    height: 100%;
+    width: 100%;
+    background-color: #013A6B;
+    background-image: -webkit-linear-gradient(60deg, #013A6B 50%, #004E95 50%);
+    background-image: url('server/static/img/bg-img.jpg');
+}
+
+.vertical-center {
+    min-height: 100%;  /* Fallback for browsers do NOT support vh unit */
+    min-height: 100vh; /* These two lines are counted as one :-)       */
+    display: flex;
+    align-items: center;
+}
+
+.labels-profile{
+    font-size: 28px;
+}
+
+.chat-msg{
+    font-size: 20px;
+}

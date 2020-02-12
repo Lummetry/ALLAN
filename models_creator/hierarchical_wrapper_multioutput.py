@@ -17,16 +17,20 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import json
 
-from metrics import compute_bleu
+from models_creator.metrics import compute_bleu
 from sklearn.metrics import accuracy_score
 import pandas as pd
-import keras.backend as K
+import tensorflow.keras.backend as K
 import random
+from collections import namedtuple
+from copy import deepcopy
 
 
 valid_lstms = ['unidirectional', 'bidirectional']
 str_optimizers = ['rmsprop', 'sgd', 'adam', 'nadam', 'adagrad']
 str_losses = ['mse', 'mae', 'sparse_categorical_crossentropy'] #TODO sparse_.... in TF
+
+Hypothesis = namedtuple('Hypothesis', ['value', 'score'])
 
 __VER__ = "1.1.0"
 
@@ -54,7 +58,10 @@ class HierarchicalNet:
     self.data_processer = data_processer
     self.config_data = self.logger.config_data
     self.has_decoder = False
-    self._parse_config_data()
+    self.max_words = self.data_processer.max_nr_words
+    self.max_characters = self.data_processer.max_nr_chars
+    self.nr_user_labels = len(self.data_processer.dict_user_id2label)
+    self.nr_bot_labels  = len(self.data_processer.dict_bot_id2label)
 
     self.tf_graph = None
     self.trainable_model = None
@@ -79,6 +86,10 @@ class HierarchicalNet:
     
     return
   
+  def Initialize(self):
+    self._parse_config_data()
+    return
+  
   def _initialize_datastructures(self):
     self.input_tensors = {}
     self.EmbLayers = {}
@@ -99,6 +110,7 @@ class HierarchicalNet:
     self._learning_rate   = self.config_data['LEARNING_RATE']
     self._str_loss        = self.config_data['LOSS'].lower()
     self._model_name      = self.config_data['MODEL_NAME']
+    self._save_weights    = bool(self.config_data['SAVE_WEIGHTS'])
 
     self._model_name = self.logger.file_prefix + '_' + self._model_name
     assert self._str_optimizer in str_optimizers
@@ -108,12 +120,6 @@ class HierarchicalNet:
       self.decoder_architecture = self.config_data["DECODER_ARCHITECTURE"]
 
     self.model_trained_layers = self.__get_trained_layers_names()   
-    
-    self.max_words = self.config_data["MAX_WORDS"]
-    self.max_characters = self.config_data["MAX_CHARACTERS"]
-    self.nr_user_labels = self.config_data["NR_USER_LABELS"]
-    self.nr_bot_labels  = self.config_data["NR_BOT_LABELS"]
-
     return
 
   def __get_trained_layers_names(self):
@@ -487,7 +493,9 @@ class HierarchicalNet:
                 Emb = Embedding(input_dim=input_dim, output_dim=output_dim, trainable=trainable,
                                 name=name)
               else:
-                Emb = Embedding(input_dim=input_dim, output_dim=output_dim, weights=[weights],
+                initializer = tf.keras.initializers.Constant(weights)
+                Emb = Embedding(input_dim=input_dim, output_dim=output_dim,
+                                embeddings_initializer=initializer,
                                 trainable=trainable, name=name)
           #endif use_keras_emb
 
@@ -594,10 +602,18 @@ class HierarchicalNet:
 
       if lstm_type == 'bidirectional':
         # TOOD initial_state
-        LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True, return_state=True), name=name)
-        crt_tf_input, tf_state_h_fw, tf_state_c_fw, tf_state_h_bw, tf_state_c_bw = LSTMCell(crt_tf_input)
-        tf_state_h = concatenate([tf_state_h_fw, tf_state_h_bw], name=identifier+'_concat_state_h_{}'.format(i))
-        tf_state_c = concatenate([tf_state_c_fw, tf_state_c_bw], name=identifier+'_concat_state_c_{}'.format(i))
+        if save_state:
+          LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True, return_state=True), name=name)
+          crt_tf_input, tf_state_h_fw, tf_state_c_fw, tf_state_h_bw, tf_state_c_bw = LSTMCell(crt_tf_input)
+          tf_state_h = concatenate([tf_state_h_fw, tf_state_h_bw], name=identifier+'_concat_state_h_{}'.format(i))
+          tf_state_c = concatenate([tf_state_c_fw, tf_state_c_bw], name=identifier+'_concat_state_c_{}'.format(i))
+        else:
+          if i == len(layers) - 1:
+            LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=False), name=name)
+            tf_state_h = LSTMCell(crt_tf_input)
+          else:
+            LSTMCell = Bidirectional(RecUnit(units=units, return_sequences=True), name=name)
+            crt_tf_input = LSTMCell(crt_tf_input)
       
       if lstm_type == 'unidirectional':
         LSTMCell = RecUnit(units=units, return_sequences=True, return_state=True, name=name)
@@ -889,11 +905,12 @@ class HierarchicalNet:
                                 show_prefix=True,
                                 to_data=False,
                                 ignore_index=True)
-      self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_val),
-                                fn='global_val_results',
-                                show_prefix=True,
-                                to_data=False,
-                                ignore_index=True)
+      if self.data_processer.batches_validation is not None:
+        self.logger.SaveDataFrame(pd.DataFrame.from_dict(self.dict_global_results_val),
+                                  fn='global_val_results',
+                                  show_prefix=True,
+                                  to_data=False,
+                                  ignore_index=True)
 
     return
 
@@ -962,6 +979,8 @@ class HierarchicalNet:
     fn_config = os.path.join(self.logger.GetModelsFolder(), model_folder + '/config.txt')
     fn_losshist = os.path.join(self.logger.GetModelsFolder(), model_folder + '/loss_hist.jpg')
     self.config_data['EPOCH'] = epoch
+    self.config_data['MAX_WORDS'] = self.max_words
+    self.config_data['MAX_CHARACTERS'] = self.max_characters
     with open(fn_config, 'w') as f:
       f.write(json.dumps(self.config_data, indent=2))
     self._log("Saved model config in '{}'.".format(fn_config))
@@ -973,8 +992,12 @@ class HierarchicalNet:
     
     diff = list(set(true_names) - set(self.model_trained_layers))
     if len(diff) != 0: self._log("WARNING! model_trained_layers mismatch. Check {}".format(diff))
-
-    self.logger.SaveKerasModelWeights(fn_weights, self.trainable_model, self.model_trained_layers)
+    
+    if self._save_weights:
+      self.logger.SaveKerasModelWeights(fn_weights, self.trainable_model, self.model_trained_layers)
+    else:
+      self.logger.SaveKerasModel(self.enc_pred_model, model_folder + '/encoder')
+      self.logger.SaveKerasModel(self.dec_pred_model, model_folder + '/decoder')
     self._mk_plot(fn_losshist)
     return
   
@@ -1055,8 +1078,137 @@ class HierarchicalNet:
     return
   
   
+  
+  def beam_search(self, _input, beam_size=5, max_decoding_time_step=70,
+                  verbose=1):
+    _type = type(_input)
+    
+    if _type in [str, list]:
+      if type(_input) is list: _input = '\n'.join(_input)
+      input_tokens = self.data_processer.input_word_text_to_tokens(_input, use_characters=True)
+      input_tokens = np.expand_dims(np.array(input_tokens), axis=0)
+      str_input = _input
+    elif _type is np.ndarray:
+      input_tokens = _input
+      input_tokens = np.expand_dims(input_tokens, axis=0)
+      str_input = self.data_processer.translate_tokenized_input(_input)
+    
+    if verbose: self._log("Given '{}' the decoder predicted:".format(str_input))
+    predict_results = self.enc_pred_model.predict(input_tokens)
+    enc_states = predict_results[:-1]
 
-  def _step_by_step_prediction(self, _input, method='sampling', verbose=1, return_text=True):
+    idx_last_intent_user = -2 if self.has_bot_intent else -1
+
+    last_intent_user = np.expand_dims(np.argmax(predict_results[idx_last_intent_user], axis=-1), axis=-1)    
+    intent_bot = None
+    if self.has_bot_intent:
+      intent_bot = np.expand_dims(np.argmax(predict_results[-1], axis=-1), axis=-1)
+    
+    dec_model_inputs = []
+    
+    for i in range(len(self.decoder_architecture['LAYERS'])):
+      layer_dict = self.decoder_architecture['LAYERS'][i]
+      units = layer_dict['NR_UNITS']
+      try:
+        enc_layer_initial_state = layer_dict['INITIAL_STATE']
+      except:
+        enc_layer_initial_state = ""
+      inp_h = np.zeros((1, units))
+      inp_c = np.zeros((1, units))
+
+      if enc_layer_initial_state != "":
+        idx = self._get_key_index_odict(self.enc_layers_full_state, enc_layer_initial_state)
+        if idx is not None:
+          inp_h, inp_c = enc_states[2*idx:2*(idx+1)]
+          if verbose: self._log("Enc_h: {}  Dec_h: {}".format(inp_h.sum(), inp_c.sum()))
+      #endif
+
+      dec_model_inputs += [inp_h, inp_c]
+    #endfor
+    
+    hypotheses = [['<START>']]
+    dct_attentions = {}
+    hyp_scores = np.zeros(len(hypotheses), dtype=np.float32)
+    completed_hypotheses = []
+    
+    t = 0
+    while len(completed_hypotheses) < beam_size and t < max_decoding_time_step:
+      t += 1
+      
+      current_tokens = [self.data_processer.dict_word2id[hyp[-1]] for hyp in hypotheses]
+      current_tokens = np.array(current_tokens).reshape(-1,1)
+      
+      if not self.has_bot_intent:
+        dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs +\
+                                                        [current_tokens,
+                                                         last_intent_user + np.zeros(current_tokens.shape)])
+      else:
+        dec_model_outputs = self.dec_pred_model.predict(dec_model_inputs +\
+                                                        [current_tokens,
+                                                         last_intent_user + np.zeros(current_tokens.shape),
+                                                         intent_bot + np.zeros(current_tokens.shape)])
+      
+      
+      dct_attentions[t] = {'H' : hypotheses}
+      
+      P = dec_model_outputs[-1]
+      log_p_t = np.log(P)
+      log_p_t = np.squeeze(log_p_t, axis=1)
+      
+      live_hyp_num = beam_size - len(completed_hypotheses)
+      continuating_hyp_scores = (np.expand_dims(hyp_scores, axis=1) + log_p_t).reshape(-1)
+      
+      idx_sorted = np.argsort(continuating_hyp_scores)[::-1]
+      top_cand_hyp_pos = idx_sorted[:live_hyp_num]
+      top_cand_hyp_scores = continuating_hyp_scores[top_cand_hyp_pos]
+     
+      prev_hyp_ids = top_cand_hyp_pos // len(self.data_processer.dict_id2word)
+      hyp_word_ids = top_cand_hyp_pos % len(self.data_processer.dict_id2word)
+      
+      new_hypotheses = []
+      live_hyp_ids = []
+      new_hyp_scores = []
+      
+      hyp_word_strs = list(map(lambda x: self.data_processer.dict_id2word[x],
+                               hyp_word_ids))
+      
+      for prev_hyp_id, hyp_word, cand_new_hyp_score in zip(prev_hyp_ids, hyp_word_strs, top_cand_hyp_scores):
+        new_hyp_sent = hypotheses[prev_hyp_id] + [hyp_word]
+        if hyp_word == '<END>':
+          completed_hypotheses.append(Hypothesis(value=new_hyp_sent[1:-1],
+                                                 score=cand_new_hyp_score))
+        else:
+          new_hypotheses.append(new_hyp_sent)
+          live_hyp_ids.append(prev_hyp_id)
+          new_hyp_scores.append(cand_new_hyp_score)
+
+      if len(completed_hypotheses) == beam_size:
+        break
+      
+      live_hyp_ids = np.array(live_hyp_ids)
+      new_dec_model_inputs = []
+      nr_dec_model_inputs_tuples = len(dec_model_inputs) // 2
+      for i in range(nr_dec_model_inputs_tuples):
+        new_dec_model_inputs.append(dec_model_outputs[2*i][live_hyp_ids])
+        new_dec_model_inputs.append(dec_model_outputs[2*(i+1)-1][live_hyp_ids])
+      
+      dec_model_inputs = deepcopy(new_dec_model_inputs)
+      
+      hypotheses = new_hypotheses
+      hyp_scores = np.array(new_hyp_scores)
+    #endwhile
+    
+    if len(completed_hypotheses) == 0:
+      completed_hypotheses.append(Hypothesis(value=hypotheses[0][1:],
+                                             score=hyp_scores[0]))
+    
+    completed_hypotheses.sort(key=lambda hyp: hyp.score, reverse=True)
+    
+    return completed_hypotheses, dct_attentions
+      
+
+  def _step_by_step_prediction(self, _input, method='sampling',
+                               verbose=1, return_text=True):
     assert method in ['sampling', 'argmax', 'beamsearch']
     _type = type(_input)
 
@@ -1131,15 +1283,20 @@ class HierarchicalNet:
     predicted_tokens = predicted_tokens[:-1]
     
     if return_text:
-      predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])
+      predicted_text = self.data_processer.input_word_tokens_to_text([predicted_tokens])[0]
       if verbose:
         self._log("  --> '{}'".format(predicted_text))
     else:
       predicted_text = list(map(lambda x: self.data_processer.dict_id2word[x], predicted_tokens))
 
-    if self.has_bot_intent: intent_bot = intent_bot.reshape(-1)
     last_intent_user = last_intent_user.reshape(-1)
-
+    if return_text:
+      last_intent_user = self.data_processer.dict_user_id2label[last_intent_user[0]]
+    if self.has_bot_intent:
+      intent_bot = intent_bot.reshape(-1)
+      if return_text:
+        intent_bot = self.data_processer.dict_bot_id2label[intent_bot[0]]
+    
     return predicted_text, last_intent_user, intent_bot
 
   

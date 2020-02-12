@@ -8,10 +8,12 @@ import json
 import random
 
 class DocUtils():
-  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None):
+  def __init__(self, logger, gensim_i2v, max_nr_words=None, max_nr_chars=None,
+               dict_user_id2label={}, dict_bot_id2label={}):
     self.logger = logger
+    self.gensim_i2v = gensim_i2v
     
-    with open(gensim_i2v, 'rb') as handle:
+    with open(self.logger.GetDataFile(self.gensim_i2v), 'rb') as handle:
       id2word = pickle.load(handle)
 
     self.dict_id2word = {}
@@ -29,11 +31,11 @@ class DocUtils():
     self.dict_char2id = {full_voc[i]:i for i in range(len(full_voc))}
     self.dict_id2char = {v:k for k,v in self.dict_char2id.items()}
     
-    self.dict_user_label2id = {}
-    self.dict_user_id2label = {}
+    self.dict_user_id2label = dict_user_id2label
+    self.dict_user_label2id = {v:k for k,v in self.dict_user_id2label.items()}
     
-    self.dict_bot_label2id = {}
-    self.dict_bot_id2label = {}
+    self.dict_bot_id2label = dict_bot_id2label
+    self.dict_bot_label2id = {v:k for k,v in self.dict_bot_id2label.items()}
 
     self.all_labels = {}
     
@@ -384,8 +386,8 @@ class DocUtils():
           row_text = row_text + ' ' + self.dict_id2word[list_tokens[r][c]]
       text = text + [row_text]
     
-    text = text[1:]
-    return self.organize_text(" ".join(text))
+    text = [self.organize_text(t[1:]) for t in text]
+    return text
 
   
   def translate_tokenized_input(self, _input):
@@ -441,3 +443,21 @@ class DocUtils():
       new_sentence = [self.dict_id2word[word] for word in out_batch]
       self._log(self.organize_text(" ".join(new_sentence)) + ' -> ' + self.dict_bot_id2label[in_label_batch[-1]], noprefix=True)
     return
+  
+  
+  def GenerateRunnerConfig(self):
+    self.dct_config = {}
+    
+    self.dct_config['DATA_W2V_INDEX2WORD'] = self.gensim_i2v
+    self.dct_config['MAX_WORDS'] = self.max_nr_words
+    self.dct_config['MAX_CHARACTERS'] = self.max_nr_chars
+    self.dct_config['DICT_USER_ID2LABEL'] = self.dict_user_id2label
+    self.dct_config['DICT_BOT_ID2LABEL'] = self.dict_bot_id2label
+    
+    fn_config = os.path.join(self.logger.GetOutputFolder(),
+                             self.logger.file_prefix + '_runner_config.pickle')
+    self.logger.SavePickleToOutput(self.dct_config, fn_config)
+    self._log("Saved runner config in '{}'.".format(fn_config))
+
+    return
+  
