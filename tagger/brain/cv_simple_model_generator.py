@@ -69,18 +69,24 @@ def get_model(input_shape,
               phase2=3,
               fcs=[(128,True)],              
               act='relu',
+              use_gpu=True,
               name='',
               drop=0.5,
               ):
   drop_id = 0
   use_embeds = embeddings is not None
-  VOCAB_SIZE = embeddings.shape[0]
-  EMBED_SIZE = embeddings.shape[1]
   model = None
+  
+  if use_gpu:
+    LSTM = tf.keras.layers.CuDNNLSTM
+  else:
+    LSTM = tf.keras.layers.LSTM
   
   tf_inp = tf.keras.layers.Input(input_shape, name='inp')
   tf_x = tf_inp
-  if use_embeds:    
+  if use_embeds:
+    VOCAB_SIZE = embeddings.shape[0]
+    EMBED_SIZE = embeddings.shape[1]
     _init = tf.keras.initializers.Constant(embeddings)
     tf_x = tf.keras.layers.Embedding(VOCAB_SIZE, EMBED_SIZE, 
                                      embeddings_initializer=_init,
@@ -107,7 +113,7 @@ def get_model(input_shape,
     tf_x = conv1d(tf_x, f=f,  k=3, s=2, bn=bn, act=act, 
                   name='lvl{}_cnv_f{}'.format(level, f))  
  
-  tf_x = tf.keras.layers.CuDNNLSTM(128, name='culstm')(tf_x)
+  tf_x = LSTM(128, name='culstm')(tf_x)
   
   tf_x = tf.keras.layers.concatenate([tf_x, tf_x_gmp], name='last_concat')
   
@@ -133,7 +139,8 @@ def get_model(input_shape,
                                     name='readout_sm')(tf_x)
   tf_out = tf_x
   model = tf.keras.models.Model(tf_inp, tf_out, name=name)
-  model.compile(loss='sparse_categorical_crossentropy', optimizer='nadam')
+  model.compile(loss='sparse_categorical_crossentropy', metrics=['acc'],
+                optimizer='nadam')
   tf.keras.utils.plot_model(model, 
                             'tagger/brain/test.png',
                             show_shapes=True)

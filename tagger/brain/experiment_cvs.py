@@ -5,14 +5,14 @@ Created on Wed Feb 19 11:57:46 2020
 @author: damia
 """
 import numpy as np
-import tensorflow as tf
-from functools import partial
 
 from libraries.logger import Logger
 from tagger.brain.cv_simple_model_generator import get_model
 from word_universe.doc_utils import DocUtils
+from functools import partial
 
-  
+from libraries.training import Trainer
+
 
 def tokenizer(sentence, dct_vocab, unk_func=None):
   sentence = DocUtils.prepare_for_tokenization(text=sentence,
@@ -120,38 +120,97 @@ if __name__ == '__main__':
   new_dev_labels = Logger.flatten_2d_list(new_dev_labels)
   
   
-  y = np.array([dct_label2idx[lbl] for lbl in all_train_labels]).reshape(-1,1)
+  y_train = np.array([dct_label2idx[lbl] for lbl in all_train_labels]).reshape(-1,1)
+  y_dev = np.array([dct_label2idx[lbl] for lbl in new_dev_labels]).reshape(-1,1)
+  
+  
+  fct_corpus_to_batch = partial(l.corpus_to_batch,
+                                tokenizer_func=tokenizer,
+                                dct_word2idx=dct_vocab,
+                                max_size=max_size,
+                                unk_word_func=None,
+                                PAD_ID=tokens_config['<PAD>'],
+                                UNK_ID=tokens_config['<UNK>'],
+                                left_pad=False,
+                                cut_left=False)
+  
   
   if USE_EMBEDS:
-    X = l.corpus_to_batch(sents=all_train_cv,
-                          tokenizer_func=tokenizer,
-                          get_embeddings=True,
-                          dct_word2idx=dct_vocab,
-                          max_size=max_size,
-                          embeddings=np_embeds,
-                          unk_word_func=None,
-                          PAD_ID=tokens_config['<PAD>'],
-                          UNK_ID=tokens_config['<UNK>'],
-                          left_pad=False,
-                          cut_left=False,
-                          )
+    X_train = fct_corpus_to_batch(sents=all_train_cv,
+                                  get_embeddings=True,
+                                  embeddings=np_embeds)
+    
+    
+    X_dev = fct_corpus_to_batch(sents=all_dev_cv,
+                              get_embeddings=True,
+                              embeddings=np_embeds)
+    
+    
   else: 
-    X = l.corpus_to_batch(sents=all_train_cv,
-                          tokenizer_func=tokenizer,
-                          get_embeddings=False,
-                          dct_word2idx=dct_vocab,
-                          max_size=max_size,
-                          embeddings=None,
-                          unk_word_func=None,
-                          PAD_ID=tokens_config['<PAD>'],
-                          UNK_ID=tokens_config['<UNK>'],
-                          left_pad=False,
-                          cut_left=False,
-                          )
+    X_train = fct_corpus_to_batch(sents=all_train_cv,
+                                  get_embeddings=False,
+                                  embeddings=None)
+    
+    X_dev = fct_corpus_to_batch(sents=all_dev_cv,
+                                get_embeddings=False,
+                                embeddings=None)
   
-#  input_shape = (max_size,X.shape[-1]) if USE_EMBEDS else (max_size,)
   
-#  model = get_model(input_shape, np_embeds)
+  batch_size = 8
+  n_batches = X_train.shape[0] // batch_size + 1
+  
+  nr_train_examples = X_train.shape[0]
+  nr_sample_train_examples = int(0.1 * nr_train_examples)
+  sample_train_indexes = np.random.choice(np.arange(nr_train_examples),
+                                          nr_sample_train_examples,
+                                          replace=False)
+  X_train_sample, y_train_sample = X_train[sample_train_indexes], y_train[sample_train_indexes]
+    
+  def train_generator():
+    
+    while True:
+      for step in range(n_batches):
+        start = step * batch_size
+        end = (step + 1) * batch_size
+        
+        X = X_train[start:end]
+        y = y_train[start:end]
+        
+        yield X, y
+      #endfor
+    #endwhile
+  #end train_generator
+  
+  gen = train_generator()
+
+  name = 'CVClf'
+  model = get_model(input_shape=(max_size,),
+                    n_classes=y_train.max() + 1, 
+                    embeddings=np_embeds,
+                    name=name,
+                    use_gpu=False)
+
+  
+  trainer = Trainer(model_name=name,
+                    epochs=100,
+                    key='dev_acc',
+                    key_mode='max',
+                    stop_at_fails=30,
+                    threshold_progress=0,
+                    max_patience=5,
+                    max_cooldown=3,
+                    lr_decay=0.85,
+                    return_history=False,
+                    log=l)
+  
+  trainer.simple_train(model=model,
+                       train_gen=gen, steps_per_epoch=n_batches,
+                       X_test=X_dev, y_test=y_dev,
+                       X_train=X_train_sample, y_train=y_train_sample)
+  
+  
+  
+
 
 
   
