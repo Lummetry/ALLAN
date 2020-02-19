@@ -76,30 +76,6 @@ def load_data(log, training_config):
                                                    exclude_list=['ï»¿'])
 
   return train_texts, train_labels, valid_texts, valid_labels
-  
-
-
-
-
-def get_model(input_shape, embeddings, grams=[1, 2, 5, 7, 9]):
-  EMBED_SIZE = embeddings.shape[1]
-  model = None
-  
-  tf_inp = tf.keras.layers.Input(input_shape, 'inp')
-  tf_x = tf_inp
-  if not USE_EMBEDS:    
-    tf_x = tf.keras.layers.Embeddings(EMBED_SIZE, 
-                                      embeddings_initializer=tf.keras.initializers.Constant(np_embeds),
-                                      name='embed')(tf_x)
-  
-  columns = []
-  level = 1
-  for i,gram in enumerate(grams):
-    f = 32
-    k = gram
-    tf_x = tf.keras.layers.Conv1D(filters=f, kernel_size=k, strides=1, padding='same', 
-                                  name='c1d_lvl{}_{}'.format(level, i+1))
-  return model  
 
 
 
