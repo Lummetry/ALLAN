@@ -11,6 +11,26 @@ import tensorflow as tf
 from libraries.logger import Logger
 
 
+def get_model(input_shape, embeddings, grams=[1, 2, 5, 7, 9]):
+  EMBED_SIZE = embeddings.shape[1]
+  model = None
+  
+  tf_inp = tf.keras.layers.Input(input_shape, 'inp')
+  tf_x = tf_inp
+  if not USE_EMBEDS:    
+    tf_x = tf.keras.layers.Embeddings(EMBED_SIZE, 
+                                      embeddings_initializer=tf.keras.initializers.Constant(np_embeds),
+                                      name='embed')(tf_x)
+  
+  columns = []
+  level = 1
+  for i,gram in enumerate(grams):
+    f = 32
+    k = gram
+    tf_x = tf.keras.layers.Conv1D(filters=f, kernel_size=k, strides=1, padding='same', 
+                                  name='c1d_lvl{}_{}'.format(level, i+1))
+  return model  
+
 
 if __name__ == '__main__':
   
@@ -30,7 +50,6 @@ if __name__ == '__main__':
   
   # load embeddings
   np_embeds = None
-  EMBED_SIZE = np_embeds.shape[-1]
   
   # load dict
   dct_vocab = None
@@ -73,8 +92,8 @@ if __name__ == '__main__':
                           )
   
   input_shape = (max_size,X.shape[-1]) if USE_EMBEDS else (max_size,)
+  
+  #model = get_model(input_shape, np_embeds)
 
-  tf_inp = tf.keras.layers.Input(input_shape, 'inp')
-  tf_x = tf_inp
-  if not USE_EMBEDS:    
-    tf_x = tf.keras.layers.Embeddings(EMBED_SIZE, name='embed')(tf_x)
+
+  
