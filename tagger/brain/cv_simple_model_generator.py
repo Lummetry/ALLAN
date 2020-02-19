@@ -34,7 +34,7 @@ main_grid = {
         ],
     
     "cols" : [
-        [(1, 64), (2, 64), (5, 128), (7, 128), (9, 128)],
+        [(1, 128), (2, 128), (5, 256), (7, 256), (9, 256)],
         [(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
         [(1, 64), (3, 64), (7, 64)],
         ],
@@ -46,7 +46,9 @@ main_grid = {
     
     "fcs" : [
         [(128,True)],
-        [(128,True)],
+        [(128,False)],
+        [(256,True)],
+        [(256,False)],
         [],
         ],
         
@@ -60,28 +62,29 @@ main_grid = {
         "max",
         "both",
         ]
-        
-        
-    
-    
+
     }
   
 
 def get_model(input_shape, 
               n_classes,
+              log,
               embeddings=None, 
+              diremb=False,
               bn=True,
-              columns=[(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
-              phase2=3,
+              cols=[(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
+              ph2=3,
               fcs=[(128,True)],              
               act='relu',
               pool='both',
               name='',
-              drop=0.5,
+              drp=0.5,
               use_gpu=True,
               ):
+  
+  tf.keras.backend.clear_session()
+  
   drop_id = 0
-  use_embeds = embeddings is not None
   model = None
   
   if use_gpu:
@@ -91,7 +94,7 @@ def get_model(input_shape,
   
   tf_inp = tf.keras.layers.Input(input_shape, name='inp')
   tf_x = tf_inp
-  if use_embeds:
+  if not diremb:
     VOCAB_SIZE = embeddings.shape[0]
     EMBED_SIZE = embeddings.shape[1]
     _init = tf.keras.initializers.Constant(embeddings)
@@ -102,7 +105,7 @@ def get_model(input_shape,
   out_columns = []
   level = 1
   tf_column_input = tf_x
-  for i,col in enumerate(columns):
+  for i,col in enumerate(cols):
     f = col[1]
     k = col[0]
     _name = 'lvl{}_{}'.format(level, i+1)
@@ -121,7 +124,7 @@ def get_model(input_shape,
     tf_x_pool = tf.keras.layers.concatenate([tf_x_pool1, tf_x_pool2], name='pool_concat')
   
   # phase 2 conv
-  for i in range(phase2):
+  for i in range(ph2):
     level += 1
     f = 2**(6+i)
     tf_x = conv1d(tf_x, f=f,  k=3, s=2, bn=bn, act=act, 
@@ -131,9 +134,9 @@ def get_model(input_shape,
   
   tf_x = tf.keras.layers.concatenate([tf_x, tf_x_pool], name='last_concat')
   
-  if drop > 0:
+  if drp > 0:
     drop_id += 1
-    tf_x = tf.keras.layers.Dropout(rate=drop, name='drop{}_{}'.format(drop_id, drop).replace('.',''))(tf_x)
+    tf_x = tf.keras.layers.Dropout(rate=drp, name='drop{}_{}'.format(drop_id, drp).replace('.',''))(tf_x)
   
   for i, lyr in enumerate(fcs):
     units= lyr[0]
@@ -143,10 +146,10 @@ def get_model(input_shape,
     else:
       tf_x = tf.keras.layers.Dense(units, name='lin{}_{}'.format(i+1, units))(tf_x)
       tf_x = tf.keras.layers.Activation(act, name='lin{}_{}'.format(i+1, act))(tf_x)
-    if drop > 0:
+    if drp > 0:
       drop_id += 1
-      tf_x = tf.keras.layers.Dropout(rate=drop, 
-                                     name='drop{}_{}'.format(drop_id, drop).replace('.',''))(tf_x)
+      tf_x = tf.keras.layers.Dropout(rate=drp, 
+                                     name='drop{}_{}'.format(drop_id, drp).replace('.',''))(tf_x)
   
   tf_x = tf.keras.layers.Dense(n_classes, name='readout_lin')(tf_x)
   tf_x = tf.keras.layers.Activation('softmax', 
@@ -155,9 +158,7 @@ def get_model(input_shape,
   model = tf.keras.models.Model(tf_inp, tf_out, name=name)
   model.compile(loss='sparse_categorical_crossentropy', metrics=['acc'],
                 optimizer='nadam')
-  tf.keras.utils.plot_model(model, 
-                            'tagger/brain/test.png',
-                            show_shapes=True)
+  log.plot_keras_model(model, name)
     
   return model  
 
