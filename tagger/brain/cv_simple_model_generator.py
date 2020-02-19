@@ -53,6 +53,12 @@ main_grid = {
     "drp" : [
         0.3,
         0.7,
+        ],
+        
+    "pool": [
+        "avg",
+        "max",
+        "both",
         ]
         
         
@@ -69,6 +75,7 @@ def get_model(input_shape,
               phase2=3,
               fcs=[(128,True)],              
               act='relu',
+              pool='both',
               name='',
               drop=0.5,
               ):
@@ -98,7 +105,14 @@ def get_model(input_shape,
   
   tf_x = tf.keras.layers.concatenate(out_columns + [tf_column_input], name='concat')
   
-  tf_x_gmp = tf.keras.layers.GlobalMaxPooling1D(name='gmp')(tf_x)
+  if pool == 'avg':
+    tf_x_pool = tf.keras.layers.GlobalAveragePooling1D(name='gap')(tf_x)
+  elif pool == 'max':
+    tf_x_pool = tf.keras.layers.GlobalMaxPooling1D(name='gmp')(tf_x)
+  else:
+    tf_x_pool1 = tf.keras.layers.GlobalAveragePooling1D(name='gap')(tf_x)
+    tf_x_pool2 = tf.keras.layers.GlobalMaxPooling1D(name='gmp')(tf_x)
+    tf_x_pool = tf.keras.layers.concatenate([tf_x_pool1, tf_x_pool2], name='pool_concat')
   
   # phase 2 conv
   for i in range(phase2):
@@ -109,7 +123,7 @@ def get_model(input_shape,
  
   tf_x = tf.keras.layers.CuDNNLSTM(128, name='culstm')(tf_x)
   
-  tf_x = tf.keras.layers.concatenate([tf_x, tf_x_gmp], name='last_concat')
+  tf_x = tf.keras.layers.concatenate([tf_x, tf_x_pool], name='last_concat')
   
   if drop > 0:
     drop_id += 1
@@ -121,7 +135,7 @@ def get_model(input_shape,
     if is_gated:
       tf_x = GatedDense(units=units, name='gated{}_{}'.format(i+1, units))(tf_x)
     else:
-      tf_x = tf.keras.layers.Dense(units, name='lin{}_{}'.format(i+1, fc))(tf_x)
+      tf_x = tf.keras.layers.Dense(units, name='lin{}_{}'.format(i+1, units))(tf_x)
       tf_x = tf.keras.layers.Activation(act, name='lin{}_{}'.format(i+1, act))(tf_x)
     if drop > 0:
       drop_id += 1
