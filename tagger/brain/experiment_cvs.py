@@ -244,7 +244,7 @@ if __name__ == '__main__':
   
     
     trainer = Trainer(model_name=model_name,
-                      epochs=10,
+                      epochs=100,
                       key='dev_acc',
                       key_mode='max',
                       stop_at_fails=20,
