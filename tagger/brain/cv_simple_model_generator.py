@@ -56,9 +56,12 @@ def get_model(input_shape,
   tf_x_gmp = tf.keras.layers.GlobalMaxPooling1D(name='gmp')(tf_x)
   
   # phase 2 conv
-  tf_x = conv1d(tf_x, 64, k=3, s=2, bn=bn, act=act, name='lvl2_cnv_k64')  
-  tf_x = conv1d(tf_x, 64, k=3, s=2, bn=bn, act=act, name='lvl3_cnv_k64')
-  
+  for i in range(3):
+    level += 1
+    f = 2**(6+i)
+    tf_x = conv1d(tf_x, f=f,  k=3, s=2, bn=bn, act=act, 
+                  name='lvl{}_cnv_f{}'.format(level, f))  
+ 
   tf_x = tf.keras.layers.CuDNNLSTM(128, name='culstm')(tf_x)
   
   tf_x = tf.keras.layers.concatenate([tf_x, tf_x_gmp], name='last_concat')
@@ -77,7 +80,7 @@ def get_model(input_shape,
 
 if __name__ == '__main__':
   import numpy as np
-  m = get_model((500,), n_classes=5, 
+  m = get_model((1400,), n_classes=5, 
                 embeddings=np.random.rand(1000,128),
                 name='test')
   m.summary()
