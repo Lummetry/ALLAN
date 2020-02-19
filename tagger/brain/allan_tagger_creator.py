@@ -268,7 +268,7 @@ class ALLANTaggerCreator(ALLANTaggerEngine):
       raise ValueError("Unknown model output '{}'".format(self.model_output))
     self.model = model
     self.P("Final model '{}':\n{}".format(self.model.name,
-                                          self.log.GetKerasModelSummary(self.model)))
+                                          self.log.get_keras_model_summary(self.model)))
     self.model_prepared = True
     
     return
