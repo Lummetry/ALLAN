@@ -121,7 +121,8 @@ if __name__ == '__main__':
   np_embeds = np.load(l.GetModelFile(l.config_data['EMB_MODEL'] + '.wv.vectors.npy'))
   x = np.random.uniform(low=-1,high=1, size=(len(tokens), np_embeds.shape[1]))
   x[tokens_config['<PAD>']] *= 0
-  np_embeds = np.concatenate((x,np_embeds),axis=0)
+  # withou the float32 conversion the tf saver crashes
+  np_embeds = np.concatenate((x,np_embeds),axis=0).astype(np.float32) 
   
   
   # compute labels dict
