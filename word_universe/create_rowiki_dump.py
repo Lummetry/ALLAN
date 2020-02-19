@@ -21,17 +21,9 @@ def parse_and_merge_files(path, output):
                         continue
 
                     #line_mod = DocUtils.strip_html_tags(line)
-                    line_mod = DocUtils.prepare_for_tokenization(line)
+                    line_mod = DocUtils.prepare_for_tokenization(line, remove_punctuation=False)
                     if line_mod[-1] != '\n':
                       line_mod += '\n'
                     w.write(line_mod)
 
     w.close()
-
-
-if __name__ == "__main__":
-  path = '/Users/laurentiupiciu/Lummetry.AI Dropbox/DATA/_allan_data/_rowiki_dump/_data/corpus/'
-  output = '/Users/laurentiupiciu/Lummetry.AI Dropbox/DATA/_allan_data/_rowiki_dump/_data/20200113_rowiki'
-  
-  
-  parse_and_merge_files(path, output)
