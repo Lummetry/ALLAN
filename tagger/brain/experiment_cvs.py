@@ -7,7 +7,7 @@ Created on Wed Feb 19 11:57:46 2020
 import numpy as np
 
 from libraries.logger import Logger
-from tagger.brain.cv_simple_model_generator import get_model
+from tagger.brain.cv_simple_model_generator import get_model, main_grid
 from word_universe.doc_utils import DocUtils
 from functools import partial
 
@@ -135,54 +135,59 @@ if __name__ == '__main__':
                                 cut_left=False)
   
   
-  if USE_EMBEDS:
-    X_train = fct_corpus_to_batch(sents=all_train_cv,
-                                  get_embeddings=True,
-                                  embeddings=np_embeds)
-    
-    
-    X_dev = fct_corpus_to_batch(sents=all_dev_cv,
-                              get_embeddings=True,
-                              embeddings=np_embeds)
-    
-    
-  else: 
-    X_train = fct_corpus_to_batch(sents=all_train_cv,
-                                  get_embeddings=False,
-                                  embeddings=None)
-    
-    X_dev = fct_corpus_to_batch(sents=all_dev_cv,
+  X_train_emb = fct_corpus_to_batch(sents=all_train_cv,
+                                get_embeddings=True,
+                                embeddings=np_embeds)
+  
+  
+  X_dev_emb = fct_corpus_to_batch(sents=all_dev_cv,
+                            get_embeddings=True,
+                            embeddings=np_embeds)
+  
+  
+  X_train_smp = fct_corpus_to_batch(sents=all_train_cv,
                                 get_embeddings=False,
                                 embeddings=None)
   
+  X_dev_smp = fct_corpus_to_batch(sents=all_dev_cv,
+                              get_embeddings=False,
+                              embeddings=None)
   
   batch_size = 8
-  n_batches = X_train.shape[0] // batch_size + 1
+  n_batches = X_train_smp.shape[0] // batch_size + 1
   
-  nr_train_examples = X_train.shape[0]
+  nr_train_examples = X_train_smp.shape[0]
   nr_sample_train_examples = int(0.1 * nr_train_examples)
   sample_train_indexes = np.random.choice(np.arange(nr_train_examples),
                                           nr_sample_train_examples,
                                           replace=False)
-  X_train_sample, y_train_sample = X_train[sample_train_indexes], y_train[sample_train_indexes]
+  X_train_emb_sample, y_train_sample = X_train_emb[sample_train_indexes], y_train[sample_train_indexes]
+  X_train_smp_sample, y_train_sample = X_train_smp[sample_train_indexes], y_train[sample_train_indexes]
     
-  def train_generator():
+  def train_generator(direct_embeds):
     
     while True:
       for step in range(n_batches):
         start = step * batch_size
         end = (step + 1) * batch_size
-        
-        X = X_train[start:end]
-        y = y_train[start:end]
+        if direct_embeds:
+          X = X_train_emb[start:end]
+        else:
+          X = X_train_smp[start:end]
+          y = y_train[start:end]
         
         yield X, y
       #endfor
     #endwhile
   #end train_generator
   
+  grid_pos = l.get_grid_iterations(main_grid)
+  
+  for itr, params in enumerate(grid_pos):
+    
+  
   gen = train_generator()
-
+  
   name = 'CVClf'
   model = get_model(input_shape=(max_size,),
                     n_classes=y_train.max() + 1, 

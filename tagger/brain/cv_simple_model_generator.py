@@ -78,6 +78,7 @@ def get_model(input_shape,
               pool='both',
               name='',
               drop=0.5,
+              use_gpu=True,
               ):
   drop_id = 0
   use_embeds = embeddings is not None
@@ -126,7 +127,7 @@ def get_model(input_shape,
     tf_x = conv1d(tf_x, f=f,  k=3, s=2, bn=bn, act=act, 
                   name='lvl{}_cnv_f{}'.format(level, f))  
  
-  tf_x = LSTM(128, name='culstm')(tf_x)
+  tf_x = LSTM(128, name='culstm' if use_gpu else 'lstm')(tf_x)
   
   tf_x = tf.keras.layers.concatenate([tf_x, tf_x_pool], name='last_concat')
   
