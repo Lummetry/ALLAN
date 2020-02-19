@@ -9,6 +9,7 @@ import tensorflow as tf
 from functools import partial
 
 from libraries.logger import Logger
+from tagger.brain.cv_simple_model_generator import get_model
 from word_universe.doc_utils import DocUtils
 
   
