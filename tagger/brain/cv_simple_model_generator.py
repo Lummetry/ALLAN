@@ -6,6 +6,7 @@ Created on Wed Feb 19 14:30:58 2020
 """
 
 import tensorflow as tf
+from libraries.lummetry_layers.gated import GatedDense
 
 def conv1d(tf_x,f,k,s,bn,act,name):
   
@@ -19,6 +20,45 @@ def conv1d(tf_x,f,k,s,bn,act,name):
     tf_x = tf.keras.layers.BatchNormalization(name=name+'_bn')(tf_x)
   tf_x = tf.keras.layers.Activation(act, name=name+'_'+act)(tf_x)
   return tf_x
+
+
+main_grid = {
+    "diremb" : [
+        True,
+        False
+        ],
+        
+    "bn" : [
+        True,
+        False
+        ],
+    
+    "cols" : [
+        [(1, 64), (2, 64), (5, 128), (7, 128), (9, 128)],
+        [(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
+        [(1, 64), (3, 64), (7, 64)],
+        ],
+        
+    "ph2": [
+         3,
+         5,
+         ],
+    
+    "fcs" : [
+        [(128,True)],
+        [(128,True)],
+        [],
+        ],
+        
+    "drp" : [
+        0.3,
+        0.7,
+        ]
+        
+        
+    
+    
+    }
   
 
 def get_model(input_shape, 
@@ -26,8 +66,13 @@ def get_model(input_shape,
               embeddings=None, 
               bn=True,
               columns=[(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
+              phase2=3,
+              fcs=[(128,True)],              
               act='relu',
-              name=''):
+              name='',
+              drop=0.5,
+              ):
+  drop_id = 0
   use_embeds = embeddings is not None
   VOCAB_SIZE = embeddings.shape[0]
   EMBED_SIZE = embeddings.shape[1]
@@ -56,7 +101,7 @@ def get_model(input_shape,
   tf_x_gmp = tf.keras.layers.GlobalMaxPooling1D(name='gmp')(tf_x)
   
   # phase 2 conv
-  for i in range(3):
+  for i in range(phase2):
     level += 1
     f = 2**(6+i)
     tf_x = conv1d(tf_x, f=f,  k=3, s=2, bn=bn, act=act, 
@@ -66,11 +111,29 @@ def get_model(input_shape,
   
   tf_x = tf.keras.layers.concatenate([tf_x, tf_x_gmp], name='last_concat')
   
+  if drop > 0:
+    drop_id += 1
+    tf_x = tf.keras.layers.Dropout(rate=drop, name='drop{}_{}'.format(drop_id, drop).replace('.',''))(tf_x)
+  
+  for i, lyr in enumerate(fcs):
+    units= lyr[0]
+    is_gated = lyr[1]
+    if is_gated:
+      tf_x = GatedDense(units=units, name='gated{}_{}'.format(i+1, units))(tf_x)
+    else:
+      tf_x = tf.keras.layers.Dense(units, name='lin{}_{}'.format(i+1, fc))(tf_x)
+      tf_x = tf.keras.layers.Activation(act, name='lin{}_{}'.format(i+1, act))(tf_x)
+    if drop > 0:
+      drop_id += 1
+      tf_x = tf.keras.layers.Dropout(rate=drop, 
+                                     name='drop{}_{}'.format(drop_id, drop).replace('.',''))(tf_x)
+  
   tf_x = tf.keras.layers.Dense(n_classes, name='readout_lin')(tf_x)
   tf_x = tf.keras.layers.Activation('softmax', 
                                     name='readout_sm')(tf_x)
   tf_out = tf_x
   model = tf.keras.models.Model(tf_inp, tf_out, name=name)
+  model.compile(loss='sparse_categorical_crossentropy', optimizer='nadam')
   tf.keras.utils.plot_model(model, 
                             'tagger/brain/test.png',
                             show_shapes=True)
