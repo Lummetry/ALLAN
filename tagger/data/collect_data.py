@@ -11,6 +11,7 @@ if __name__ == '__main__':
   data_folder = log.config_data['DATA_FOLDER']
   dev_size = log.config_data['DEV_SIZE']
   balance_classes = bool(log.config_data['BALANCE_CLASSES'])
+  ext_label = log.config_data['EXT_LABEL']
   
   splitted_data_folders = {'train': log.config_data['TRAIN_DATA_FOLDER'],
                            'dev': log.config_data['DEV_DATA_FOLDER'],
@@ -94,12 +95,15 @@ if __name__ == '__main__':
     path = os.path.join(log.GetDataFolder(), data_folder, v)
     try:
       os.mkdir(path)
+      os.mkdir(os.path.join(path, 'texts'))
+      os.mkdir(os.path.join(path, 'labels'))
     except OSError:
       log.P("Creation of the {} data directory '..{}' FAILED".format(dataset, path))
     else:
       log.P("Successfully created the {} data directory '..{}'".format(dataset, path))
   
-    dst = os.path.join(full_data_folder, dataset)
+    dst_texts = os.path.join(full_data_folder, dataset, 'texts')
+    dst_labels = os.path.join(full_data_folder, dataset, 'labels')
     for main_profile, files in dct_main_profiles[dataset].items():
       str_main_profile = 'profile_' + main_profile.replace(' ', '_')
       src = os.path.join(full_data_folder, main_profile)
@@ -108,12 +112,12 @@ if __name__ == '__main__':
         f_no_ext = f[:ext_pos]
    
         shutil.copyfile(src=os.path.join(src, f),
-                        dst=os.path.join(dst, f))
+                        dst=os.path.join(dst_texts, f))
         
-        with open(os.path.join(dst, f_no_ext + '.label'), 'w') as handle:
+        with open(os.path.join(dst_labels, f_no_ext + ext_label), 'w') as handle:
           handle.write(str_main_profile + '\n')
         
-      log.P("  Copied {} files from '..{}' to '..{}' and created labels.".format(len(files), src[-30:], dst[-30:]))
+      log.P("  Copied {} files from '..{}' to '..{}' and created labels.".format(len(files), src[-30:], dst_texts[-30:]))
     
   
       
