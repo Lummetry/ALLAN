@@ -22,49 +22,7 @@ def conv1d(tf_x,f,k,s,bn,act,name):
   return tf_x
 
 
-main_grid = {
-    "diremb" : [
-        True,
-        #False
-        ],
-        
-    "bn" : [
-        True,
-        False
-        ],
-    
-    "cols" : [
-        [(1, 128), (2, 128), (5, 256), (7, 256), (9, 256)],
-        [(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
-        [(1, 64), (3, 64), (7, 64)],
-        ],
-        
-    "ph2": [
-         3,
-         5,
-         ],
-    
-    "fcs" : [
-        [(128,True)],
-        [(128,False)],
-        [(256,True)],
-        [(256,False)],
-        [],
-        ],
-        
-    "drp" : [
-        0.3,
-        0.7,
-        ],
-        
-    "pool": [
-        "avg",
-        "max",
-        "both",
-        ]
 
-    }
-  
 
 def get_model(input_shape, 
               n_classes,

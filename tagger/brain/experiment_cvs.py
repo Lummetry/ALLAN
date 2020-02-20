@@ -10,7 +10,7 @@ import tensorflow as tf
 import pandas as pd
 
 from libraries.logger import Logger
-from tagger.brain.cv_simple_model_generator import get_model, main_grid
+from tagger.brain.cv_simple_model_generator import get_model
 from word_universe.doc_utils import DocUtils
 from functools import partial
 
@@ -192,6 +192,52 @@ if __name__ == '__main__':
   #end train_generator
   
   
+  #### GRID
+  N_EPOCHS = 5
+  main_grid = {
+      "diremb" : [
+          True,
+          #False
+          ],
+          
+      "bn" : [
+          True,
+          False
+          ],
+      
+      "cols" : [
+          [(1, 128), (2, 128), (5, 256), (7, 256), (9, 256)],
+          [(1, 32), (2, 32), (5, 32), (7, 32), (9, 32)],
+          [(1, 64), (3, 64), (7, 64)],
+          ],
+          
+      "ph2": [
+           3,
+           5,
+           ],
+      
+      "fcs" : [
+          [(128,True)],
+          [(128,False)],
+          [(256,True)],
+          [(256,False)],
+          [],
+          ],
+          
+      "drp" : [
+          0.3,
+          0.7,
+          ],
+          
+      "pool": [
+          "avg",
+          "max",
+          "both",
+          ]
+  
+      }
+      
+  
   ######################
   ######################
   ## 
@@ -224,6 +270,10 @@ if __name__ == '__main__':
     l.P("Start giter {}/{} {} - total/elapsed/remain: {:.1f}/{:.1f}/{:.1f} hrs (giter: {:.1f} mins)".format(
         idx+1, nr_grid_iters, model_name, t_total, t_elapsed, t_remain, mean_time / 60))
     
+    ####
+    #### SPECIAL CASE: during training we may decide to change the datasets based
+    #### on a special setting in the grid options
+    ####
     if params['diremb']:    
       gen = train_generator(direct_embeds=True)
       X_dev = X_dev_emb
@@ -237,16 +287,17 @@ if __name__ == '__main__':
                       n_classes=y_train.max() + 1, 
                       embeddings=np_embeds,
                       name=model_name,
-                      use_gpu=False,
+                      use_gpu=True,
                       log=l,
                       **params
                       )
   
     
     trainer = Trainer(model_name=model_name,
-                      epochs=100,
+                      epochs=N_EPOCHS,
                       key='dev_acc',
                       key_mode='max',
+                      delete_if_key_worse=0.8,
                       stop_at_fails=20,
                       threshold_progress=0,
                       max_patience=7,
