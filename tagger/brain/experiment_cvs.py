@@ -85,7 +85,7 @@ def load_data(log, training_config):
 
 
 if __name__ == '__main__':
-  VER = '01'
+  VER = '02'
   
   
   base_name = 'ACV' + VER
@@ -237,7 +237,7 @@ if __name__ == '__main__':
                       n_classes=y_train.max() + 1, 
                       embeddings=np_embeds,
                       name=model_name,
-                      use_gpu=True,
+                      use_gpu=False,
                       log=l,
                       **params
                       )
@@ -264,9 +264,9 @@ if __name__ == '__main__':
       dct_results[k].append(params[k])    
     dct_results['model'].append(model_name)
     dct_results['Dloss'].append(dct_vals['dev_loss'])
-    dct_results['Dacc'].append(dct_vals['dev_acc'])
+    dct_results['Dacc'].append(dct_vals['dev_acc']*100)
     dct_results['tloss'].append(dct_vals['train_loss'])
-    dct_results['tacc'].append(dct_vals['train_acc'])
+    dct_results['tacc'].append(dct_vals['train_acc']*100)
     dct_results['ep'].append(best_epoch)
     
     stop = time()

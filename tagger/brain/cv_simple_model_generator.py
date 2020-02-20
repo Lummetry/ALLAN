@@ -25,7 +25,7 @@ def conv1d(tf_x,f,k,s,bn,act,name):
 main_grid = {
     "diremb" : [
         True,
-        False
+        #False
         ],
         
     "bn" : [
