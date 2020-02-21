@@ -35,7 +35,7 @@ def get_model(input_shape,
               fcs=[(128,True)],              
               act='relu',
               pool='both',
-              name='',
+              model_name='',
               drp=0.5,
               use_gpu=True,
               ):
@@ -113,10 +113,10 @@ def get_model(input_shape,
   tf_x = tf.keras.layers.Activation('softmax', 
                                     name='readout_sm')(tf_x)
   tf_out = tf_x
-  model = tf.keras.models.Model(tf_inp, tf_out, name=name)
+  model = tf.keras.models.Model(tf_inp, tf_out, name=model_name)
   model.compile(loss='sparse_categorical_crossentropy', metrics=['acc'],
                 optimizer='nadam')
-  log.plot_keras_model(model, name)
+  log.plot_keras_model(model, model_name)
     
   return model  
 

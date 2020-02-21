@@ -14,9 +14,38 @@ from tagger.brain.cv_simple_model_generator import get_model
 from word_universe.doc_utils import DocUtils
 from functools import partial
 
-from libraries.training import Trainer
+from libraries.training import GridSearcher
 
 from time import time
+
+
+def get_train_params_callback(**params):
+  if params['diremb']:    
+    gen = train_generator(direct_embeds=True)
+    X_dev = X_dev_emb
+    X_train_sample = X_train_emb_sample
+  else:
+    gen = train_generator(direct_embeds=False)
+    X_dev = X_dev_smp
+    X_train_sample = X_train_smp_sample
+  
+  model = get_model(input_shape=X_dev.shape[1:],
+                    n_classes=y_train.max() + 1, 
+                    embeddings=np_embeds,
+                    use_gpu=False,
+                    log=l,
+                    **params
+                    )
+
+  
+  return {'model': model,
+          'train_gen': gen,
+          'steps_per_epoch': n_batches,
+          'X_test': X_dev,
+          'y_test': y_dev,
+          'X_train': X_train_sample,
+          'y_train': y_train_sample}
+  
 
 
 def tokenizer(sentence, dct_vocab, unk_func=None):
@@ -236,6 +265,28 @@ if __name__ == '__main__':
           ]
   
       }
+  
+  
+  nr_iters = 50
+  gs = GridSearcher(grid_params=main_grid,
+                    model_name=base_name,
+                    log=l)
+  
+  
+  
+  gs.grid_search(get_train_params_callback=get_train_params_callback,
+                 max_iters=50,
+                 epochs=N_EPOCHS,
+                 key='dev_acc',
+                 key_mode='max',
+                 delete_if_key_worse=0.8,
+                 stop_at_fails=20,
+                 threshold_progress=0,
+                 max_patience=7,
+                 max_cooldown=2,
+                 lr_decay=0.85,
+                 return_history=False)
+  
       
   
   ######################
@@ -246,89 +297,89 @@ if __name__ == '__main__':
   ######################
   ######################
   
-  dct_results = {'model': [], 'Dloss': [], 'Dacc': [], 
-                 'tacc' : [], 'tloss': [],
-                 'ep': []}
-  for k in main_grid.keys():
-    dct_results[k] = []  
-    
-  nr_iters = 50
-  all_grid_iters = l.get_grid_iterations(main_grid)
-  grid_iters = np.random.choice(all_grid_iters, size=nr_iters, replace=False)
-  
-  nr_grid_iters = len(grid_iters)
-  lst_time = []
-  mean_time = np.inf
-  for idx, params in enumerate(grid_iters):
-    start = time()
-    model_name = base_name + '_{:03}'.format(idx + 1)
-    l.P("-"*40)
-    t_elapsed = idx * mean_time / 3600
-    t_remain = (nr_grid_iters - idx) * mean_time / 3600
-    t_total = t_elapsed + t_remain
-    
-    l.P("Start giter {}/{} {} - total/elapsed/remain: {:.1f}/{:.1f}/{:.1f} hrs (giter: {:.1f} mins)".format(
-        idx+1, nr_grid_iters, model_name, t_total, t_elapsed, t_remain, mean_time / 60))
-    
-    ####
-    #### SPECIAL CASE: during training we may decide to change the datasets based
-    #### on a special setting in the grid options
-    ####
-    if params['diremb']:    
-      gen = train_generator(direct_embeds=True)
-      X_dev = X_dev_emb
-      X_train_sample = X_train_emb_sample
-    else:
-      gen = train_generator(direct_embeds=False)
-      X_dev = X_dev_smp
-      X_train_sample = X_train_smp_sample
-    
-    model = get_model(input_shape=X_dev.shape[1:],
-                      n_classes=y_train.max() + 1, 
-                      embeddings=np_embeds,
-                      name=model_name,
-                      use_gpu=True,
-                      log=l,
-                      **params
-                      )
-  
-    
-    trainer = Trainer(model_name=model_name,
-                      epochs=N_EPOCHS,
-                      key='dev_acc',
-                      key_mode='max',
-                      delete_if_key_worse=0.8,
-                      stop_at_fails=20,
-                      threshold_progress=0,
-                      max_patience=7,
-                      max_cooldown=2,
-                      lr_decay=0.85,
-                      return_history=False,
-                      log=l)
-    
-    best_epoch, dct_vals = trainer.simple_train(model=model,
-                                                train_gen=gen, steps_per_epoch=n_batches,
-                                                X_test=X_dev, y_test=y_dev,
-                                                X_train=X_train_sample, y_train=y_train_sample)
-    
-    for k in params.keys():
-      dct_results[k].append(params[k])    
-    dct_results['model'].append(model_name)
-    dct_results['Dloss'].append(dct_vals['dev_loss'])
-    dct_results['Dacc'].append(dct_vals['dev_acc']*100)
-    dct_results['tloss'].append(dct_vals['train_loss'])
-    dct_results['tacc'].append(dct_vals['train_acc']*100)
-    dct_results['ep'].append(best_epoch)
-    
-    stop = time()
-    lap_time = stop - start
-    lst_time.append(lap_time)
-    mean_time = np.mean(lst_time)
-    l.P('Finished lap in {:.1f}s'.format(lap_time))
-    l.P("Results:\n{}".format(pd.DataFrame(dct_results).sort_values('Dacc')))
-    tf.keras.backend.clear_session()
-    del model
-  
+#  dct_results = {'model': [], 'Dloss': [], 'Dacc': [], 
+#                 'tacc' : [], 'tloss': [],
+#                 'ep': []}
+#  for k in main_grid.keys():
+#    dct_results[k] = []  
+#    
+#  
+#  all_grid_iters = l.get_grid_iterations(main_grid)
+#  grid_iters = np.random.choice(all_grid_iters, size=nr_iters, replace=False)
+#  
+#  nr_grid_iters = len(grid_iters)
+#  lst_time = []
+#  mean_time = np.inf
+#  for idx, params in enumerate(grid_iters):
+#    start = time()
+#    model_name = base_name + '_{:03}'.format(idx + 1)
+#    l.P("-"*40)
+#    t_elapsed = idx * mean_time / 3600
+#    t_remain = (nr_grid_iters - idx) * mean_time / 3600
+#    t_total = t_elapsed + t_remain
+#    
+#    l.P("Start giter {}/{} {} - total/elapsed/remain: {:.1f}/{:.1f}/{:.1f} hrs (giter: {:.1f} mins)".format(
+#        idx+1, nr_grid_iters, model_name, t_total, t_elapsed, t_remain, mean_time / 60))
+#    
+#    ####
+#    #### SPECIAL CASE: during training we may decide to change the datasets based
+#    #### on a special setting in the grid options
+#    ####
+#    if params['diremb']:    
+#      gen = train_generator(direct_embeds=True)
+#      X_dev = X_dev_emb
+#      X_train_sample = X_train_emb_sample
+#    else:
+#      gen = train_generator(direct_embeds=False)
+#      X_dev = X_dev_smp
+#      X_train_sample = X_train_smp_sample
+#    
+#    model = get_model(input_shape=X_dev.shape[1:],
+#                      n_classes=y_train.max() + 1, 
+#                      embeddings=np_embeds,
+#                      name=model_name,
+#                      use_gpu=True,
+#                      log=l,
+#                      **params
+#                      )
+#  
+#    
+#    trainer = Trainer(model_name=model_name,
+#                      epochs=N_EPOCHS,
+#                      key='dev_acc',
+#                      key_mode='max',
+#                      delete_if_key_worse=0.8,
+#                      stop_at_fails=20,
+#                      threshold_progress=0,
+#                      max_patience=7,
+#                      max_cooldown=2,
+#                      lr_decay=0.85,
+#                      return_history=False,
+#                      log=l)
+#    
+#    best_epoch, dct_vals = trainer.simple_train(model=model,
+#                                                train_gen=gen, steps_per_epoch=n_batches,
+#                                                X_test=X_dev, y_test=y_dev,
+#                                                X_train=X_train_sample, y_train=y_train_sample)
+#    
+#    for k in params.keys():
+#      dct_results[k].append(params[k])    
+#    dct_results['model'].append(model_name)
+#    dct_results['Dloss'].append(dct_vals['dev_loss'])
+#    dct_results['Dacc'].append(dct_vals['dev_acc']*100)
+#    dct_results['tloss'].append(dct_vals['train_loss'])
+#    dct_results['tacc'].append(dct_vals['train_acc']*100)
+#    dct_results['ep'].append(best_epoch)
+#    
+#    stop = time()
+#    lap_time = stop - start
+#    lst_time.append(lap_time)
+#    mean_time = np.mean(lst_time)
+#    l.P('Finished lap in {:.1f}s'.format(lap_time))
+#    l.P("Results:\n{}".format(pd.DataFrame(dct_results).sort_values('Dacc')))
+#    tf.keras.backend.clear_session()
+#    del model
+#  
   
   
 
