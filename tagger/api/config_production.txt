@@ -14,5 +14,5 @@
   "DCT_LABEL2IDX" : "ACV02_dct_label2idx.txt",
   
   "HOST" : "0.0.0.0",
-  "PORT" : 5001
+  "PORT" : 5002
 }
