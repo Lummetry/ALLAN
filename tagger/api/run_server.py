@@ -44,7 +44,7 @@ def output_callback(preds):
     confidence = 'HIGH'
   elif preds[0] >=  confidence_thresholds[1]:
     confidence = 'MEDIUM'
-  elif confidence >= confidence_thresholds[2]:
+  elif preds[0] >= confidence_thresholds[2]:
     confidence = 'LOW'
   else:
     confidence = 'LOW'
@@ -61,6 +61,8 @@ def output_callback(preds):
 
 
 if __name__ == '__main__':
+  ONLINE = False
+  
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--production", help="Production mode switch on(1)/off(0)",
                       type=int, default=0)
@@ -118,14 +120,24 @@ if __name__ == '__main__':
                                 get_embeddings=True,
                                 embeddings=np_embeds)
   
-  simple_server = SimpleFlaskModelServer(model=model,
-                                         predict_function='predict',
-                                         fun_input=input_callback,
-                                         fun_output=output_callback,
-                                         log=l,
-                                         host=l.config_data['HOST'],
-                                         port=l.config_data['PORT'])
-  simple_server.run()
+  inp = input_callback({
+	"CV" : "Calculez si mut (tva-ul ma refer) ca masina de cusut. Bine si mai stiu si excel"
+  })
+    
+  preds = model.predict(inp)
+  
+  out = output_callback(preds)
+  
+  
+  if ONLINE:
+    simple_server = SimpleFlaskModelServer(model=model,
+                                           predict_function='predict',
+                                           fun_input=input_callback,
+                                           fun_output=output_callback,
+                                           log=l,
+                                           host=l.config_data['HOST'],
+                                           port=l.config_data['PORT'])
+    simple_server.run()
   
   
   
