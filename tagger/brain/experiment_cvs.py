@@ -147,7 +147,7 @@ if __name__ == '__main__':
   dct_vocab = {w:i for i,w in enumerate(vocab)}
   
   # load embeddings
-  np_embeds = np.load(l.GetModelFile(l.config_data['EMB_MODEL'] + '.wv.vectors.npy'))
+  np_embeds = np.load(l.get_model_file(l.config_data['EMB_MODEL'] + '.wv.vectors.npy'))
   x = np.random.uniform(low=-1,high=1, size=(len(tokens), np_embeds.shape[1]))
   x[tokens_config['<PAD>']] *= 0
   # withou the float32 conversion the tf saver crashes
