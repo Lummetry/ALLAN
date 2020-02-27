@@ -61,7 +61,7 @@ def output_callback(preds):
 
 
 if __name__ == '__main__':
-  ONLINE = False
+  ONLINE = True
   
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--production", help="Production mode switch on(1)/off(0)",
@@ -119,14 +119,7 @@ if __name__ == '__main__':
                                 cut_left=False,
                                 get_embeddings=True,
                                 embeddings=np_embeds)
-  
-  inp = input_callback({
-	"CV" : "Calculez si mut (tva-ul ma refer) ca masina de cusut. Bine si mai stiu si excel"
-  })
-    
-  preds = model.predict(inp)
-  
-  out = output_callback(preds)
+
   
   
   if ONLINE:
