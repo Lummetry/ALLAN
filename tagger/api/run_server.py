@@ -38,7 +38,7 @@ def output_callback(preds):
       "RUNNER_2" : None
   }
   
-  confidence_thresholds = [0.35, 0.28, 0.2]
+  confidence_thresholds = [0.73, 0.47, 0.2]
   confidence = None
   if preds[0] >= confidence_thresholds[0]:
     confidence = 'HIGH'
