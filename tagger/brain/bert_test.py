@@ -12,7 +12,6 @@ from libraries.logger import Logger
 from tagger.brain import utils
 from tagger.brain.utils import bert_detokenizer
 
-from transformers import TFBertModel, BertTokenizer
 
 
 if __name__ == '__main__':
@@ -20,6 +19,9 @@ if __name__ == '__main__':
   GENERATE = False
   
   if GENERATE:
+    
+    from transformers import TFBertModel, BertTokenizer
+    
     bert_subfolder = '_allan_data/_ro_bert/20200520'
     bert_folder = l.get_root_subfolder(bert_subfolder)
     assert bert_folder is not None
