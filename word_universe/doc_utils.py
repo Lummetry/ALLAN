@@ -59,9 +59,26 @@ class DocUtils():
     return
 
   @staticmethod
-  def prepare_for_tokenization(string):
-    string = string.lower()
-    return re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', string)
+  def prepare_for_tokenization(text, remove_punctuation=True):
+    text = text.lower()
+    text = re.sub(r'([ \w]*)([!?„”"–,\'\.\(\)\[\]\{\}\:\;\/\\])([ \w]*)', r'\1 \2 \3', text)
+    
+    specials = ['\n', '\t', '\r', '\xa0', '\u2028', '\x1e']
+    for s in specials:
+      text = text.replace(s, ' ')
+    
+    if remove_punctuation:
+      punctuations = '.,?!(){}/\"`~'
+      for p in punctuations:
+        text = text.replace(p, ' ')
+    return text
+
+  @staticmethod
+  def get_words(text, remove_punctuation=True):
+    text = DocUtils.prepare_for_tokenization(text, remove_punctuation=remove_punctuation)
+    lst_splitted = list(filter(lambda x: x != '', text.split(' ')))
+    return lst_splitted
+
 
 
   def strip_html_tags(self, string):

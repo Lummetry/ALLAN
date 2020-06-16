@@ -1,0 +1,26 @@
+{
+  "BASE_FOLDER": "Dropbox",
+  "APP_FOLDER": "_allan_data/_allan_cv_screening",
+  
+  
+  "EMB_MODEL" : "20200211_w2v_ep25_transfered_20200120",
+  "TRAINING" : {
+    "FOLDER"    : "20200211_EY_CV_SCREENING/train",
+    "DEV_FOLDER" : "20200211_EY_CV_SCREENING/dev",
+    "SUBFOLDERS" : 
+        {
+          "ENABLED" : 1,
+          "DOCS"    : "texts",
+          "LABELS"  : "labels"
+        },
+    "DOCUMENT"   : ".txt",
+    "LABEL"      : ".label"
+  },
+  
+  "TOKENS" : {
+    "<PAD>" : 0,
+    "<UNK>" : 1,
+    "<SOS>" : 2,
+    "<EOS>" : 3
+  }
+}
