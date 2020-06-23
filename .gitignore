@@ -6,3 +6,5 @@ chatbot/server/pipe/
 chatbot/server/static/img/wordcloud/
 
 *.DS_STORE
+
+*.npy
