@@ -6,3 +6,7 @@ chatbot/server/pipe/
 chatbot/server/static/img/wordcloud/
 
 *.DS_STORE
+_data/
+_logs/
+_models/
+_output/

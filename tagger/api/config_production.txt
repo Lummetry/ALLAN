@@ -1,0 +1,18 @@
+{
+  "BASE_FOLDER": "~",
+  "APP_FOLDER": "allan_cv_screening",
+  
+  "MODEL" : "ACV02Mdl23_e049_dev_acc_1.000.h5",
+  "EMB_MODEL" : "20200211_w2v_ep25_transfered_20200120", 
+  "TOKENS" : {
+    "<PAD>" : 0,
+    "<UNK>" : 1,
+    "<SOS>" : 2,
+    "<EOS>" : 3
+  },
+  
+  "DCT_LABEL2IDX" : "ACV02_dct_label2idx.txt",
+  
+  "HOST" : "0.0.0.0",
+  "PORT" : 5002
+}

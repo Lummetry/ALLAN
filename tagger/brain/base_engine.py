@@ -17,6 +17,8 @@ import os
 import numpy as np
 from collections import OrderedDict
 
+from word_universe.doc_utils import DocUtils
+
 from libraries.generic_obj import LummetryObject
 from libraries.lummetry_layers.gated import GatedDense
 from libraries.logger import Logger
@@ -36,7 +38,8 @@ class ALLANTaggerEngine(LummetryObject):
                vocab_size=None,
                embed_size=None,
                DEBUG=False, MAX_CHR=100000,
-               TOP_TAGS=None):
+               TOP_TAGS=None,
+               add_specials=True):
     if log is None or (type(log).__name__ != 'Logger'):
       raise ValueError("Loggger object is invalid: {}".format(log))
     #"".join([chr(0)] + [chr(i) for i in range(32, 127)] + [chr(i) for i in range(162,256)])
@@ -67,6 +70,7 @@ class ALLANTaggerEngine(LummetryObject):
     self.embed_size = embed_size
     self.emb_layer_name = 'emb_layer'
     self.pre_encoded_tokens = None
+    self.add_specials = add_specials
     super().__init__(log=log, DEBUG=DEBUG)
     return
   
@@ -79,10 +83,10 @@ class ALLANTaggerEngine(LummetryObject):
     self.char_full_voc = "".join([chr(x) for x in range(self.MAX_CHR)])
     self.train_config = self.config_data['TRAINING']
     self.token_config = self.config_data['TOKENS']
-    self.UNK_ID = self.token_config['UNK']
-    self.PAD_ID = self.token_config['PAD']
-    self.SOS_ID = self.token_config['SOS']
-    self.EOS_ID = self.token_config['EOS']
+    self.UNK_ID = self.token_config['<UNK>']
+    self.PAD_ID = self.token_config['<PAD>']
+    self.SOS_ID = self.token_config['<SOS>']
+    self.EOS_ID = self.token_config['<EOS>']
     self.SPECIALS = [
         self.PAD_ID,
         self.UNK_ID,
@@ -116,7 +120,7 @@ class ALLANTaggerEngine(LummetryObject):
     if ".txt" in self.fn_labels2idx:
       dict_labels2idx = self.log.LoadDictFromData(self.fn_labels2idx)
     else:
-      dict_labels2idx = self.log.LoadPickleFromData(self.fn_labels2idx)
+      dict_labels2idx = self.log.load_pickle_from_data(self.fn_labels2idx)
     if dict_labels2idx is None:
       self.log.P(" No labels2idx dict found")
     
@@ -125,7 +129,7 @@ class ALLANTaggerEngine(LummetryObject):
       if '.txt' in self.fn_topic2tags:
         self.dic_topic2tags = self.log.LoadDictFromData(self.fn_topic2tags)
       else:
-        self.dic_topic2tags = self.log.LoadPickleFromData(self.fn_topic2tags)
+        self.dic_topic2tags = self.log.load_pickle_from_data(self.fn_topic2tags)
     
     
     dic_index2label = {v:k for k,v in dict_labels2idx.items()}
@@ -140,11 +144,18 @@ class ALLANTaggerEngine(LummetryObject):
     fn_emb = embeds_filename
     if fn_emb is None:
       fn_emb = self.model_config['EMBED_FILE'] if 'EMBED_FILE' in self.model_config.keys() else ""
-      fn_emb = self.log.GetDataFile(fn_emb)
+      fn_emb = self.log.GetModelFile(fn_emb)
     if os.path.isfile(fn_emb):
       self.P("Loading embeddings {}...".format(fn_emb[-25:]))
       self.embeddings = np.load(fn_emb, allow_pickle=True)
-      self.P(" Loaded embeddings: {}".format(self.embeddings.shape))    
+      self.P(" Loaded embeddings: {}".format(self.embeddings.shape)) 
+      if self.add_specials:
+        x = np.random.uniform(low=-1,high=1, size=(len(self.SPECIALS), self.embeddings.shape[1]))
+        x[self.PAD_ID] *= 0
+        self.P(" Adding special embeddings: {} ...".format(x.shape))
+        self.embeddings = np.concatenate((x,self.embeddings),axis=0)
+  
+         
       self.emb_size = self.embeddings.shape[-1]
       self.vocab_size = self.embeddings.shape[-2]
     else:
@@ -162,7 +173,7 @@ class ALLANTaggerEngine(LummetryObject):
       fn_emb = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else ""
     if self.log.GetDataFile(fn_emb) is not None:
       self.P("Loading similarity embeddings {}...".format(fn_emb))
-      self.generated_embeddings = self.log.LoadPickleFromData(fn_emb)
+      self.generated_embeddings = self.log.load_pickle_from_data(fn_emb)
       self.P(" Loaded similarity embeddings: {}".format(self.generated_embeddings.shape))    
     else:
       self.P("WARNING: Embed file '{}' does not exists. generated_embeddings='None'".format(
@@ -231,7 +242,7 @@ class ALLANTaggerEngine(LummetryObject):
     t2 = time()
     self.P("Done inferring generated embeddings in {:.1f}s.".format(t2-t1))
     fn = self.embgen_model_config['EMBED_FILE'] if 'EMBED_FILE' in self.embgen_model_config.keys() else "embgen_embeds.pkl"
-    self.log.SavePickleToData(self.generated_embeddings, fn)
+    self.log.save_pickle_to_data(self.generated_embeddings, fn)
     return 
   
   
@@ -293,7 +304,7 @@ class ALLANTaggerEngine(LummetryObject):
     if ".txt" in fn_words_dict:
       dict_word2idx = self.log.LoadDictFromData(fn_words_dict)
     else:
-      dict_word2idx = self.log.LoadPickleFromData(fn_words_dict)
+      dict_word2idx = self.log.load_pickle_from_data(fn_words_dict)
     if dict_word2idx is None:
       self.P("  No word2idx dict found")
     else:
@@ -302,9 +313,19 @@ class ALLANTaggerEngine(LummetryObject):
     if ".txt" in fn_idx_dict:
       dict_idx2word = self.log.LoadDictFromData(fn_idx_dict)
     else:
-      dict_idx2word = self.log.LoadPickleFromData(fn_idx_dict)
-      if type(dict_idx2word) in [list, tuple]:
+      dict_idx2word = self.log.load_pickle_from_data(fn_idx_dict)
+      if dict_idx2word is None:
+        dict_idx2word = self.log.load_pickle_from_models(fn_idx_dict)
+
+      _type = type(dict_idx2word)
+      if _type in [list, tuple]:
+        special_keys = np.array(list(self.token_config.keys()))
+        special_values = np.array(list(self.token_config.values()))
+        special_keys = special_keys[special_values]
+        
+        dict_idx2word = _type(special_keys) + dict_idx2word
         dict_idx2word = {i:v for i,v in enumerate(dict_idx2word)}
+        
     if dict_idx2word is None:
       self.P(" No idx2word dict found")
     else:
@@ -493,15 +514,11 @@ class ALLANTaggerEngine(LummetryObject):
       idx = self.UNK_ID      
     emb = self.embeddings[idx]
     return idx, emb
-      
+
   
   def _get_reverse_word_dict(self):
     self.P("Constructing reverse vocab...")
     self.dic_index2word = {v:k for k,v in self.dic_word2index.items()}
-  
-  def _get_words(self, text):
-    lst_splitted = tf.keras.preprocessing.text.text_to_word_sequence(text)
-    return lst_splitted
   
 
   def encode(self, text, 
@@ -511,7 +528,8 @@ class ALLANTaggerEngine(LummetryObject):
              convert_unknown_words=True,
              direct_embeddings=False,
              fixed_len=0,
-             DEBUG=False):
+             DEBUG=False,
+             remove_punctuation=True):
     """
     this function will tokenize or directly output the embedding represenation
     of the input list of documents together with the given labels for each
@@ -544,7 +562,7 @@ class ALLANTaggerEngine(LummetryObject):
       if not DEBUG and (len(text) > 10):
         print("\rProcessing {:.1f}% of input documents...".format(
             i/nr_obs * 100), end='', flush=True)
-      splitted = self._get_words(txt)
+      splitted = DocUtils.get_words(txt, remove_punctuation=remove_punctuation)
       self.last_max_size = max(self.last_max_size, len(splitted))
       tkns = []
       embs = []
@@ -735,7 +753,8 @@ class ALLANTaggerEngine(LummetryObject):
                            convert_unknown_words=convert_unknown_words,
                            direct_embeddings=direct_embeddings,
                            fixed_len=self.doc_size,
-                           DEBUG=DEBUG)
+                           DEBUG=DEBUG,
+                           remove_punctuation=remove_punctuation)
       self.pre_encoded_tokens = tokens
     
     tokens = self.pre_encoded_tokens
@@ -946,10 +965,10 @@ class ALLANTaggerEngine(LummetryObject):
     
     if debug:      
       self.P("Saving tagger model '{}'".format(s_name))
-    fn = self.log.SaveKerasModel(self.model, 
-                                 s_name, 
-                                 use_prefix=True,
-                                 DEBUG=debug)
+    fn = self.log.save_keras_model(self.model, 
+                                   s_name, 
+                                   use_prefix=True,
+                                   DEBUG=debug)
 
     if delete_prev_named:
       if self.prev_saved_model != []:
@@ -991,7 +1010,8 @@ class ALLANTaggerEngine(LummetryObject):
             test_top=1,
             DEBUG=True,   
             compute_topic=True,
-            sanity_check=True
+            sanity_check=True,
+            remove_punctuation=True
             ):
     """
     this methods trains the loaded/created `model` directly on text documents
@@ -1041,7 +1061,7 @@ class ALLANTaggerEngine(LummetryObject):
       files = os.listdir(fld)
       self.P("Searching training encoding data in {} ...".format(fld))
       for f in files:
-        cache = self.log.LoadPickleFromOutput(os.path.join(encoding_folder, f))
+        cache = self.log.load_pickle_from_output(os.path.join(encoding_folder, f))
         params = cache['params']
         ok = True
         for i,p in enumerate(params):
@@ -1059,10 +1079,11 @@ class ALLANTaggerEngine(LummetryObject):
                                      rank_labels=rank_labels,
                                      convert_unknown_words=convert_unknown_words,
                                      direct_embeddings=self.direct_embeddings,
-                                     fixed_len=pad_data)
+                                     fixed_len=pad_data,
+                                     remove_punctuation=remove_punctuation)
       if encoding_folder is not None:
-        self.log.SavePickleToOutput({'params': fct_params, 'output': (X_tokens,y_data)},
-                                    os.path.join(encoding_folder, self.log.file_prefix + '.p'))  
+        self.log.save_pickle_to_output({'params': fct_params, 'output': (X_tokens,y_data)},
+                                        os.path.join(encoding_folder, self.log.file_prefix + '.p'))  
     
     #endif
 
@@ -1198,7 +1219,7 @@ class ALLANTaggerEngine(LummetryObject):
       self.version += '.' + _ver
       if self.log.GetModelsFile(fn) is not None:
         self.P("Loading pretrained model {}".format(fn))
-        self.model = self.log.LoadKerasModel(
+        self.model = self.log.load_keras_model(
                                   fn,
                                   custom_objects={
                                       "GatedDense" : GatedDense,
@@ -1215,7 +1236,7 @@ class ALLANTaggerEngine(LummetryObject):
       fn = self.embgen_model_config['PRETRAINED']
       if self.log.GetModelsFile(fn) is not None:
         self.P("Loading pretrained embgen model {}".format(fn))
-        self.embgen_model = self.log.LoadKerasModel(
+        self.embgen_model = self.log.load_keras_model(
                                     fn,
                                     custom_objects={
                                       "GatedDense" : GatedDense,
@@ -1233,7 +1254,7 @@ class ALLANTaggerEngine(LummetryObject):
   def setup_pretrained_model(self):
     if self.maybe_load_pretrained():
       self.P("Pretrained model:\n{}".format(
-          self.log.GetKerasModelSummary(self.model)))
+          self.log.get_keras_model_summary(self.model)))
       self.trained = True
     return  
     

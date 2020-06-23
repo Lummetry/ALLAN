@@ -38,7 +38,9 @@ class ALLANDataLoader(ALLANTaggerEngine):
     return
      
   
-  def LoadData(self, has_topics=True, exclude_list=[], min_label_freq=0):
+  def LoadData(self, has_topics=True, exclude_list=[], min_label_freq=0,
+               save_dicts=False,
+               remove_punctuation=True):
     fn_w2i = self.fn_word2idx
     fn_i2w = self.fn_idx2word
     fn_l2i = self.fn_labels2idx
@@ -58,7 +60,9 @@ class ALLANDataLoader(ALLANTaggerEngine):
                                     normalize=self.normalize_labels,
                                     has_topics=has_topics,
                                     exclude_list=exclude_list,
-                                    min_label_freq=min_label_freq
+                                    min_label_freq=min_label_freq,
+                                    remove_punctuation=remove_punctuation,
+                                    save_dicts=save_dicts
                                     )
 
     return
@@ -77,7 +81,8 @@ class ALLANDataLoader(ALLANTaggerEngine):
                           multi_label=True, normalize=False,
                           has_topics=True,
                           exclude_list=[],
-                          min_label_freq=0):
+                          min_label_freq=0,
+                          remove_punctuation=True):
     """
      utility function to load training data and tokenize as follows:
      if word2idx is none then use tf tokenizer and save dict
@@ -89,7 +94,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
       if ".txt" in fn_labels_dict:
         dict_labels2idx = self.log.LoadDictFromData(fn_labels_dict)
       else:
-        dict_labels2idx = self.log.LoadPickleFromData(fn_labels_dict)
+        dict_labels2idx = self.log.load_pickle_from_data(fn_labels_dict)
     if dict_labels2idx is None:
       self.P(" No labels2idx dict found")
     
@@ -149,7 +154,7 @@ class ALLANDataLoader(ALLANTaggerEngine):
       self.P("Using predefined word2idx with {} words: {}".format(
           len(dict_word2idx), 
           ["{}:{}".format(k,v) for k,v in dict_word2idx.items()][:4]))
-      lst_splitted = [self._get_words(x) for x in lst_docs]
+      lst_splitted = [self._get_words(x, remove_punctuation=remove_punctuation) for x in lst_docs]
       x_docs = []
       for text in lst_splitted:
         x_docs.append([self._word_encoder(x) for x in text])

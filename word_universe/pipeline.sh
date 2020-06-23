@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+# ./pipeline.sh -e tf_20 -p base_folder -a app_folder -c corpus_folder -d false -m full_path_to_transfer_model 
+
 SCRIPT=`realpath $0`
 SCRIPTPATH=`dirname $SCRIPT`
 
@@ -12,9 +15,9 @@ case "${unameOut}" in
     *)          machine="UNKNOWN:${unameOut}"
 esac
 
-ENVIRONMENT=tf_115
+ENVIRONMENT=tf_20
 link=https://dumps.wikimedia.org/rowiki/20200120/rowiki-20200120-pages-articles.xml.bz2
-path=/Users/laurentiupiciu/Lummetry.AI\ Dropbox/DATA
+path=Dropbox
 app_path=_allan_data/_rowiki_dump
 corpus_folder=corpus
 download=true
@@ -70,7 +73,7 @@ fi
 echo "[INFO]  Utilitaries checked!"
 
 cd "$SCRIPTPATH"
-cat config.txt | jq --arg a "$app_path" '.APP_FOLDER = $a' | jq --arg a "$corpus_folder" '.CORPUS_FOLDER = $a' | jq --arg a "$model" '.TRANSFER_MODEL_REAL_PATH = $a' > config_tmp.txt && rm config.txt && mv config_tmp.txt config.txt
+cat config.txt | jq --arg a "$path" '.BASE_FOLDER = $a' | jq --arg a "$app_path" '.APP_FOLDER = $a' | jq --arg a "$corpus_folder" '.CORPUS_FOLDER = $a' | jq --arg a "$model" '.TRANSFER_MODEL_REAL_PATH = $a' > config_tmp.txt && rm config.txt && mv config_tmp.txt config.txt
 cd ..
 echo "$(pwd)"
 export PYTHONPATH=$PYTHONPATH:"$(pwd)"
