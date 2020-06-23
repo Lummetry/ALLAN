@@ -35,7 +35,7 @@ if __name__ == '__main__':
   NR_AAAALLZZ = 8
   file_prefix = log.file_prefix[:NR_AAAALLZZ]
   corpus_folder = log.config_data['CORPUS_FOLDER']
-  path_corpus_folder = os.path.join(log.GetDataFolder(), corpus_folder)
+  path_corpus_folder = os.path.join(log.get_data_folder(), corpus_folder)
   assert os.path.isdir(path_corpus_folder),\
          "Corpus folder '{}' does not exist".format(path_corpus_folder)
   numbers_in_corpus_folder = sum(c.isdigit() for c in corpus_folder)
@@ -46,7 +46,7 @@ if __name__ == '__main__':
   prefix = corpus_folder[:NR_AAAALLZZ]
   if all(c.isdigit() for c in prefix):
     files = list(filter(lambda x: prefix in x and suffix in x,
-                        os.listdir(log.GetDataFolder())))
+                        os.listdir(log.get_data_folder())))
     if len(files) > 0:
       assert len(files) == 1
       corpus_file = files[0]
@@ -58,7 +58,7 @@ if __name__ == '__main__':
     file_prefix = prefix
   #endif
   
-  corpus_file = os.path.join(log.GetDataFolder(), corpus_file)
+  corpus_file = os.path.join(log.get_data_folder(), corpus_file)
   
   if compute_corpus_file:
     log.P("Parsing and merging files from {} ...".format(path_corpus_folder))
@@ -125,8 +125,8 @@ if __name__ == '__main__':
     
 
   model.callbacks = []
-  model.save(os.path.join(log.GetModelsFolder(), model_name))
-  with open(os.path.join(log.GetModelsFolder(),
+  model.save(os.path.join(log.get_models_folder(), model_name))
+  with open(os.path.join(log.get_models_folder(),
                          model_name + '.index2word.pickle'), 'wb') as handle:
     pickle.dump(model.wv.index2word, handle, protocol=pickle.HIGHEST_PROTOCOL)
   

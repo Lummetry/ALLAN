@@ -6,7 +6,7 @@ Created on Wed Feb 19 14:30:58 2020
 """
 
 import tensorflow as tf
-from libraries.lummetry_layers.gated import GatedDense
+from libraries.nn import GatedDense
 
 def conv1d(tf_x,f,k,s,bn,act,name):
   
@@ -37,7 +37,7 @@ def get_model(input_shape,
               pool='both',
               model_name='',
               drp=0.5,
-              use_gpu=True,
+              use_gpu=True, # unused anymore - in tf 2.0 is just LSTM
               ):
   
   tf.keras.backend.clear_session()
@@ -45,10 +45,7 @@ def get_model(input_shape,
   drop_id = 0
   model = None
   
-  if use_gpu:
-    LSTM = tf.keras.layers.CuDNNLSTM
-  else:
-    LSTM = tf.keras.layers.LSTM
+  LSTM = tf.keras.layers.LSTM
   
   tf_inp = tf.keras.layers.Input(input_shape, name='inp')
   tf_x = tf_inp
