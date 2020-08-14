@@ -13,3 +13,6 @@ _data/
 _logs/
 _models/
 _output/
+*.1
+
+*.0
