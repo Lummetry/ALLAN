@@ -40,20 +40,19 @@ def test_model(model, tokenizer, strings):
 
 from libraries import Logger
 import argparse
-from transformers import pipeline
-
-from libraries.nlp import RomBERT
-
+from transformers import pipeline, BertForMaskedLM, BertTokenizer
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("-b", "--base_folder", help="Base folder for storage",
                       type=str, default='dropbox')
   parser.add_argument("-a", "--app_folder", help="App folder for storage",
-                      type=str, default='_allan_data/_rowiki_dump')
+                      type=str, default='_allan_data/_ro_bert')
   parser.add_argument("-v", "--vocab_size", type=int, default=100_000)
   parser.add_argument("-f", "--min_freq", type=int, default=2)
   parser.add_argument("-m", "--model", type=str, default='RoBERTa')
+  
+  DEFAULT_MODEL = '20200520'
   
   args = parser.parse_args()
   base_folder = args.base_folder
@@ -62,17 +61,22 @@ if __name__ == '__main__':
   min_freq = args.min_freq
   model = args.model
   
-  log = Logger(lib_name='LM_BERT', base_folder=base_folder, app_folder=app_folder, TF_KERAS=False)
+  log = Logger(
+    lib_name='LM_BERT',
+    base_folder=base_folder,
+    app_folder=app_folder,
+    TF_KERAS=False
+  )
   
-  eng = RomBERT(log=log)
-  res = eng.text2tokens('wlifhjejeg erg erklher ergher ekgherv klhrtn')
-  print(res)
+  
+  tokenizer = BertTokenizer.from_pretrained(log.get_base_subfolder(DEFAULT_MODEL))
+  model = BertForMaskedLM.from_pretrained(log.get_base_subfolder(DEFAULT_MODEL))
   
   list_s = ["Mi-am luat Tesla si ma dau cu ea prin <mask>.",
-          "Azi mi-am luat <mask> si ma duc la cumparaturi."]
+            "Azi mi-am luat <mask> si ma duc la cumparaturi."]
   
   test_model(
-    model=eng.embeng,
-    tokenizer=eng.tokeng,
+    model=model,
+    tokenizer=tokenizer,
     strings=list_s)
   
