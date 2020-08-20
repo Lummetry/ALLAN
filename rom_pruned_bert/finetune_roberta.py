@@ -60,7 +60,7 @@ parser.add_argument("-a", "--app_folder", help="App folder for storage",
 parser.add_argument("-v", "--vocab_size", type=int, default=100_000)
 parser.add_argument("-f", "--min_freq", type=int, default=2)
 parser.add_argument("-m", "--model", type=str, default='RoBERTa')
-parser.add_argument("-b", "--batch_size", type=int, default=8)
+parser.add_argument("--size_batch", type=int, default=8)
 
 args = parser.parse_args()
 base_folder = args.base_folder
@@ -68,7 +68,7 @@ app_folder = args.app_folder
 vocab_size = args.vocab_size
 min_freq = args.min_freq
 model = args.model
-batch_size = args.batch_size
+batch_size = args.size_batch
 
 log = Logger(
   lib_name='LM',
