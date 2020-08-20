@@ -152,7 +152,7 @@ if True:
       output_dir=output_dir,
       overwrite_output_dir=True,
       num_train_epochs=1,
-      per_gpu_train_batch_size=64,
+      per_gpu_train_batch_size=8,
       save_steps=10_000,
       save_total_limit=2,
   )
@@ -164,8 +164,9 @@ if True:
       train_dataset=dataset,
       prediction_loss_only=True,
   )
-    
-
+  
+  log.P("Starting training...", color='g')
+  trainer.train()
 
 
 if False:
