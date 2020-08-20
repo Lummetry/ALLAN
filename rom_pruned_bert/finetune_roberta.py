@@ -68,7 +68,7 @@ app_folder = args.app_folder
 vocab_size = args.vocab_size
 min_freq = args.min_freq
 model = args.model
-batch_size = batch_size
+batch_size = args.batch_size
 
 log = Logger(
   lib_name='LM',
