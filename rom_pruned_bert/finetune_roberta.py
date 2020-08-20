@@ -129,7 +129,7 @@ list_s = ["Mi-am luat Tesla si ma dau cu ea prin <mask>.",
 log.P("Before training ...")
 test_model(model, tokenizer, list_s)
 
-# trainer.train()
+trainer.train()
 
 log.P("After training ...")
 test_model(model, tokenizer, list_s)
