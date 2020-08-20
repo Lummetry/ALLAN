@@ -60,6 +60,7 @@ parser.add_argument("-a", "--app_folder", help="App folder for storage",
 parser.add_argument("-v", "--vocab_size", type=int, default=100_000)
 parser.add_argument("-f", "--min_freq", type=int, default=2)
 parser.add_argument("-m", "--model", type=str, default='RoBERTa')
+parser.add_argument("-b", "--batch_size", type=int, default=8)
 
 args = parser.parse_args()
 base_folder = args.base_folder
@@ -67,6 +68,7 @@ app_folder = args.app_folder
 vocab_size = args.vocab_size
 min_freq = args.min_freq
 model = args.model
+batch_size = batch_size
 
 log = Logger(
   lib_name='LM',
@@ -109,7 +111,7 @@ training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir=True,
     num_train_epochs=1,
-    per_gpu_train_batch_size=64,
+    per_gpu_train_batch_size=batch_size,
     save_steps=10_000,
     save_total_limit=2,
 )
