@@ -72,11 +72,12 @@ if __name__ == '__main__':
   tokenizer = BertTokenizer.from_pretrained(log.get_base_subfolder(DEFAULT_MODEL))
   model = BertForMaskedLM.from_pretrained(log.get_base_subfolder(DEFAULT_MODEL))
   
-  list_s = ["Mi-am luat Tesla si ma dau cu ea prin <mask>.",
-            "Azi mi-am luat <mask> si ma duc la cumparaturi."]
+  list_s = ["Mi-am luat Tesla si ma dau cu ea prin [MASK].",
+            "Azi mi-am luat [MASK] si ma duc la cumparaturi."]
   
   test_model(
     model=model,
     tokenizer=tokenizer,
-    strings=list_s)
+    strings=list_s
+  )
   
